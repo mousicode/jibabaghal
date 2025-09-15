@@ -1,0 +1,14 @@
+---
+deployment:
+  tasks:
+    - export WP_PLUGINS="/home/jibbagha/public_html/wp-content/plugins"
+
+    # ساخت پوشه‌های مقصد اگر نبود
+    - /bin/mkdir -p "$WP_PLUGINS/jbg-core" "$WP_PLUGINS/jbg-player" "$WP_PLUGINS/jbg-quiz" "$WP_PLUGINS/jbg-ads-feed" "$WP_PLUGINS/jbg-billing"
+
+    # همگام‌سازی هر افزونه با حذف فایل‌های اضافه
+    - /bin/rsync -a --delete --exclude ".git" --exclude "node_modules" --exclude ".env" "jbg-core/"     "$WP_PLUGINS/jbg-core/"
+    - /bin/rsync -a --delete --exclude ".git" --exclude "node_modules" --exclude ".env" "jbg-player/"   "$WP_PLUGINS/jbg-player/"
+    - /bin/rsync -a --delete --exclude ".git" --exclude "node_modules" --exclude ".env" "jbg-quiz/"     "$WP_PLUGINS/jbg-quiz/"
+    - /bin/rsync -a --delete --exclude ".git" --exclude "node_modules" --exclude ".env" "jbg-ads-feed/" "$WP_PLUGINS/jbg-ads-feed/"
+    - /bin/rsync -a --delete --exclude ".git" --exclude "node_modules" --exclude ".env" "jbg-billing/"  "$WP_PLUGINS/jbg-billing/"
