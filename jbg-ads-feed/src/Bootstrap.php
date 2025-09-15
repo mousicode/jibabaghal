@@ -32,32 +32,70 @@ class Bootstrap {
         // Shortcode: list
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/ListShortcode.php';
-            if (file_exists($file)) { require_once $file; if (class_exists('\\JBG\\Ads\\Frontend\\ListShortcode')) \JBG\Ads\Frontend\ListShortcode::register(); }
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\ListShortcode')) {
+                    \JBG\Ads\Frontend\ListShortcode::register();
+                }
+            }
         });
 
         // Shortcode: related (by category)  ← NEW
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/RelatedShortcode.php';
-            if (file_exists($file)) { require_once $file; if (class_exists('\\JBG\\Ads\\Frontend\\RelatedShortcode')) \JBG\Ads\Frontend\RelatedShortcode::register(); }
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\RelatedShortcode')) {
+                    \JBG\Ads\Frontend\RelatedShortcode::register();
+                }
+            }
+        });
+
+        // Single two-column layout wrapper (Right: player, Left: related)  ← NEW
+        add_action('init', function () {
+            $file = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\SingleLayout')) {
+                    \JBG\Ads\Frontend\SingleLayout::register();
+                }
+            }
         });
 
         // Single header badge
         add_action('init', function () {
             $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
-            if (file_exists($vb)) { require_once $vb; if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) \JBG\Ads\Frontend\ViewBadge::register(); }
+            if (file_exists($vb)) {
+                require_once $vb;
+                if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
+                    \JBG\Ads\Frontend\ViewBadge::register();
+                }
+            }
         });
 
         // REST endpoints
         add_action('rest_api_init', function () {
             $feed = JBG_ADS_DIR . 'src/Rest/FeedController.php';
-            if (file_exists($feed)) { require_once $feed; if (class_exists('\\JBG\\Ads\\Rest\\FeedController')) \JBG\Ads\Rest\FeedController::register_routes(); }
+            if (file_exists($feed)) {
+                require_once $feed;
+                if (class_exists('\\JBG\\Ads\\Rest\\FeedController')) {
+                    \JBG\Ads\Rest\FeedController::register_routes();
+                }
+            }
 
             $view = JBG_ADS_DIR . 'src/Rest/ViewController.php';
-            if (file_exists($view)) { require_once $view; if (class_exists('\\JBG\\Ads\\Rest\\ViewController')) \JBG\Ads\Rest\ViewController::register_routes(); }
+            if (file_exists($view)) {
+                require_once $view;
+                if (class_exists('\\JBG\\Ads\\Rest\\ViewController')) {
+                    \JBG\Ads\Rest\ViewController::register_routes();
+                }
+            }
 
             // ← NEW: ViewTrackController
             $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
-            if (file_exists($viewTrack)) require_once $viewTrack;
+            if (file_exists($viewTrack)) {
+                require_once $viewTrack;
+            }
             if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
                 \JBG\Ads\Rest\ViewTrackController::register_routes();
             }
