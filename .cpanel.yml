@@ -1,4 +1,21 @@
 ---
 deployment:
   tasks:
-    - /bin/echo "deploy works!" > /home/jibbagha/public_html/deploy-test.txt
+    - export WP_PLUGINS="/home/jibbagha/public_html/wp-content/plugins"
+
+    # ensure plugin dirs exist
+    - /bin/mkdir -p "$WP_PLUGINS/jbg-core" "$WP_PLUGINS/jbg-player" "$WP_PLUGINS/jbg-quiz" "$WP_PLUGINS/jbg-ads-feed" "$WP_PLUGINS/jbg-billing"
+
+    # clean old files
+    - /bin/rm -rf "$WP_PLUGINS/jbg-core/*"
+    - /bin/rm -rf "$WP_PLUGINS/jbg-player/*"
+    - /bin/rm -rf "$WP_PLUGINS/jbg-quiz/*"
+    - /bin/rm -rf "$WP_PLUGINS/jbg-ads-feed/*"
+    - /bin/rm -rf "$WP_PLUGINS/jbg-billing/*"
+
+    # copy new files
+    - /bin/cp -a jbg-core/.     "$WP_PLUGINS/jbg-core/"
+    - /bin/cp -a jbg-player/.   "$WP_PLUGINS/jbg-player/"
+    - /bin/cp -a jbg-quiz/.     "$WP_PLUGINS/jbg-quiz/"
+    - /bin/cp -a jbg-ads-feed/. "$WP_PLUGINS/jbg-ads-feed/"
+    - /bin/cp -a jbg-billing/.  "$WP_PLUGINS/jbg-billing/"
