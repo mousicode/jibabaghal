@@ -1,0 +1,13 @@
+.jbg-quiz{ margin:18px 0; }
+.jbg-quiz-card{
+border:1px solid #e5e7eb; border-radius:12px; padding:14px; background:#fff;
+box-shadow:0 6px 18px rgba(0,0,0,.04);
+}
+.jbg-quiz-title{ margin:0 0 8px; font-size:18px; }
+.jbg-quiz-q{ margin:0 0 10px; }
+.jbg-quiz-opt{ display:block; margin:6px 0; }
+.jbg-quiz-btn{
+margin-top:10px; background:#16a34a; color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer;
+}
+.jbg-quiz-btn:hover{ background:#15803d; }
+.jbg-quiz-result{ margin-top:10px; font-weight:600; }

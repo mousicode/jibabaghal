@@ -1,0 +1,101 @@
+/* Wrapper & player skin */
+.jbg-player-wrapper{
+  width:100%;
+  max-width:100%;
+  margin:16px 0 20px;
+}
+.jbg-player-wrapper .plyr{
+  width:100%;
+  max-width:100%;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,.06);
+}
+
+/* Force fluid 16:9 area and make the <video> fill it */
+.jbg-player-wrapper .plyr__video-wrapper{
+  width:100%;
+  height:auto;
+  aspect-ratio:16/9; /* modern browsers */
+}
+.jbg-player-wrapper video#jbg-player{
+  width:100% !important;
+  height:100% !important;
+  max-width:100%;
+  display:block;
+  object-fit:contain; /* no crop */
+}
+
+/* Fallback for browsers without aspect-ratio support (older Safari, etc.) */
+@supports not (aspect-ratio: 16/9){
+  .jbg-player-wrapper .plyr__video-wrapper{
+    position:relative;
+    height:0;
+    padding-bottom:56.25%; /* 16:9 */
+  }
+  .jbg-player-wrapper video#jbg-player{
+    position:absolute;
+    inset:0;
+    width:100% !important;
+    height:100% !important;
+  }
+}
+
+/* Prevent control overflow on small screens */
+.plyr--video .plyr__controls{ flex-wrap:wrap; }
+
+/* Status text */
+.jbg-status{
+  margin-top:8px;
+  font-size:14px;
+  opacity:.85;
+  line-height:1.6;
+  text-align:right;
+}
+
+/* Actions (Start Quiz button) */
+.jbg-actions{
+  margin-top:10px;
+  display:flex;
+  justify-content:flex-end;
+}
+.jbg-actions > * + *{ margin-left:8px; }
+
+/* Button */
+.jbg-btn{
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  padding:10px 14px;
+  border-radius:8px;
+  font-weight:500;
+  transition:background .2s ease, transform .05s ease;
+}
+.jbg-btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+.jbg-btn:not(:disabled){
+  cursor:pointer;
+}
+.jbg-btn:not(:disabled):hover{ background:#1e4fd7; }
+.jbg-btn:not(:disabled):active{ transform:translateY(1px); }
+.jbg-btn:focus{ outline:2px solid #93c5fd; outline-offset:2px; }
+
+/* Mobile tweaks */
+@media (max-width:640px){
+  .jbg-status{ text-align:left; font-size:13px; }
+  .jbg-actions{ justify-content:stretch; }
+  .jbg-btn{ width:100%; }
+}
+
+.jbg-player-wrapper{max-width:1100px;margin:12px auto 8px}
+.jbg-player-wrapper .plyr{border-radius:14px;overflow:hidden;box-shadow:0 10px 24px rgba(0,0,0,.06)}
+
+/* وضعیت تماشا */
+#jbg-status{margin-top:8px;font-size:14px;opacity:.85;text-align:right}
+/* دکمه شروع آزمون: پنهان تا وقتی JS آن را visible کند */
+#jbg-quiz-btn,
+.jbg-quiz-trigger{display:none}
+#jbg-quiz-btn[data-jbg-visible="1"],
+.jbg-quiz-trigger[data-jbg-visible="1"]{display:inline-block}
