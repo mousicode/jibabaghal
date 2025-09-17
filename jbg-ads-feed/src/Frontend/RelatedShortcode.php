@@ -8,7 +8,7 @@ class RelatedShortcode {
         add_shortcode('jbg_related', [self::class, 'render']);
     }
 
-    /* ---------- helpers ---------- */
+    /* ---------- helpers (مثل قبل) ---------- */
 
     private static function compact_num(int $n): string {
         if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
@@ -29,20 +29,13 @@ class RelatedShortcode {
         return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
     }
 
-    /** شمارش بازدید (سازگار با کلیدهای جدید/قدیم) */
     private static function views_count(int $ad_id): int {
-        $ad_id = absint($ad_id);
-        if ($ad_id <= 0) return 0;
-
         $v = (int) get_post_meta($ad_id, 'jbg_views_total', true);
         if ($v > 0) return $v;
-
-        global $wpdb;
-        $table = $wpdb->prefix . 'jbg_views';
+        global $wpdb; $table = $wpdb->prefix.'jbg_views';
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) return 0;
-
-        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id = %d", $ad_id));
+        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id=%d", $ad_id));
         update_post_meta($ad_id, 'jbg_views_total', $count);
         update_post_meta($ad_id, 'jbg_views_count', $count);
         wp_cache_delete($ad_id, 'post_meta');
@@ -60,7 +53,7 @@ class RelatedShortcode {
         $limit = max(1, (int)$a['limit']);
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
 
-        // فیلتر بر اساس دستهٔ فعلی (اگر ست شده)
+        // جمع‌آوری آیتم‌ها (مثل بایگانی)
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -73,20 +66,13 @@ class RelatedShortcode {
             }
         }
 
-        /**
-         * نکتهٔ مهم: برای اینکه ترتیب دقیقاً مثل بایگانی/کارت‌ها شود،
-         * باید بعد از واکشی، خودمان sort چند معیاره را انجام بدهیم.
-         * برای پوشش کافی، چند برابر limit واکشی می‌کنیم و سپس slice می‌کنیم.
-         */
         $args = [
             'post_type'      => 'jbg_ad',
-            'posts_per_page' => $limit * 6,          // پوشش بیشتر برای مرتب‌سازی چندمعیاره
+            'posts_per_page' => $limit * 6,
             'no_found_rows'  => true,
             'post__not_in'   => $current_id ? [$current_id] : [],
-            'meta_query'     => [
-                ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
-            ],
-            'orderby'        => 'date',              // tiebreak موقتی؛ ترتیب نهایی با usort
+            'meta_query'     => [['key'=>'jbg_cpv','compare'=>'EXISTS']],
+            'orderby'        => 'date',
             'order'          => 'DESC',
         ];
         if ($tax_query) $args['tax_query'] = $tax_query;
@@ -107,12 +93,11 @@ class RelatedShortcode {
         }
         wp_reset_postdata();
 
-        // --- مرتب‌سازی دقیقاً مطابق صفحهٔ کارت‌ها/آرشیو ---
         usort($items, function($a, $b){
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) {
                     if ($a['boost'] === $b['boost']) {
-                        return ($b['date'] <=> $a['date']); // جدیدتر جلوتر
+                        return ($b['date'] <=> $a['date']);
                     }
                     return ($b['boost'] <=> $a['boost']);
                 }
@@ -121,33 +106,86 @@ class RelatedShortcode {
             return ($b['cpv']     <=> $a['cpv']);
         });
 
-        // فقط «ویدیوهای بعدی» را نمایش بده
+        // فقط limit تا
         $items = array_slice($items, 0, $limit);
 
-        // خروجی سایدبار
-        ob_start();
-        echo '<div class="jbg-related">';
-        echo '<div class="jbg-related-title">'.esc_html($a['title']).'</div>';
-        echo '<div class="jbg-related-list">';
-        foreach ($items as $it) {
-            $views  = self::views_count((int)$it['ID']);
-            $viewsF = self::compact_num($views) . ' بازدید';
-            $when   = self::relative_time((int)$it['ID']);
-            $brand  = self::brand_name((int)$it['ID']);
+        // --- محاسبه‌ی گیت: completed ها و اولین مجاز بعدی ---
+        $uid = get_current_user_id();
+        $is_logged = is_user_logged_in();
 
-            echo '<a class="jbg-related-item" href="'.esc_url($it['link']).'">';
-            echo   '<span class="jbg-related-thumb"'.($it['thumb']?' style="background-image:url(\''.esc_url($it['thumb']).'\')"':'').'></span>';
-            echo   '<span class="jbg-related-meta">';
-            echo     '<span class="jbg-related-title-text">'.esc_html($it['title']).'</span>';
-            echo     '<span class="jbg-related-sub">';
-            if ($brand) echo '<span class="brand">'.esc_html($brand).'</span><span class="dot">•</span>';
-            echo       '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
-            echo     '</span>';
-            echo   '</span>';
-            echo '</a>';
+        // تکلیف: اولین آیتم همیشه باز است، حتی برای مهمان
+        $allowed_ids = [];
+        $completed_ids = [];
+
+        foreach ($items as $i => $it) {
+            $ad_id = (int)$it['ID'];
+            if ($i === 0) { $allowed_ids[$ad_id] = true; }
+
+            if ($is_logged) {
+                $watched = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true);
+                $billed  = (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
+                if ($watched && $billed) {
+                    $completed_ids[$ad_id] = true;
+                    // آیتم بعدی را باز کن اگر وجود دارد
+                    if (isset($items[$i+1])) $allowed_ids[(int)$items[$i+1]['ID']] = true;
+                }
+            }
         }
-        echo '</div>';
-        echo '</div>';
+
+        // خروجی UI (قفل برای غیرمجازها)
+        ob_start();
+        ?>
+        <div class="jbg-related">
+          <div class="jbg-related-title"><?php echo esc_html($a['title']); ?></div>
+          <div class="jbg-related-list">
+            <?php foreach ($items as $it):
+                $ad_id = (int)$it['ID'];
+                $is_completed = isset($completed_ids[$ad_id]);
+                $is_allowed   = isset($allowed_ids[$ad_id]) || $is_completed; // completed همیشه باز است
+                $views  = self::views_count($ad_id);
+                $viewsF = self::compact_num($views) . ' بازدید';
+                $when   = self::relative_time($ad_id);
+                $brand  = self::brand_name($ad_id);
+                $thumb  = $it['thumb'] ? ' style="background-image:url(\''.esc_url($it['thumb']).'\')"' : '';
+            ?>
+              <div class="jbg-related-item <?php echo $is_allowed ? '' : 'is-locked'; ?>">
+                <?php if ($is_allowed): ?>
+                  <a class="jbg-related-link" href="<?php echo esc_url($it['link']); ?>">
+                    <span class="jbg-related-thumb"<?php echo $thumb; ?>></span>
+                    <span class="jbg-related-meta">
+                      <span class="jbg-related-title-text"><?php echo esc_html($it['title']); ?></span>
+                      <span class="jbg-related-sub">
+                        <?php if ($brand): ?><span class="brand"><?php echo esc_html($brand); ?></span><span class="dot">•</span><?php endif; ?>
+                        <span><?php echo esc_html($viewsF); ?></span><span class="dot">•</span><span><?php echo esc_html($when); ?></span>
+                      </span>
+                    </span>
+                  </a>
+                <?php else: ?>
+                  <div class="jbg-related-link -nolink">
+                    <span class="jbg-related-thumb"<?php echo $thumb; ?>></span>
+                    <span class="jbg-related-meta">
+                      <span class="jbg-related-title-text"><?php echo esc_html($it['title']); ?></span>
+                      <span class="jbg-related-sub">
+                        <?php if ($brand): ?><span class="brand"><?php echo esc_html($brand); ?></span><span class="dot">•</span><?php endif; ?>
+                        <span><?php echo esc_html($viewsF); ?></span><span class="dot">•</span><span><?php echo esc_html($when); ?></span>
+                      </span>
+                    </span>
+                    <span class="jbg-lock-badge" aria-hidden="true">🔒</span>
+                  </div>
+                <?php endif; ?>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <style>
+          .jbg-related-item.is-locked{opacity:.6; position:relative}
+          .jbg-related-item.is-locked .jbg-related-link.-nolink{cursor:not-allowed}
+          .jbg-related-item .jbg-lock-badge{position:absolute; left:8px; top:8px; font-size:18px}
+          .jbg-related-link{display:flex; gap:10px; text-decoration:none; border-radius:12px; padding:8px; align-items:center; border:1px solid transparent}
+          .jbg-related-link:hover{background:#f8fafc; border-color:#e5e7eb}
+          .jbg-related-link.-nolink:hover{background:transparent; border-color:transparent}
+        </style>
+        <?php
         return (string) ob_get_clean();
     }
 }

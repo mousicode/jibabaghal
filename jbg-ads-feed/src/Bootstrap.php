@@ -100,6 +100,18 @@ class Bootstrap {
                 \JBG\Ads\Rest\ViewTrackController::register_routes();
             }
         });
+
+        // بعد از بلوک‌های دیگرِ init اضافه کنید:
+add_action('init', function () {
+    $file = JBG_ADS_DIR . 'src/Frontend/AccessGate.php';
+    if (file_exists($file)) {
+        require_once $file;
+        if (class_exists('\\JBG\\Ads\\Frontend\\AccessGate')) {
+            \JBG\Ads\Frontend\AccessGate::register();
+        }
+    }
+});
+
     }
 
     public static function activate(): void {
