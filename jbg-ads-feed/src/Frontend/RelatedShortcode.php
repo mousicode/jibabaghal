@@ -8,7 +8,7 @@ class RelatedShortcode {
         add_shortcode('jbg_related', [self::class, 'render']);
     }
 
-    /* ---------- helpers (هم‌راستا با ListShortcode) ---------- */
+    /* ---------- helpers ---------- */
 
     private static function compact_num(int $n): string {
         if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
@@ -34,7 +34,6 @@ class RelatedShortcode {
         $ad_id = absint($ad_id);
         if ($ad_id <= 0) return 0;
 
-        // ترجیح متای جدید
         $v = (int) get_post_meta($ad_id, 'jbg_views_total', true);
         if ($v > 0) return $v;
 
@@ -44,7 +43,6 @@ class RelatedShortcode {
         if ($exists !== $table) return 0;
 
         $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id = %d", $ad_id));
-        // سینک هر دو کلید
         update_post_meta($ad_id, 'jbg_views_total', $count);
         update_post_meta($ad_id, 'jbg_views_count', $count);
         wp_cache_delete($ad_id, 'post_meta');
@@ -59,8 +57,10 @@ class RelatedShortcode {
             'title' => 'ویدیوهای مرتبط',
         ], $atts, 'jbg_related');
 
-        // دسته‌های پست فعلی (taxonomy جدید jbg_cat)
+        $limit = max(1, (int)$a['limit']);
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
+
+        // فیلتر بر اساس دستهٔ فعلی (اگر ست شده)
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -73,14 +73,21 @@ class RelatedShortcode {
             }
         }
 
+        /**
+         * نکتهٔ مهم: برای اینکه ترتیب دقیقاً مثل بایگانی/کارت‌ها شود،
+         * باید بعد از واکشی، خودمان sort چند معیاره را انجام بدهیم.
+         * برای پوشش کافی، چند برابر limit واکشی می‌کنیم و سپس slice می‌کنیم.
+         */
         $args = [
             'post_type'      => 'jbg_ad',
-            'posts_per_page' => max(1, (int)$a['limit']),
+            'posts_per_page' => $limit * 6,          // پوشش بیشتر برای مرتب‌سازی چندمعیاره
             'no_found_rows'  => true,
             'post__not_in'   => $current_id ? [$current_id] : [],
             'meta_query'     => [
                 ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
             ],
+            'orderby'        => 'date',              // tiebreak موقتی؛ ترتیب نهایی با usort
+            'order'          => 'DESC',
         ];
         if ($tax_query) $args['tax_query'] = $tax_query;
 
@@ -95,20 +102,29 @@ class RelatedShortcode {
                 'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
                 'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
                 'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
+                'date'  => get_post_time('U', true, $p->ID),
             ];
         }
         wp_reset_postdata();
 
-        // همان منطق رتبه‌بندی لیست اصلی  (CPV ↓ → BudgetRemaining ↓ → Boost ↓)
+        // --- مرتب‌سازی دقیقاً مطابق صفحهٔ کارت‌ها/آرشیو ---
         usort($items, function($a, $b){
             if ($a['cpv'] === $b['cpv']) {
-                if ($a['br'] === $b['br']) return ($b['boost'] <=> $a['boost']);
-                return ($b['br'] <=> $a['br']);
+                if ($a['br'] === $b['br']) {
+                    if ($a['boost'] === $b['boost']) {
+                        return ($b['date'] <=> $a['date']); // جدیدتر جلوتر
+                    }
+                    return ($b['boost'] <=> $a['boost']);
+                }
+                return ($b['br']   <=> $a['br']);
             }
-            return ($b['cpv'] <=> $a['cpv']);
+            return ($b['cpv']     <=> $a['cpv']);
         });
 
-        // خروجی عمودی برای سایدبار
+        // فقط «ویدیوهای بعدی» را نمایش بده
+        $items = array_slice($items, 0, $limit);
+
+        // خروجی سایدبار
         ob_start();
         echo '<div class="jbg-related">';
         echo '<div class="jbg-related-title">'.esc_html($a['title']).'</div>';
