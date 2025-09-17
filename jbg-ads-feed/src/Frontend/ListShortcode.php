@@ -1,6 +1,5 @@
 <?php
 namespace JBG\Ads\Frontend;
-
 if (!defined('ABSPATH')) exit;
 
 class ListShortcode {
@@ -9,8 +8,7 @@ class ListShortcode {
         add_shortcode('jbg_ads', [self::class, 'render']);
     }
 
-    /* ---------- helpers ---------- */
-
+    // ===== helpers خلاصه (هم‌سو با نسخهٔ قبلی) =====
     private static function compact_num(int $n): string {
         if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
         elseif ($n >= 1000000){ $num=$n/1000000;    $u=' میلیون'; }
@@ -20,58 +18,19 @@ class ListShortcode {
         $s = preg_replace('/([0-9۰-۹]+)[\.\,٫]0$/u', '$1', $s);
         return $s.$u;
     }
-
     private static function relative_time(int $post_id): string {
         return trim(human_time_diff(get_the_time('U',$post_id), current_time('timestamp'))).' پیش';
     }
-
     private static function brand_name(int $post_id): string {
         $names = wp_get_post_terms($post_id, 'jbg_brand', ['fields'=>'names']);
         return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
     }
 
-    /**
-     * تعداد بازدید:
-     * 1) ابتدا از متای جدید jbg_views_total می‌خوانیم
-     * 2) اگر نبود/صفر بود، از جدول لاگ‌ها جمع می‌زنیم
-     * 3) سپس هر دو متای jbg_views_total و jbg_views_count را با هم همگام می‌کنیم
-     */
-    private static function views_count(int $ad_id): int {
-        $ad_id = absint($ad_id);
-        if ($ad_id <= 0) return 0;
-
-        // متای جدید
-        $v = (int) get_post_meta($ad_id, 'jbg_views_total', true);
-        if ($v > 0) return $v;
-
-        global $wpdb;
-        $table = $wpdb->prefix . 'jbg_views';
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists !== $table) return 0;
-
-        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id = %d", $ad_id));
-
-        // سینک هر دو کلید برای سازگاری
-        update_post_meta($ad_id, 'jbg_views_total', $count);
-        update_post_meta($ad_id, 'jbg_views_count', $count);
-        wp_cache_delete($ad_id, 'post_meta');
-
-        return $count;
-    }
-
-    /* ---------- shortcode ---------- */
-
     public static function render($atts = []): string {
-        // اطمینان از لود استایل یک‌بار
-        if (!wp_style_is('jbg-list', 'enqueued')) {
-            $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.3');
-        }
-
         $a = shortcode_atts([
             'limit'    => 12,
-            'brand'    => '',     // اسلاگ‌های برند با کاما
-            'category' => '',     // اگر taxonomy دیگری ساختی
+            'brand'    => '',
+            'category' => '',    // اختیاری: اگر دارید استفاده می‌کنید
             'class'    => '',
         ], $atts, 'jbg_ads');
 
@@ -79,80 +38,112 @@ class ListShortcode {
             'post_type'      => 'jbg_ad',
             'posts_per_page' => max(1, (int)$a['limit']),
             'no_found_rows'  => true,
-            'meta_query'     => [
-                ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
-            ],
+            'meta_query'     => [['key'=>'jbg_cpv','compare'=>'EXISTS']],
         ];
 
-        // فیلتر برند
+        // فیلتر برند/دسته در صورت نیاز
+        $tax = [];
         if (!empty($a['brand'])) {
-            $brands = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['brand']))));
-            if ($brands) {
-                $args['tax_query'][] = [
-                    'taxonomy' => 'jbg_brand',
-                    'field'    => 'slug',
-                    'terms'    => $brands,
-                ];
-            }
+            $tax[] = ['taxonomy'=>'jbg_brand','field'=> is_numeric($a['brand'])?'term_id':'slug', 'terms'=> is_numeric($a['brand'])?(int)$a['brand']:$a['brand']];
         }
-        // فیلتر دسته‌بندی سفارشی (اگر jbg_category داری)
-        if (taxonomy_exists('jbg_category') && !empty($a['category'])) {
-            $cats = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['category']))));
-            if ($cats) {
-                $args['tax_query'][] = [
-                    'taxonomy' => 'jbg_category',
-                    'field'    => 'slug',
-                    'terms'    => $cats,
-                ];
-            }
+        if (!empty($a['category'])) {
+            $tax[] = ['taxonomy'=>'jbg_cat','field'=> is_numeric($a['category'])?'term_id':'slug', 'terms'=> is_numeric($a['category'])?(int)$a['category']:$a['category']];
         }
+        if ($tax) $args['tax_query'] = $tax;
 
+        // واکشی
         $q = new \WP_Query($args);
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
-                'ID'     => $p->ID,
-                'title'  => get_the_title($p),
-                'link'   => get_permalink($p),
-                'thumb'  => get_the_post_thumbnail_url($p->ID, 'large') ?: '',
-                'cpv'    => (int) get_post_meta($p->ID, 'jbg_cpv', true),
-                'br'     => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
-                'boost'  => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
+                'ID'    => $p->ID,
+                'title' => get_the_title($p),
+                'link'  => get_permalink($p),
+                'thumb' => get_the_post_thumbnail_url($p->ID, 'large') ?: '',
+                'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
+                'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
+                'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
+                'date'  => get_post_time('U', true, $p->ID),
             ];
         }
         wp_reset_postdata();
 
-        // مرتب‌سازی: اول CPV نزولی، بعد بودجهٔ باقی‌مانده نزولی، بعد Boost
+        // مرتب‌سازی مثل آرشیو
         usort($items, function($a, $b){
             if ($a['cpv'] === $b['cpv']) {
-                if ($a['br'] === $b['br']) return ($b['boost'] <=> $a['boost']);
-                return ($b['br'] <=> $a['br']);
+                if ($a['br'] === $b['br']) {
+                    if ($a['boost'] === $b['boost']) return ($b['date'] <=> $a['date']);
+                    return ($b['boost'] <=> $a['boost']);
+                }
+                return ($b['br']   <=> $a['br']);
             }
-            return ($b['cpv'] <=> $a['cpv']);
+            return ($b['cpv']     <=> $a['cpv']);
         });
 
-        // رندر کارت‌ها
-        ob_start();
-        echo '<div class="jbg-grid '.esc_attr($a['class']).'">';
-        foreach ($items as $it) {
-            $views  = self::views_count((int)$it['ID']);
-            $viewsF = self::compact_num($views) . ' بازدید';
-            $when   = self::relative_time((int)$it['ID']);
-            $brand  = self::brand_name((int)$it['ID']);
+        // === گیت مرحله‌ای برای UI لیست ===
+        $uid = get_current_user_id();
+        $is_logged = is_user_logged_in();
+        $prev_ok = true; // آیتم اول همیشه نقطه شروعه
 
-            echo '<div class="jbg-card">';
-            echo   '<a class="jbg-thumb" href="'.esc_url($it['link']).'"'.($it['thumb']?' style="background-image:url(\''.esc_url($it['thumb']).'\')"':'').'></a>';
-            echo   '<div class="jbg-card-body">';
-            echo     '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
-            echo     '<div class="jbg-card-meta">';
-            if ($brand) echo   '<span class="brand">'.esc_html($brand).'</span><span class="dot">•</span>';
-            echo       '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
-            echo     '</div>';
-            echo     '<a class="jbg-btn jbg-card-btn" href="'.esc_url($it['link']).'">مشاهده</a>';
-            echo   '</div>';
+        $rows = [];
+        foreach ($items as $i => $it) {
+            $ad_id = (int)$it['ID'];
+            $completed = false;
+            if ($is_logged) {
+                $completed = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true)
+                           && (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
+            }
+            $allowed = $completed || $prev_ok;
+            $rows[] = $it + ['completed'=>$completed, 'allowed'=>$allowed];
+            $prev_ok = $completed; // شرط مرحله‌ای
+        }
+
+        // رندر کارت‌ها (با کلاس is-locked برای غیر مجازها)
+        ob_start();
+        $extra_class = $a['class'] ? ' '.sanitize_html_class($a['class']) : '';
+        echo '<div class="jbg-list-grid'.$extra_class.'">';
+        foreach ($rows as $it) {
+            $ad_id = (int)$it['ID'];
+            $is_allowed = (bool)$it['allowed'];
+            $views  = self::compact_num( (int) get_post_meta($ad_id,'jbg_views_total',true) );
+            $when   = self::relative_time($ad_id);
+            $brand  = self::brand_name($ad_id);
+            $thumb  = $it['thumb'] ? ' style="background-image:url(\''.esc_url($it['thumb']).'\')"' : '';
+
+            echo '<div class="jbg-card '.($is_allowed?'':'is-locked').'">';
+            if ($is_allowed) {
+                echo '<a class="jbg-card-link" href="'.esc_url($it['link']).'">';
+            } else {
+                echo '<div class="jbg-card-link -nolink">';
+            }
+
+            echo   '<span class="jbg-card-thumb"'.$thumb.'></span>';
+            echo   '<span class="jbg-card-body">';
+            echo     '<span class="jbg-card-title">'.esc_html($it['title']).'</span>';
+            echo     '<span class="jbg-card-sub">';
+            if ($brand) echo '<span class="brand">'.esc_html($brand).'</span><span class="dot">•</span>';
+            echo       '<span>'.$views.' بازدید</span><span class="dot">•</span><span>'.$when.'</span>';
+            echo     '</span>';
+            echo     '<span class="jbg-card-cta">مشاهده</span>';
+            echo   '</span>';
+
+            if ($is_allowed) {
+                echo '</a>';
+            } else {
+                echo   '<span class="jbg-lock-badge" aria-hidden="true">🔒</span>';
+                echo '</div>';
+            }
             echo '</div>';
         }
         echo '</div>';
+        ?>
+        <style>
+          .jbg-card.is-locked{opacity:.7; position:relative}
+          .jbg-card-link.-nolink{cursor:not-allowed}
+          .jbg-card.is-locked .jbg-card-cta{filter:grayscale(1); opacity:.8}
+          .jbg-card .jbg-lock-badge{position:absolute; left:12px; top:12px; font-size:20px}
+        </style>
+        <?php
         return (string) ob_get_clean();
     }
 }

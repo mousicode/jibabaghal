@@ -8,7 +8,7 @@ class RelatedShortcode {
         add_shortcode('jbg_related', [self::class, 'render']);
     }
 
-    /* ---------- helpers (مثل قبل) ---------- */
+    /* ---------- helpers ---------- */
 
     private static function compact_num(int $n): string {
         if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
@@ -53,7 +53,7 @@ class RelatedShortcode {
         $limit = max(1, (int)$a['limit']);
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
 
-        // جمع‌آوری آیتم‌ها (مثل بایگانی)
+        // فیلتر بر اساس jbg_cat (دستهٔ همین ویدیو)
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -66,6 +66,7 @@ class RelatedShortcode {
             }
         }
 
+        // واکشی گسترده و مرتب‌سازی نهایی چندمعیاره (همان منطق کارت‌ها/آرشیو)
         $args = [
             'post_type'      => 'jbg_ad',
             'posts_per_page' => $limit * 6,
@@ -96,9 +97,7 @@ class RelatedShortcode {
         usort($items, function($a, $b){
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) {
-                    if ($a['boost'] === $b['boost']) {
-                        return ($b['date'] <=> $a['date']);
-                    }
+                    if ($a['boost'] === $b['boost']) return ($b['date'] <=> $a['date']);
                     return ($b['boost'] <=> $a['boost']);
                 }
                 return ($b['br']   <=> $a['br']);
@@ -106,47 +105,53 @@ class RelatedShortcode {
             return ($b['cpv']     <=> $a['cpv']);
         });
 
-        // فقط limit تا
         $items = array_slice($items, 0, $limit);
 
-        // --- محاسبه‌ی گیت: completed ها و اولین مجاز بعدی ---
+        // --- گیت مرحله‌ای: «اول باید همین ویدیو پاس شود» ---
         $uid = get_current_user_id();
         $is_logged = is_user_logged_in();
 
-        // تکلیف: اولین آیتم همیشه باز است، حتی برای مهمان
-        $allowed_ids = [];
-        $completed_ids = [];
-
-        foreach ($items as $i => $it) {
-            $ad_id = (int)$it['ID'];
-            if ($i === 0) { $allowed_ids[$ad_id] = true; }
-
-            if ($is_logged) {
-                $watched = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true);
-                $billed  = (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
-                if ($watched && $billed) {
-                    $completed_ids[$ad_id] = true;
-                    // آیتم بعدی را باز کن اگر وجود دارد
-                    if (isset($items[$i+1])) $allowed_ids[(int)$items[$i+1]['ID']] = true;
-                }
-            }
+        // آیا ویدیوی فعلی پاس شده؟
+        $current_ok = false;
+        if ($current_id && $is_logged) {
+            $watched = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $current_id, true);
+            $billed  = (bool) get_user_meta($uid, 'jbg_billed_'     . $current_id, true);
+            $current_ok = ($watched && $billed);
         }
 
-        // خروجی UI (قفل برای غیرمجازها)
+        // prev_ok = آیا آیتم قبلی پاس است؟ برای سایدبار، «قبلی» همان ویدیوی فعلی است.
+        $prev_ok = $current_ok;
+
+        // وضعیت هر آیتم
+        $rows = [];
+        foreach ($items as $i => $it) {
+            $ad_id = (int)$it['ID'];
+            $completed = false;
+            if ($is_logged) {
+                $completed = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true)
+                           && (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
+            }
+
+            $allowed = $completed || $prev_ok;   // اگر قبلی پاس است یا خودش پاس است → باز
+            $rows[] = $it + ['completed'=>$completed, 'allowed'=>$allowed];
+            // برای آیتم بعدی، قبلی را «پاس بودنِ همین آیتم» تعیین می‌کند
+            $prev_ok = $completed;
+        }
+
+        // خروجی
         ob_start();
         ?>
         <div class="jbg-related">
           <div class="jbg-related-title"><?php echo esc_html($a['title']); ?></div>
           <div class="jbg-related-list">
-            <?php foreach ($items as $it):
+            <?php foreach ($rows as $it):
                 $ad_id = (int)$it['ID'];
-                $is_completed = isset($completed_ids[$ad_id]);
-                $is_allowed   = isset($allowed_ids[$ad_id]) || $is_completed; // completed همیشه باز است
                 $views  = self::views_count($ad_id);
                 $viewsF = self::compact_num($views) . ' بازدید';
                 $when   = self::relative_time($ad_id);
                 $brand  = self::brand_name($ad_id);
                 $thumb  = $it['thumb'] ? ' style="background-image:url(\''.esc_url($it['thumb']).'\')"' : '';
+                $is_allowed = (bool)$it['allowed'];
             ?>
               <div class="jbg-related-item <?php echo $is_allowed ? '' : 'is-locked'; ?>">
                 <?php if ($is_allowed): ?>
