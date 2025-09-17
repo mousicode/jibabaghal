@@ -62,6 +62,17 @@ class Bootstrap {
             }
         });
 
+        // Access gate (sequential viewing)  ← NEW
+        add_action('init', function () {
+            $file = JBG_ADS_DIR . 'src/Frontend/AccessGate.php';
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\AccessGate')) {
+                    \JBG\Ads\Frontend\AccessGate::register();
+                }
+            }
+        });
+
         // Single header badge
         add_action('init', function () {
             $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
@@ -73,7 +84,7 @@ class Bootstrap {
             }
         });
 
-        // REST endpoints
+        // REST endpoints (+ NextController)  ← UPDATED
         add_action('rest_api_init', function () {
             $feed = JBG_ADS_DIR . 'src/Rest/FeedController.php';
             if (file_exists($feed)) {
@@ -91,27 +102,24 @@ class Bootstrap {
                 }
             }
 
-            // ← NEW: ViewTrackController
+            // ViewTrackController
             $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
             if (file_exists($viewTrack)) {
                 require_once $viewTrack;
+                if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
+                    \JBG\Ads\Rest\ViewTrackController::register_routes();
+                }
             }
-            if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
-                \JBG\Ads\Rest\ViewTrackController::register_routes();
+
+            // NextController (returns the next video's URL by ordering)  ← NEW
+            $next = JBG_ADS_DIR . 'src/Rest/NextController.php';
+            if (file_exists($next)) {
+                require_once $next;
+                if (class_exists('\\JBG\\Ads\\Rest\\NextController')) {
+                    \JBG\Ads\Rest\NextController::register_routes();
+                }
             }
         });
-
-        // بعد از بلوک‌های دیگرِ init اضافه کنید:
-add_action('init', function () {
-    $file = JBG_ADS_DIR . 'src/Frontend/AccessGate.php';
-    if (file_exists($file)) {
-        require_once $file;
-        if (class_exists('\\JBG\\Ads\\Frontend\\AccessGate')) {
-            \JBG\Ads\Frontend\AccessGate::register();
-        }
-    }
-});
-
     }
 
     public static function activate(): void {
