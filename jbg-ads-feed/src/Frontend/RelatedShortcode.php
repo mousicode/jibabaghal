@@ -8,8 +8,6 @@ class RelatedShortcode {
         add_shortcode('jbg_related', [self::class, 'render']);
     }
 
-    /* ---------- helpers ---------- */
-
     private static function compact_num(int $n): string {
         if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
         elseif ($n >= 1000000){ $num=$n/1000000;    $u=' میلیون'; }
@@ -19,16 +17,13 @@ class RelatedShortcode {
         $s = preg_replace('/([0-9۰-۹]+)[\.\,٫]0$/u', '$1', $s);
         return $s.$u;
     }
-
     private static function relative_time(int $post_id): string {
         return trim(human_time_diff(get_the_time('U',$post_id), current_time('timestamp'))).' پیش';
     }
-
     private static function brand_name(int $post_id): string {
         $names = wp_get_post_terms($post_id, 'jbg_brand', ['fields'=>'names']);
         return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
     }
-
     private static function views_count(int $ad_id): int {
         $v = (int) get_post_meta($ad_id, 'jbg_views_total', true);
         if ($v > 0) return $v;
@@ -42,8 +37,6 @@ class RelatedShortcode {
         return $count;
     }
 
-    /* ---------- shortcode ---------- */
-
     public static function render($atts = []): string {
         $a = shortcode_atts([
             'limit' => 8,
@@ -53,7 +46,7 @@ class RelatedShortcode {
         $limit = max(1, (int)$a['limit']);
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
 
-        // فیلتر بر اساس jbg_cat (دستهٔ همین ویدیو)
+        // فیلتر jbg_cat برای ویدیوهای مرتبط
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -66,7 +59,7 @@ class RelatedShortcode {
             }
         }
 
-        // واکشی گسترده و مرتب‌سازی نهایی چندمعیاره (همان منطق کارت‌ها/آرشیو)
+        // واکشی گسترده و مرتب‌سازی نهایی چندمعیاره
         $args = [
             'post_type'      => 'jbg_ad',
             'posts_per_page' => $limit * 6,
@@ -107,40 +100,31 @@ class RelatedShortcode {
 
         $items = array_slice($items, 0, $limit);
 
-        // --- گیت مرحله‌ای: «اول باید همین ویدیو پاس شود» ---
-        $uid = get_current_user_id();
+        // گیت مرحله‌ای (اول باید همین ویدیو پاس شود)
+        $uid       = get_current_user_id();
         $is_logged = is_user_logged_in();
-
-        // آیا ویدیوی فعلی پاس شده؟
         $current_ok = false;
         if ($current_id && $is_logged) {
-            $watched = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $current_id, true);
-            $billed  = (bool) get_user_meta($uid, 'jbg_billed_'     . $current_id, true);
-            $current_ok = ($watched && $billed);
+            $current_ok = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $current_id, true)
+                       && (bool) get_user_meta($uid, 'jbg_billed_'     . $current_id, true);
         }
-
-        // prev_ok = آیا آیتم قبلی پاس است؟ برای سایدبار، «قبلی» همان ویدیوی فعلی است.
         $prev_ok = $current_ok;
 
-        // وضعیت هر آیتم
         $rows = [];
         foreach ($items as $i => $it) {
             $ad_id = (int)$it['ID'];
-            $completed = false;
-            if ($is_logged) {
-                $completed = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true)
-                           && (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
-            }
+            $completed = $is_logged
+                ? ( (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true)
+                 && (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true) )
+                : false;
 
-            $allowed = $completed || $prev_ok;   // اگر قبلی پاس است یا خودش پاس است → باز
-            $rows[] = $it + ['completed'=>$completed, 'allowed'=>$allowed];
-            // برای آیتم بعدی، قبلی را «پاس بودنِ همین آیتم» تعیین می‌کند
+            $allowed = $completed || $prev_ok;
+            $rows[]  = $it + ['completed'=>$completed, 'allowed'=>$allowed];
             $prev_ok = $completed;
         }
 
         // خروجی
-        ob_start();
-        ?>
+        ob_start(); ?>
         <div class="jbg-related">
           <div class="jbg-related-title"><?php echo esc_html($a['title']); ?></div>
           <div class="jbg-related-list">
@@ -153,7 +137,7 @@ class RelatedShortcode {
                 $thumb  = $it['thumb'] ? ' style="background-image:url(\''.esc_url($it['thumb']).'\')"' : '';
                 $is_allowed = (bool)$it['allowed'];
             ?>
-              <div class="jbg-related-item <?php echo $is_allowed ? '' : 'is-locked'; ?>">
+              <div class="jbg-related-item <?php echo $is_allowed ? '' : 'is-locked'; ?>" data-ad-id="<?php echo esc_attr($ad_id); ?>">
                 <?php if ($is_allowed): ?>
                   <a class="jbg-related-link" href="<?php echo esc_url($it['link']); ?>">
                     <span class="jbg-related-thumb"<?php echo $thumb; ?>></span>
