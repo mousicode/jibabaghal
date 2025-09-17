@@ -5,45 +5,35 @@ if (!defined('ABSPATH')) exit;
 /**
  * Two-column layout for single jbg_ad
  * Left: related sidebar  |  Right: main player/content
- * بدون دست‌کاری خروجی Player/Badge/Quiz – فقط چیدمان.
+ * فقط چیدمان؛ هیچ رفتار Player/Badge/Quiz تغییر نمی‌کند.
  */
 class SingleLayout {
 
     public static function register(): void {
-        // قبل از هوک‌های تزریق پلیر/بج/کوییز
-        add_filter('the_content', [self::class, 'wrap'], 4);
+        // نکتهٔ مهم: بعد از همهٔ فیلترهایی که محتوا را تزریق می‌کنند اجرا شود
+        // (Player با priority≈5، ViewBadge≈7، Quiz≈8)
+        add_filter('the_content', [self::class, 'wrap'], 99);
     }
 
     public static function wrap($content) {
-        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) {
-            return $content;
-        }
+        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
-        // CSS: گرید LTR برای اینکه ستون اول «چپ» باشد؛ محتوای داخلی RTL می‌ماند
+        // اگر قبلاً wrap شده، دوباره انجام نده
+        if (strpos($content, 'jbg-two-col') !== false) return $content;
+
+        // CSS: ستون اول چپ (LTR)، داخل ستون‌ها RTL
         $style = '<style id="jbg-single-2col-css">
             .single-jbg_ad .jbg-two-col{
-              direction:ltr;                  /* مهم: ستون اول سمت چپ */
-              display:grid;
-              grid-template-columns:1fr;
-              gap:24px;
-              align-items:start;
+              direction:ltr; display:grid; grid-template-columns:1fr; gap:24px; align-items:start;
             }
             @media(min-width:768px){
-              .single-jbg_ad .jbg-two-col{
-                grid-template-columns: 360px 1fr; /* چپ: سایدبار | راست: ویدیو */
-              }
+              .single-jbg_ad .jbg-two-col{ grid-template-columns: 360px 1fr; }
             }
-            /* ستون‌ها RTL باشند تا متن‌ها درست نمایش داده شوند */
-            .single-jbg_ad .jbg-col-aside,
-            .single-jbg_ad .jbg-col-main{ direction:rtl; }
-
-            /* سایدبار چسبان در دسکتاپ */
+            .single-jbg_ad .jbg-col-aside,.single-jbg_ad .jbg-col-main{ direction:rtl; }
             @media(min-width:768px){
               .single-jbg_ad .jbg-col-aside{ position:sticky; top:24px; }
               body.admin-bar .single-jbg_ad .jbg-col-aside{ top:56px; }
             }
-
-            /* استایل لیست مرتبط‌ها */
             .jbg-related{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:12px;}
             .jbg-related-title{font-weight:800;margin:4px 0 10px;font-size:16px;color:#111827}
             .jbg-related-list{display:flex;flex-direction:column;gap:10px;max-height:78vh;overflow:auto;padding-right:2px}
@@ -55,19 +45,20 @@ class SingleLayout {
             .jbg-related-sub{font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
             .jbg-related-sub .brand{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600}
             .jbg-related-sub .dot{opacity:.55}
-          </style>';
+        </style>';
 
         // سایدبار: شورت‌کد مرتبط‌ها
         $related = do_shortcode('[jbg_related limit="10" title="ویدیوهای مرتبط"]');
 
-        // DOM: سایدبار اول (چپ)، بعد Main (راست) — چون container LTR است
+        // DOM: سایدبار اول (چپ)، سپس Main (راست). چون container LTR است.
         $html  = '<div class="jbg-two-col">';
         $html .=   '<aside class="jbg-col-aside">'.$related.'</aside>';
         $html .=   '<main class="jbg-col-main">'.$content.'</main>';
         $html .= '</div>';
 
-        static $once=false;
-        if (!$once) { $html = $style . $html; $once=true; }
+        // استایل را فقط یک‌بار تزریق کن
+        static $once = false;
+        if (!$once) { $html = $style . $html; $once = true; }
 
         return $html;
     }
