@@ -32,12 +32,13 @@ class Bootstrap {
         // ───────── Frontend components ─────────
         add_action('init', function () {
             foreach ([
-                'src/Frontend/PlayerShim.php'       => '\\JBG\\Ads\\Frontend\\PlayerShim',       // ← NEW (پلیر همیشه لود شود)
-                'src/Frontend/ListShortcode.php'    => '\\JBG\\Ads\\Frontend\\ListShortcode',
-                'src/Frontend/RelatedShortcode.php' => '\\JBG\\Ads\\Frontend\\RelatedShortcode',
-                'src/Frontend/ViewBadge.php'        => '\\JBG\\Ads\\Frontend\\ViewBadge',
-                'src/Frontend/SingleLayout.php'     => '\\JBG\\Ads\\Frontend\\SingleLayout',
-                'src/Frontend/AccessGate.php'       => '\\JBG\\Ads\\Frontend\\AccessGate',
+                // ⬇️ این خط اضافه شد تا PlayerShim رجیستر شود و پلیر همیشه لود گردد
+                'src/Frontend/PlayerShim.php'      => '\\JBG\\Ads\\Frontend\\PlayerShim',
+                'src/Frontend/ListShortcode.php'   => '\\JBG\\Ads\\Frontend\\ListShortcode',
+                'src/Frontend/RelatedShortcode.php'=> '\\JBG\\Ads\\Frontend\\RelatedShortcode',
+                'src/Frontend/ViewBadge.php'       => '\\JBG\\Ads\\Frontend\\ViewBadge',
+                'src/Frontend/SingleLayout.php'    => '\\JBG\\Ads\\Frontend\\SingleLayout',
+                'src/Frontend/AccessGate.php'      => '\\JBG\\Ads\\Frontend\\AccessGate',
             ] as $rel => $fqcn) {
                 $file = JBG_ADS_DIR . $rel;
                 if (file_exists($file)) {
@@ -55,7 +56,7 @@ class Bootstrap {
                 'src/Rest/FeedController.php'      => '\\JBG\\Ads\\Rest\\FeedController',
                 'src/Rest/ViewController.php'      => '\\JBG\\Ads\\Rest\\ViewController',
                 'src/Rest/ViewTrackController.php' => '\\JBG\\Ads\\Rest\\ViewTrackController',
-                'src/Rest/NextController.php'      => '\\JBG\\Ads\\Rest\\NextController',
+                'src/Rest/NextController.php'      => '\\JBG\\Ads\\Rest\\NextController', // ← NEW
             ] as $rel => $fqcn) {
                 $file = JBG_ADS_DIR . $rel;
                 if (file_exists($file)) {
