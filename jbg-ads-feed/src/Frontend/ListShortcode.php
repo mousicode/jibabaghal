@@ -16,14 +16,12 @@ class ListShortcode {
             'title' => '',
         ], $atts, 'jbg_list');
 
-        // فیلتر دسته (اختیاری)
         $tax_query = [];
         if (!empty($a['cat'])) {
             $field = is_numeric($a['cat']) ? 'term_id' : 'slug';
             $tax_query[] = ['taxonomy'=>'jbg_cat','field'=>$field,'terms'=>[$a['cat']]];
         }
 
-        // واکشی خام
         $q = new \WP_Query([
             'post_type'      => 'jbg_ad',
             'posts_per_page' => (int)$a['limit'],
@@ -46,7 +44,7 @@ class ListShortcode {
         }
         wp_reset_postdata();
 
-        // مرتب‌سازی مرکب (مثل آرشیو)
+        // ترتیب مرکب: CPV↓ سپس بودجه↓ سپس Boost↓ سپس تاریخ↓
         usort($rows, function($a,$b){
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) {
@@ -67,7 +65,7 @@ class ListShortcode {
                 if ($i === 0 || $passed) $max_open = $i + 1; else break;
             }
         } else {
-            $max_open = 1; // مهمان فقط اولی
+            $max_open = 1; // مهمان: فقط اولی باز
         }
 
         // خروجی کارت‌ها

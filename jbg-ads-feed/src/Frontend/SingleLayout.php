@@ -11,7 +11,7 @@ class SingleLayout {
         add_filter('the_content', [self::class, 'append_block'], 99);
     }
 
-    /** ترتیب واحد: cpv↓, budget_remaining↓, priority_boost↓, date↓ (فقط در دسته‌های همین ویدیو) */
+    /** ترتیب واحد: CPV↓, budget_remaining↓, priority_boost↓, date↓ (فقط دسته‌های همین ویدیو) */
     private static function ordered_items_for(int $current_id): array {
         $tax_query = [];
         $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -66,7 +66,6 @@ class SingleLayout {
     }
 
     public static function append_block($content) {
-        // فقط روی سینگل jbg_ad و حلقه اصلی
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
         $current_id = get_the_ID();
@@ -97,16 +96,14 @@ class SingleLayout {
 
         $script = '<script>(function(){
           var b=document.getElementById("jbg-next-btn"),h=document.getElementById("jbg-next-hint");
-          if(!b) return;
-          '.($passed ? 'b.setAttribute("aria-disabled","false"); if(h) h.textContent="";' : '').'
-          function openBtn(){b.setAttribute("aria-disabled","false"); if(h) h.textContent="";}
+          if(b && '.($passed ? 'true' : 'false').'){ b.setAttribute("aria-disabled","false"); if(h) h.textContent=""; }
+          function openBtn(){ if(!b) return; b.setAttribute("aria-disabled","false"); if(h) h.textContent=""; }
           document.addEventListener("jbg:quiz_passed",function(e){
-            try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')openBtn();}
-            catch(_){openBtn();}
+            try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')openBtn();}catch(_){openBtn();}
           });
         })();</script>';
 
-        // ویدیوهای مرتبط را «بعد از محتوا» می‌آوریم تا هیچ تأثیری روی لود پلیر نداشته باشد
+        // سایدبار/ویدیوهای مرتبط را «بعد از محتوا» می‌آوریم تا روی لود پلیر هیچ اثری نگذارد
         $related = '<div class="jbg-related-wrap">'.do_shortcode('[jbg_related limit="8" title="ویدیوهای مرتبط"]').'</div>';
 
         return $content . '<div class="jbg-after">'.$style.$btn.$related.'</div>'.$script;

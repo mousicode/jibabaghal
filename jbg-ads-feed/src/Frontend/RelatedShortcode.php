@@ -48,6 +48,7 @@ class RelatedShortcode {
         }
         wp_reset_postdata();
 
+        // ترتیب مرکب
         usort($rows, function($a,$b){
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) {
@@ -59,7 +60,7 @@ class RelatedShortcode {
             return ($b['cpv'] <=> $a['cpv']);
         });
 
-        // قفل‌گذاری زنجیره‌ای (اولی باز؛ هر بعدی منوط به پاس قبلی)
+        // قفل‌گذاری زنجیره‌ای: اولی باز؛ هر بعدی منوط به قبولی قبلی
         $uid = get_current_user_id();
         $max_open = 0;
         if ($uid) {
@@ -71,7 +72,7 @@ class RelatedShortcode {
             $max_open = 1;
         }
 
-        // خروجی کارت عمودی/سایدبار
+        // خروجی کارت سایدبار
         $out  = '<div class="jbg-related" style="border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:12px">';
         $out .= '<h3 style="margin:0 0 8px 0">'.$a['title'].'</h3>';
 
@@ -80,12 +81,13 @@ class RelatedShortcode {
             $perma  = get_permalink($it['ID']);
             $title  = esc_html(get_the_title($it['ID']));
             $age    = human_time_diff($it['date'], current_time('timestamp')) . ' پیش';
+            $views  = (int) get_post_meta($it['ID'],'jbg_views_count',true);
 
             $out .= '<div class="jbg-related-item'.($locked?' is-locked':'').'" style="display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;background:#f9fafb;margin:8px 0">';
             $out .= '  <div class="thumb" style="width:72px;height:54px;background:#e5e7eb;border-radius:8px;flex:none"></div>';
             $out .= '  <div class="meta" style="flex:1 1 auto">';
             $out .= '    <div style="font-weight:700">'.$title.'</div>';
-            $out .= '    <div style="font-size:12px;color:#6b7280">بازدید '.(int)get_post_meta($it['ID'],'jbg_views_count',true).' • '.$age.'</div>';
+            $out .= '    <div style="font-size:12px;color:#6b7280">بازدید '.$views.' • '.$age.'</div>';
             $out .= '  </div>';
             if ($locked) {
                 $out .= '  <a aria-disabled="true" class="btn" style="pointer-events:none;opacity:.6;display:inline-block;background:#2563eb;color:#fff;padding:6px 10px;border-radius:10px;text-decoration:none">قفل</a>';
