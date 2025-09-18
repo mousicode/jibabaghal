@@ -2,12 +2,14 @@
 namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
+if (!class_exists(__NAMESPACE__ . '\\SingleLayout')):
+
 class SingleLayout {
     public static function register(): void {
-        add_filter('the_content', [self::class, 'wrap'], 20);
+        add_filter('the_content', [self::class, 'inject_next_button'], 50); // بعد از محتوا؛ پلیر و کوییز را دست نمی‌زنیم
     }
 
-    /** ترتیب واحد: cpv↓, budget_remaining↓, priority_boost↓, date↓ فقط داخل دسته(های) همین ویدیو */
+    /** ترتیب واحد مطابق آرشیو: cpv↓, budget↓, boost↓, date↓ (فقط داخل دسته‌های همین آگهی) */
     private static function ordered_items_for(int $current_id): array {
         $tax_query = [];
         $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -27,22 +29,21 @@ class SingleLayout {
             'orderby'        => 'date',
             'order'          => 'DESC',
             'tax_query'      => $tax_query ?: null,
-            'fields'         => 'all',
         ]);
 
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
                 'ID'    => (int)$p->ID,
-                'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
-                'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
-                'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
+                'cpv'   => (int)get_post_meta($p->ID,'jbg_cpv',true),
+                'br'    => (int)get_post_meta($p->ID,'jbg_budget_remaining',true),
+                'boost' => (int)get_post_meta($p->ID,'jbg_priority_boost',true),
                 'date'  => get_post_time('U', true, $p->ID),
             ];
         }
         wp_reset_postdata();
 
-        usort($items, function($a, $b){
+        usort($items, function($a,$b){
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) {
                     if ($a['boost'] === $b['boost']) return ($b['date'] <=> $a['date']);
@@ -56,75 +57,52 @@ class SingleLayout {
         return $items;
     }
 
-    /** پیدا کردن لینکِ آیتم بعدی طبق همین ترتیب */
     private static function next_url_for(int $current_id): string {
         $items = self::ordered_items_for($current_id);
         if (!$items) return '';
-        $ids = array_map(fn($it)=> (int)$it['ID'], $items);
+        $ids = array_map(fn($it)=>(int)$it['ID'], $items);
         $idx = array_search($current_id, $ids, true);
         if ($idx === false || $idx >= count($ids)-1) return '';
-        $next_id = (int)$ids[$idx+1];
-        return get_permalink($next_id) ?: '';
+        return get_permalink((int)$ids[$idx+1]) ?: '';
     }
 
-    public static function wrap($content) {
+    public static function inject_next_button($content) {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
         $current_id = get_the_ID();
-        $next_url   = self::next_url_for($current_id);   // ← لینک ویدیو بعدی را همین‌جا می‌گذاریم
-        $sidebar    = do_shortcode('[jbg_related limit="12" title="ویدیوهای مرتبط"]');
+        $next_url   = self::next_url_for($current_id);
 
-        // دکمه پیش‌فرض غیرفعال است؛ فقط ایونت «قبولی آزمون» قفل را برمی‌دارد
-        $style = '<style>
-          .jbg-two-col{display:grid;grid-template-columns:1fr;gap:24px}
-          @media(min-width:768px){.jbg-two-col{grid-template-columns:360px 1fr}}
-          .jbg-next-wrap{margin-top:16px;text-align:right}
-          .jbg-next-btn{display:inline-block;padding:10px 16px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none}
-          .jbg-next-btn[aria-disabled="false"]{opacity:1;pointer-events:auto}
-          .jbg-next-hint{margin-right:8px;font-size:12px;color:#6b7280}
-        </style>';
-
-        $btn  = '<div class="jbg-next-wrap">';
+        // دکمه مستقل؛ پلیر/کوییز را دست نمی‌زنیم
+        $btn  = '<div class="jbg-next-wrap" style="margin-top:16px;text-align:right">';
         if ($next_url) {
-            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" aria-disabled="true" data-current-id="'.esc_attr($current_id).'" href="'.esc_url($next_url).'">ویدیو بعدی</a>';
-            $btn .= '<small id="jbg-next-hint" class="jbg-next-hint">برای رفتن به مرحله بعد، آزمون این ویدیو را درست پاسخ بده.</small>';
+            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="'.esc_url($next_url).'" '
+                 .  'aria-disabled="true" style="display:inline-block;padding:10px 16px;border-radius:10px;'
+                 .  'background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none">'
+                 .  'ویدیو بعدی</a>';
+            $btn .= '<small id="jbg-next-hint" style="margin-right:8px;font-size:12px;color:#6b7280">'
+                 .  'برای رفتن به مرحله بعد، آزمون این ویدیو را درست پاسخ بده.</small>';
         } else {
-            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" aria-disabled="true" style="display:none" href="#">ویدیو بعدی</a>';
-            $btn .= '<small id="jbg-next-hint" class="jbg-next-hint">این آخرین ویدیو است.</small>';
+            // آخرین ویدیو
+            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="#" aria-disabled="true" '
+                 .  'style="display:none"></a>'
+                 .  '<small id="jbg-next-hint" style="margin-right:8px;font-size:12px;color:#6b7280">'
+                 .  'این آخرین ویدیو است.</small>';
         }
         $btn .= '</div>';
 
-        // فعال‌سازی فقط با ایونت «قبولی آزمون»
-        $script = '<script>
-        (function(){
-          var btn  = document.getElementById("jbg-next-btn");
-          var hint = document.getElementById("jbg-next-hint");
-          if(!btn) return;
+        // اگر کاربر قبلاً این آزمون را پاس کرده باشد، دکمه از ابتدا باز باشد
+        $passed = is_user_logged_in() ? (bool)get_user_meta(get_current_user_id(),'jbg_quiz_passed_'.$current_id,true) : false;
 
-          // اگر قبلاً این کاربر آزمون همین ویدیو را پاس کرده، دکمه را از همان ابتدا باز کن
-          try{
-            var phpUser = '.(is_user_logged_in()? 'true':'false').';
-            var phpPassed = phpUser ? '.( get_user_meta(get_current_user_id(),'jbg_quiz_passed_'.get_the_ID(), true) ? 'true':'false' ).' : false;
-            if(phpPassed){ btn.setAttribute("aria-disabled","false"); if(hint) hint.textContent=""; }
-          }catch(e){}
+        $script = '<script>(function(){'
+                . 'var btn=document.getElementById("jbg-next-btn");var hint=document.getElementById("jbg-next-hint");'
+                . ($passed ? 'if(btn){btn.setAttribute("aria-disabled","false");btn.style.opacity="1";btn.style.pointerEvents="auto";if(hint)hint.textContent="";}' : '')
+                . 'function unlock(){if(!btn)return;btn.setAttribute("aria-disabled","false");btn.style.opacity="1";btn.style.pointerEvents="auto";if(hint)hint.textContent="";}'
+                // به محض قبولی آزمون، رویداد DOM را از اسکریپت کوییز فایر کن:
+                . 'document.addEventListener("jbg:quiz_passed",function(e){try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')unlock();}catch(_){unlock();}});'
+                . '})();</script>';
 
-          function unlock(){
-            btn.setAttribute("aria-disabled","false");
-            if(hint) hint.textContent="";
-          }
-
-          // ایونت سراسری که باید بعد از تایید پاسخ صحیح فایر شود:
-          document.addEventListener("jbg:quiz_passed", function(ev){
-            try{
-              var id = (ev && ev.detail && ev.detail.adId) ? parseInt(ev.detail.adId, 10) : 0;
-              if(!id || id === '.intval($current_id).') unlock();
-            }catch(_){ unlock(); }
-          });
-        })();
-        </script>';
-
-        $html  = '<div class="jbg-two-col"><aside>'.$sidebar.'</aside><main>'.$content.$btn.'</main></div>';
-
-        return $style.$html.$script;
+        return $content . $btn . $script;
     }
 }
+
+endif;
