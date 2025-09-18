@@ -2,111 +2,89 @@
 namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
-/**
- * Two-column layout (Left related | Right main content) + robust Next Video button
- */
 class SingleLayout {
-
     public static function register(): void {
-        add_filter('the_content', [self::class, 'wrap'], 99);
+        add_filter('the_content', [self::class, 'wrap'], 20);
     }
 
     public static function wrap($content) {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
-        $current_id = get_the_ID();
+        // سایدبار مرتبط‌ها
+        $sidebar = do_shortcode('[jbg_related limit="12" title="ویدیوهای مرتبط"]');
 
-        $style = '<style id="jbg-single-2col-css">
-            .single-jbg_ad .jbg-two-col{direction:ltr; display:grid; grid-template-columns:1fr; gap:24px; align-items:start;}
-            @media(min-width:768px){ .single-jbg_ad .jbg-two-col{ grid-template-columns:360px 1fr; } }
-            .single-jbg_ad .jbg-col-aside,.single-jbg_ad .jbg-col-main{ direction:rtl; }
-            @media(min-width:768px){ .single-jbg_ad .jbg-col-aside{ position:sticky; top:24px; } body.admin-bar .single-jbg_ad .jbg-col-aside{ top:56px; } }
-            .jbg-next-wrap{margin-top:16px;}
-            .jbg-next-btn{display:inline-block; padding:10px 16px; border-radius:10px; background:#2563eb; color:#fff; text-decoration:none; font-weight:700}
-            .jbg-next-btn.is-disabled{background:#cbd5e1; pointer-events:none; cursor:not-allowed}
-            .jbg-next-note{margin-top:8px; font-size:12px; color:#6b7280}
-        </style>';
-
-        // دکمه: در ابتدا بدون href
-        $nextBtn  = '<div class="jbg-next-wrap">';
-        $nextBtn .=   '<a id="jbg-next-btn" class="jbg-next-btn is-disabled" data-current-id="'.esc_attr($current_id).'" href="javascript:void(0)">ویدیو بعدی</a>';
-        $nextBtn .=   '<div id="jbg-next-note" class="jbg-next-note">بعد از تماشای کامل و پاسخ صحیح، این دکمه فعال می‌شود.</div>';
-        $nextBtn .= '</div>';
-
-        // سایدبار
-        $related = do_shortcode('[jbg_related limit="10" title="ویدیوهای مرتبط"]');
-
-        // ترکیب
-        $html  = '<div class="jbg-two-col">';
-        $html .=   '<aside class="jbg-col-aside">'.$related.'</aside>';
-        $html .=   '<main class="jbg-col-main">'.$content.$nextBtn.'</main>';
-        $html .= '</div>';
-
-        // اسکریپت: با REST چک می‌کند و فقط با URL معتبر فعال می‌کند
-        $restUrl = esc_url_raw( rest_url('jbg/v1/next') );
-        $script = '<script>
+        // دکمه و اسکریپت
+        $id  = get_the_ID();
+        $btn = '
+        <div id="jbg-next-wrap" style="margin:16px 0 24px;direction:rtl;text-align:right">
+            <a id="jbg-next-btn" class="button" href="#" aria-disabled="true"
+               style="opacity:.5;pointer-events:none;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600">
+               ویدیو بعدی
+            </a>
+            <small id="jbg-next-hint" style="margin-right:8px;color:#666"></small>
+        </div>
+        <script>
         (function(){
-          var btn  = document.getElementById("jbg-next-btn");
-          var note = document.getElementById("jbg-next-note");
-          if(!btn) return;
-          var currentId = parseInt(btn.getAttribute("data-current-id"), 10) || 0;
-          var restUrl   = '.json_encode($restUrl).';
+            const current = '.(int)$id.';
+            const REST = "'.esc_js(esc_url_raw( rest_url('jbg/v1/next') ) ).'";
+            const btn  = document.getElementById("jbg-next-btn");
+            const hint = document.getElementById("jbg-next-hint");
 
-          function setEnabled(url){
-            if(url){
-              btn.classList.remove("is-disabled");
-              btn.setAttribute("data-next-url", url);
-              if(note){ note.textContent = ""; }
-            } else {
-              btn.classList.add("is-disabled");
-              btn.removeAttribute("data-next-url");
+            function setBtn(url){
+                if (!url) return;
+                btn.href = url;
+                btn.style.opacity = "1";
+                btn.style.pointerEvents = "auto";
+                btn.setAttribute("aria-disabled","false");
+                hint.textContent = "";
             }
-          }
 
-          function fetchNextThenEnable(cb){
-            fetch(restUrl + "?current=" + currentId, {method:"GET", credentials:"same-origin"})
-              .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
-              .then(function(res){
-                if(res.ok && res.d && res.d.url){
-                  setEnabled(res.d.url);
-                  if(typeof cb==="function") cb(true, res.d.url);
-                } else {
-                  // اگر end=true بود یعنی ویدیوی بعدی وجود ندارد → دکمه غیرفعال بماند
-                  setEnabled("");
-                  if(typeof cb==="function") cb(false, "");
-                }
-              })
-              .catch(function(){ if(typeof cb==="function") cb(false, ""); });
-          }
+            function pollNext(tries){
+                fetch(REST + "?current=" + current, {credentials:"same-origin"})
+                  .then(r => r.text().then(t => { // robust JSON parse
+                       let j=null; try{ j = JSON.parse(t); }catch(e){ j=null; }
+                       return {status:r.status, data:j};
+                  }))
+                  .then(res => {
+                      if (res.status === 200 && res.data && res.data.ok && !res.data.end && res.data.url){
+                          setBtn(res.data.url);
+                      } else if (tries > 0) {
+                          hint.textContent = "در حال بررسی آزاد شدن…";
+                          setTimeout(()=>pollNext(tries-1), 1500);
+                      } else {
+                          // هنوز قفل است
+                          hint.textContent = "برای باز شدن، ویدیو فعلی را کامل ببینید و آزمون را صحیح پاس کنید.";
+                      }
+                  })
+                  .catch(()=> { if (tries>0) setTimeout(()=>pollNext(tries-1), 1500); });
+            }
 
-          // چک اولیه: اگر قبلاً پاس‌شده باشد، URL را می‌گیریم
-          fetchNextThenEnable();
+            // تلاش اولیه (ممکن است قبلا آزاد شده باشد)
+            pollNext(1);
 
-          // پس از مشاهده‌ی پیام «پاسخ صحیح بود» چندبار REST را می‌پرسیم تا URL آماده شود
-          var retries = 6, delay = 700; // تا ~4 ثانیه
-          function pollAfterSuccess(){
-            fetchNextThenEnable(function(ok){
-              if(!ok && retries-- > 0) setTimeout(pollAfterSuccess, delay);
+            // وقتی پیام «پاسخ صحیح بود» در DOM ظاهر شد → شروع polling جدی
+            const mo = new MutationObserver(() => {
+                const ok = Array.from(document.body.querySelectorAll("*"))
+                              .some(n => /پاسخ\\s*صحیح\\s*بود/u.test(n.textContent||""));
+                if (ok) { pollNext(10); }
             });
-          }
-          var obs = new MutationObserver(function(){
-            var txt = document.body.innerText || "";
-            if(/پاسخ\\s*صحیح\\s*بود/.test(txt)){ pollAfterSuccess(); }
-          });
-          obs.observe(document.body, {childList:true, subtree:true, characterData:true});
+            mo.observe(document.body, {subtree:true, childList:true, characterData:true});
 
-          btn.addEventListener("click", function(e){
-            var url = btn.getAttribute("data-next-url") || "";
-            if(!url){ e.preventDefault(); return; }
-            // ناوبری فقط با URL معتبر
-            window.location.assign(url);
-          });
+            // کلیک: اگر هنوز آزاد نشده باشد، مانع شو
+            btn.addEventListener("click", function(e){
+                if (btn.getAttribute("aria-disabled") === "true") {
+                    e.preventDefault();
+                    pollNext(5);
+                }
+            });
         })();
         </script>';
 
-        static $once=false;
-        if (!$once) { $html = $style . $html . $script; $once = true; }
-        else { $html .= $script; }
+        // چیدمان: چپ سایدبار، راست پلیر/محتوا
+        $html  = '<div class="jbg-two-col" style="display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start">';
+        $html .=   '<aside>'.$sidebar.'</aside>';
+        $html .=   '<main>'.$content.$btn.'</main>';
+        $html .= '</div>';
 
         return $html;
     }

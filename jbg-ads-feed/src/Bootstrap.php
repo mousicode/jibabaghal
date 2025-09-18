@@ -4,7 +4,7 @@ namespace JBG\Ads;
 if (!defined('ABSPATH')) exit;
 
 use JBG\Ads\Taxonomy\Brand;
-use JBG\Ads\Taxonomy\Category;            // ← NEW
+use JBG\Ads\Taxonomy\Category;
 use JBG\Ads\PostType\Ad;
 use JBG\Ads\Admin\MetaBox;
 use JBG\Ads\Admin\Columns;
@@ -14,7 +14,7 @@ class Bootstrap {
 
         // Taxonomies + CPT
         add_action('init', [Brand::class, 'register'], 5);
-        add_action('init', [Category::class, 'register'], 6);   // ← NEW
+        add_action('init', [Category::class, 'register'], 6);
         add_action('init', [Ad::class, 'register'], 7);
 
         // Metaboxes
@@ -29,94 +29,32 @@ class Bootstrap {
             add_action('pre_get_posts', [Columns::class, 'handle_sorting']);
         }
 
-        // Shortcode: list
+        // ───────── Frontend components ─────────
         add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/ListShortcode.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\ListShortcode')) {
-                    \JBG\Ads\Frontend\ListShortcode::register();
-                }
+            foreach ([
+                'src/Frontend/ListShortcode.php'    => '\\JBG\\Ads\\Frontend\\ListShortcode',
+                'src/Frontend/RelatedShortcode.php' => '\\JBG\\Ads\\Frontend\\RelatedShortcode',
+                'src/Frontend/ViewBadge.php'        => '\\JBG\\Ads\\Frontend\\ViewBadge',
+                'src/Frontend/SingleLayout.php'     => '\\JBG\\Ads\\Frontend\\SingleLayout',
+                'src/Frontend/AccessGate.php'       => '\\JBG\\Ads\\Frontend\\AccessGate',
+            ] as $rel => $fqcn) {
+                $file = JBG_ADS_DIR . $rel;
+                if (file_exists($file)) { require_once $file; if (class_exists($fqcn)) $fqcn::register(); }
             }
         });
 
-        // Shortcode: related (by category)  ← NEW
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/RelatedShortcode.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\RelatedShortcode')) {
-                    \JBG\Ads\Frontend\RelatedShortcode::register();
-                }
-            }
-        });
-
-        // Single two-column layout wrapper (Right: player, Left: related)  ← NEW
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\SingleLayout')) {
-                    \JBG\Ads\Frontend\SingleLayout::register();
-                }
-            }
-        });
-
-        // Access gate (sequential viewing)  ← NEW
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/AccessGate.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\AccessGate')) {
-                    \JBG\Ads\Frontend\AccessGate::register();
-                }
-            }
-        });
-
-        // Single header badge
-        add_action('init', function () {
-            $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
-            if (file_exists($vb)) {
-                require_once $vb;
-                if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
-                    \JBG\Ads\Frontend\ViewBadge::register();
-                }
-            }
-        });
-
-        // REST endpoints (+ NextController)  ← UPDATED
+        // ───────── REST endpoints ─────────
         add_action('rest_api_init', function () {
-            $feed = JBG_ADS_DIR . 'src/Rest/FeedController.php';
-            if (file_exists($feed)) {
-                require_once $feed;
-                if (class_exists('\\JBG\\Ads\\Rest\\FeedController')) {
-                    \JBG\Ads\Rest\FeedController::register_routes();
-                }
-            }
-
-            $view = JBG_ADS_DIR . 'src/Rest/ViewController.php';
-            if (file_exists($view)) {
-                require_once $view;
-                if (class_exists('\\JBG\\Ads\\Rest\\ViewController')) {
-                    \JBG\Ads\Rest\ViewController::register_routes();
-                }
-            }
-
-            // ViewTrackController
-            $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
-            if (file_exists($viewTrack)) {
-                require_once $viewTrack;
-                if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
-                    \JBG\Ads\Rest\ViewTrackController::register_routes();
-                }
-            }
-
-            // NextController (returns the next video's URL by ordering)  ← NEW
-            $next = JBG_ADS_DIR . 'src/Rest/NextController.php';
-            if (file_exists($next)) {
-                require_once $next;
-                if (class_exists('\\JBG\\Ads\\Rest\\NextController')) {
-                    \JBG\Ads\Rest\NextController::register_routes();
+            foreach ([
+                'src/Rest/FeedController.php'       => '\\JBG\\Ads\\Rest\\FeedController',
+                'src/Rest/ViewController.php'       => '\\JBG\\Ads\\Rest\\ViewController',
+                'src/Rest/ViewTrackController.php'  => '\\JBG\\Ads\\Rest\\ViewTrackController',
+                'src/Rest/NextController.php'       => '\\JBG\\Ads\\Rest\\NextController', // ← NEW
+            ] as $rel => $fqcn) {
+                $file = JBG_ADS_DIR . $rel;
+                if (file_exists($file)) require_once $file;
+                if (class_exists($fqcn) && method_exists($fqcn, 'register_routes')) {
+                    $fqcn::register_routes();
                 }
             }
         });
@@ -124,7 +62,7 @@ class Bootstrap {
 
     public static function activate(): void {
         Brand::register();
-        Category::register();   // ← NEW
+        Category::register();
         Ad::register();
         flush_rewrite_rules(false);
     }
