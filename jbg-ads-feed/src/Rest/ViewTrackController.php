@@ -27,22 +27,33 @@ class ViewTrackController {
             return new \WP_Error('no_user', 'User not logged in', ['status'=>401]);
         }
 
+        // به تم/افزونه‌ها اجازه می‌دهیم تصمیم بگیرند که این بازدید شمرده بشود یا نه
+        $should_count = apply_filters('jbg_viewtrack_should_count', true, $ad_id, $uid, $req);
+        if ($should_count === false) {
+            return new \WP_REST_Response(['ok'=>true, 'counted'=>false, 'reason'=>'filtered'], 200);
+        }
+
         global $wpdb;
         $table = $wpdb->prefix.'jbg_views';
 
-        // اگر در 24 ساعت گذشته بازدیدی از این کاربر برای این آگهی داشته‌ایم، دوباره ثبت نکن
+        // پنجره‌ی زمانی ضد تکرار (ساعت) - قابل تنظیم با فیلتر
+        $hours   = max(1, (int) apply_filters('jbg_viewtrack_window_hours', 24));
+        $cutoff  = gmdate('Y-m-d H:i:s', time() - ($hours * 3600)); // UTC
+        // اگر ستون created_at بر اساس timezone سایت ثبت می‌شود، می‌توانی به‌جای gmdate از current_time('mysql') معادل بگیری
+
+        // اگر در بازه‌ی ضدتکرار قبلاً بازدیدی از این کاربر برای این آگهی ثبت شده بود، دوباره ثبت نکن
         $exists = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$table}
              WHERE ad_id=%d AND user_id=%d
-               AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+               AND created_at >= %s
              LIMIT 1",
-            $ad_id, $uid
+            $ad_id, $uid, $cutoff
         ));
         if ($exists) {
-            return new \WP_REST_Response(['ok'=>true, 'already'=>true], 200);
+            return new \WP_REST_Response(['ok'=>true, 'already'=>true, 'counted'=>false], 200);
         }
 
-        // درج لاگ بازدید (amount=0 چون بیلینگ نیست)
+        // درج لاگ بازدید (amount=0 چون این endpoint بیلینگ نیست)
         $ip = isset($_SERVER['REMOTE_ADDR']) ? substr(sanitize_text_field($_SERVER['REMOTE_ADDR']), 0, 45) : '';
         $ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr(sanitize_text_field($_SERVER['HTTP_USER_AGENT']), 0, 255) : '';
         $ins = $wpdb->insert($table, [
@@ -58,11 +69,13 @@ class ViewTrackController {
             return new \WP_Error('db_insert_failed', 'Insert failed: '.$wpdb->last_error, ['status'=>500]);
         }
 
-        // افزایش اتمی شمارنده‌ی بازدید (هر دو کلید برای سازگاری)
+        // افزایش اتمی شمارنده‌ی بازدید:
+        //  - jbg_views_total = تعداد ایمپرشن‌ها/مشاهده‌ها (صرف‌نظر از بیلینگ)
+        //  - jbg_views_count = شمارنده‌ی اصلی که باید فقط بعد از قبولی آزمون/بیلینگ آپدیت شود (اینجا عمداً افزایش نمی‌دهیم)
         self::incr_views_meta($ad_id, 'jbg_views_total');
-        self::incr_views_meta($ad_id, 'jbg_views_count');
+        // self::incr_views_meta($ad_id, 'jbg_views_count'); // ← حذف شد تا دوباره‌شماری رخ ندهد
 
-        return new \WP_REST_Response(['ok'=>true, 'already'=>false], 200);
+        return new \WP_REST_Response(['ok'=>true, 'already'=>false, 'counted'=>true], 200);
     }
 
     private static function incr_views_meta(int $ad_id, string $key): void {
