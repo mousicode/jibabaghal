@@ -7,7 +7,7 @@ if (!class_exists(__NAMESPACE__ . '\\SingleLayout')):
 class SingleLayout {
 
     public static function register(): void {
-        // فقط در انتهای محتوا اضافه می‌کنیم؛ به خود محتوا/پلیر/کوییز دست نمی‌زنیم
+        // فقط بلاک خودمان را در انتهای محتوا اضافه می‌کنیم؛ به خود محتوا/پلیر/کوییز دست نمی‌زنیم
         add_filter('the_content', [self::class, 'append_block'], 99);
     }
 
@@ -72,7 +72,7 @@ class SingleLayout {
         $current_id = get_the_ID();
         $next_url   = self::next_url_for($current_id);
 
-        // استایل بسیار مینیمال؛ تداخلی با تم ایجاد نمی‌کند
+        // استایل بسیار مینیمال (تداخلی با تم ایجاد نمی‌کند)
         $style = '<style>
           .jbg-after{margin-top:16px}
           .jbg-next-wrap{text-align:right;margin:10px 0 18px}
