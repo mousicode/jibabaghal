@@ -2,6 +2,11 @@
 namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
+/**
+ * از دوبار تعریف شدن کلاس جلوگیری می‌کند
+ */
+if (!class_exists(__NAMESPACE__ . '\\AccessGate')) {
+
 class AccessGate {
 
     public static function register(): void {
@@ -15,11 +20,10 @@ class AccessGate {
         $uid        = get_current_user_id();
         $current_id = get_queried_object_id();
 
-        // ترتیب همان آرشیو
+        // ترتیب واحد (cpv↓, budget_remaining↓, boost↓, date↓) فقط داخل دسته‌های همین ویدیو
         $items = self::ordered_items_for($current_id);
         if (empty($items)) return;
 
-        // ایندکس فعلی
         $ids = array_map(fn($it)=> (int)$it['ID'], $items);
         $idx = array_search($current_id, $ids, true);
         if ($idx === false) return;
@@ -85,3 +89,5 @@ class AccessGate {
         return $items;
     }
 }
+
+} // end class_exists guard
