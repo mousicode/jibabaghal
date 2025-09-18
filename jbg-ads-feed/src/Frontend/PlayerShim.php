@@ -1,54 +1,40 @@
 <?php
 namespace JBG\Ads\Frontend;
+
 if (!defined('ABSPATH')) exit;
 
 if (!class_exists(__NAMESPACE__ . '\\PlayerShim')):
-class PlayerShim {
-    public static function register(): void {
-        add_filter('the_content', [self::class, 'inject_player_if_missing'], 5);
-    }
-    public static function inject_player_if_missing($content) {
-        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
-        // اگر پلیر/iframe هست، دست نزن
+class PlayerShim {
+
+    public static function register(): void {
+        // هم محتوای معمولی، هم محتوای رندر شده توسط Elementor
+        add_filter('the_content', [self::class, 'inject'], 3);
+        add_filter('elementor/frontend/the_content', [self::class, 'inject'], 3);
+    }
+
+    public static function inject($content) {
+        // فقط روی سینگل jbg_ad کار کن
+        if (!is_singular('jbg_ad')) return $content;
+
+        // اگر خود محتوا پلیر/iframe دارد، دست نزن
         if (stripos($content, '<video') !== false ||
             stripos($content, '<iframe') !== false ||
-            stripos($content, 'wp-video-shortcode') !== false) return $content;
-
-        $id = get_the_ID();
-
-        // اول متاهای رایج
-        $src = '';
-        foreach ([
-            get_post_meta($id,'jbg_player',true),
-            get_post_meta($id,'jbg_video_url',true),
-            get_post_meta($id,'_jbg_video_url',true),
-            get_post_meta($id,'video_url',true),
-            get_post_meta($id,'embed_html',true),
-        ] as $v) { if (is_string($v) && trim($v) !== '') { $src = trim($v); break; } }
-
-        // اگر خالی بود: اولین ضمیمهٔ ویدیویی
-        if ($src === '') {
-            $att = get_children([
-                'post_parent'=>$id,'post_type'=>'attachment',
-                'post_mime_type'=>'video','numberposts'=>1,
-                'orderby'=>'menu_order ID','order'=>'ASC',
-            ]);
-            if ($att) {
-                $first = array_shift($att);
-                $u = wp_get_attachment_url($first->ID);
-                if ($u) $src = $u;
-            }
+            stripos($content, 'wp-video-shortcode') !== false) {
+            return $content;
         }
 
-        if ($src === '') return $content;
+        $id  = get_queried_object_id();
+        $src = self::resolve_video_src($id, $content);
 
-        // اگر HTML خام باشد
-        if (stripos($src,'<iframe') !== false || stripos($src,'<video') !== false) {
+        if (!$src) return $content;
+
+        // اگر HTML خامِ پلیر ذخیره شده باشد
+        if (stripos($src, '<iframe') !== false || stripos($src, '<video') !== false) {
             $player = $src;
         } else {
-            if (preg_match('/\\.(mp4|webm|ogg)(\\?.*)?$/i', $src)) {
-                $player = wp_video_shortcode(['src'=>esc_url_raw($src)]);
+            if (preg_match('/\.(mp4|webm|ogg)(\?.*)?$/i', $src)) {
+                $player = wp_video_shortcode(['src' => esc_url_raw($src)]);
             } else {
                 $player = wp_oembed_get($src);
                 if (!$player) {
@@ -58,7 +44,47 @@ class PlayerShim {
             }
         }
 
-        return '<div class="jbg-player" style="margin:12px 0">'.$player.'</div>'."\n".$content;
+        // یک کامنت برای دیباگ تا در View Source بشه دید
+        $marker = "<!-- jbg-player: injected for post {$id} -->";
+
+        return '<div class="jbg-player" style="margin:12px 0">'.$player.'</div>'."\n".$marker."\n".$content;
+    }
+
+    /** منبع ویدیو را از متاها، ضمیمه، یا اولین URL داخل محتوا پیدا می‌کند */
+    private static function resolve_video_src(int $post_id, string $content): string {
+        // 1) متاهای رایج
+        foreach ([
+            get_post_meta($post_id, 'jbg_player', true),
+            get_post_meta($post_id, 'jbg_video_url', true),
+            get_post_meta($post_id, '_jbg_video_url', true),
+            get_post_meta($post_id, 'video_url', true),
+            get_post_meta($post_id, 'embed_html', true),
+        ] as $v) {
+            if (is_string($v) && trim($v) !== '') return trim($v);
+        }
+
+        // 2) ضمیمهٔ ویدیوییِ متصل به پست
+        $att = get_children([
+            'post_parent'   => $post_id,
+            'post_type'     => 'attachment',
+            'post_mime_type'=> 'video',
+            'numberposts'   => 1,
+            'orderby'       => 'menu_order ID',
+            'order'         => 'ASC',
+        ]);
+        if ($att) {
+            $first = array_shift($att);
+            $url = wp_get_attachment_url($first->ID);
+            if ($url) return $url;
+        }
+
+        // 3) اولین URL داخل محتوا (برای یوتیوب/آپارات/MP4 و…)
+        if (preg_match('~https?://[^\s"<]+~i', $content, $m)) {
+            return $m[0];
+        }
+
+        return '';
     }
 }
+
 endif;
