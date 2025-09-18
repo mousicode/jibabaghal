@@ -35,17 +35,18 @@ class NextController {
 
         $next = self::compute_next($current_id);
         if (!$next) {
-            // موردی بعد از این ویدیو نیست
-            return new \WP_REST_Response(['id' => 0, 'url' => ''], 200);
+            // هیچ ویدیوی بعدی‌ای نیست
+            return new \WP_REST_Response(['id' => 0, 'url' => '', 'end' => true], 200);
         }
 
         return new \WP_REST_Response([
             'id'  => (int) $next['ID'],
             'url' => (string) get_permalink((int)$next['ID']),
+            'end' => false,
         ], 200);
     }
 
-    /** ترتیب همان: CPV ↓ → budget_remaining ↓ → boost ↓ → date ↓ در همان دسته‌ها */
+    /** ترتیب: CPV ↓ → budget_remaining ↓ → boost ↓ → date ↓ (در همان دسته‌های jbg_cat) */
     private static function compute_next(int $current_id): ?array {
         $tax_query = [];
         $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -91,7 +92,6 @@ class NextController {
             return ($b['cpv'] <=> $a['cpv']);
         });
 
-        // مکان فعلی و آیتم بعدی
         $idx = -1;
         foreach ($items as $i => $it) { if ($it['ID'] === $current_id) { $idx = $i; break; } }
         if ($idx < 0) return null;
