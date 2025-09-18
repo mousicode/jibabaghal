@@ -6,11 +6,11 @@ if (!class_exists(__NAMESPACE__ . '\\SingleLayout')):
 
 class SingleLayout {
     public static function register(): void {
-        // خیلی دیر اجرا می‌کنیم تا محتوای نهایی (شامل پلیر) آماده باشد
-        add_filter('the_content', [self::class, 'wrap'], 999);
+        // محتوای سینگل را با سایدبار wrap می‌کنیم (خود محتوا دست‌نخورده می‌ماند)
+        add_filter('the_content', [self::class, 'wrap'], 30);
     }
 
-    /** ترتیب واحد مطابق آرشیو: cpv↓, budget_remaining↓, priority_boost↓, date↓ (فقط دسته‌های همین ویدیو) */
+    /** ترتیب واحد: cpv↓, budget_remaining↓, priority_boost↓, date↓ (فقط در دسته‌های همین ویدیو) */
     private static function ordered_items_for(int $current_id): array {
         $tax_query = [];
         $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -28,9 +28,9 @@ class SingleLayout {
             'tax_query'      => $tax_query ?: null,
         ]);
 
-        $rows = [];
+        $items = [];
         foreach ($q->posts as $p) {
-            $rows[] = [
+            $items[] = [
                 'ID'    => (int)$p->ID,
                 'cpv'   => (int)get_post_meta($p->ID,'jbg_cpv',true),
                 'br'    => (int)get_post_meta($p->ID,'jbg_budget_remaining',true),
@@ -40,7 +40,7 @@ class SingleLayout {
         }
         wp_reset_postdata();
 
-        usort($rows, function($a,$b){
+        usort($items, function($a,$b){
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) {
                     if ($a['boost'] === $b['boost']) return ($b['date'] <=> $a['date']);
@@ -51,9 +51,10 @@ class SingleLayout {
             return ($b['cpv'] <=> $a['cpv']);
         });
 
-        return $rows;
+        return $items;
     }
 
+    /** لینک آیتم بعدی طبق ترتیب بالا */
     private static function next_url_for(int $current_id): string {
         $items = self::ordered_items_for($current_id);
         if (!$items) return '';
@@ -69,20 +70,21 @@ class SingleLayout {
         $current_id = get_the_ID();
         $next_url   = self::next_url_for($current_id);
 
-        // سایدبار مرتبط (کارت‌ها و قفل‌گذاری داخل خود شورت‌کد هندل می‌شود)
+        // سایدبار کارت‌ها
         $sidebar = do_shortcode('[jbg_related limit="12" title="ویدیوهای مرتبط"]');
 
-        // استایل سبک برای گرید دو ستونه – به پلیر دست نمی‌زند
+        // استایل سبک
         $style = '<style>
           .jbg-two-col{display:grid;grid-template-columns:1fr;gap:24px}
           @media(min-width:992px){.jbg-two-col{grid-template-columns:360px 1fr}}
-          .jbg-next-wrap{text-align:right;margin-top:16px}
+          .jbg-two-col>aside{order:1}.jbg-two-col>main{order:2}
+          .jbg-next-wrap{margin-top:16px;text-align:right}
           .jbg-next-btn{display:inline-block;padding:10px 16px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none}
           .jbg-next-btn[aria-disabled="false"]{opacity:1;pointer-events:auto}
           .jbg-next-hint{margin-right:8px;font-size:12px;color:#6b7280}
         </style>';
 
-        // دکمه «ویدیو بعدی»: لینک از الان درست است ولی تا پاس آزمون غیرفعال
+        // دکمه «ویدیو بعدی» (لینک از الان درست است؛ تا قبولی آزمون قفل است)
         $btn  = '<div class="jbg-next-wrap">';
         if ($next_url) {
             $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="'.esc_url($next_url).'" aria-disabled="true">ویدیو بعدی</a>';
@@ -92,22 +94,21 @@ class SingleLayout {
         }
         $btn .= '</div>';
 
-        // اگر قبلاً پاس شده، از همان ابتدا باز باشد
+        // اگر قبلاً کوییز این ویدیو پاس شده باشد، از ابتدا باز باشد
         $passed = is_user_logged_in() ? (bool)get_user_meta(get_current_user_id(),'jbg_quiz_passed_'.$current_id,true) : false;
 
         $script = '<script>(function(){
-          var b=document.getElementById("jbg-next-btn"),h=document.getElementById("jbg-next-hint");
-          if(!b) return;
-          '.($passed ? 'b.setAttribute("aria-disabled","false"); if(h)h.textContent="";' : '').'
-          function openBtn(){b.setAttribute("aria-disabled","false"); if(h)h.textContent="";}
-          // اسکریپت آزمون باید بعد از پاسخ صحیح این رویداد را فایر کند:
+          var btn=document.getElementById("jbg-next-btn"),hint=document.getElementById("jbg-next-hint");
+          if(!btn) return;
+          '.($passed ? 'btn.setAttribute("aria-disabled","false"); if(hint) hint.textContent="";' : '').'
+          function unlock(){btn.setAttribute("aria-disabled","false"); if(hint) hint.textContent="";}
           document.addEventListener("jbg:quiz_passed",function(e){
-            try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')openBtn();}
-            catch(_){openBtn();}
+            try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')unlock();}
+            catch(_){unlock();}
           });
         })();</script>';
 
-        // چیدمان: سایدبار چپ، محتوای اصلی (پلیر+کوییزِ موجود) راست، دکمه زیر محتوا
+        // چیدمان دو ستونه
         $html = '<div class="jbg-two-col"><aside>'.$sidebar.'</aside><main>'.$content.$btn.'</main></div>';
 
         return $style . $html . $script;
