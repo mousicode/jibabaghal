@@ -32,6 +32,7 @@ class Bootstrap {
         // ───────── Frontend components ─────────
         add_action('init', function () {
             foreach ([
+                'src/Frontend/PlayerShim.php'       => '\\JBG\\Ads\\Frontend\\PlayerShim',       // ← NEW (پلیر همیشه لود شود)
                 'src/Frontend/ListShortcode.php'    => '\\JBG\\Ads\\Frontend\\ListShortcode',
                 'src/Frontend/RelatedShortcode.php' => '\\JBG\\Ads\\Frontend\\RelatedShortcode',
                 'src/Frontend/ViewBadge.php'        => '\\JBG\\Ads\\Frontend\\ViewBadge',
@@ -54,7 +55,7 @@ class Bootstrap {
                 'src/Rest/FeedController.php'      => '\\JBG\\Ads\\Rest\\FeedController',
                 'src/Rest/ViewController.php'      => '\\JBG\\Ads\\Rest\\ViewController',
                 'src/Rest/ViewTrackController.php' => '\\JBG\\Ads\\Rest\\ViewTrackController',
-                'src/Rest/NextController.php'      => '\\JBG\\Ads\\Rest\\NextController', // ← NEW
+                'src/Rest/NextController.php'      => '\\JBG\\Ads\\Rest\\NextController',
             ] as $rel => $fqcn) {
                 $file = JBG_ADS_DIR . $rel;
                 if (file_exists($file)) {
@@ -67,8 +68,6 @@ class Bootstrap {
         });
 
         // ───────── Quiz Pass Flag (unlock by quiz) ─────────
-        // وقتی کاربر آزمون را صحیح پاس می‌کند، فلگ مخصوص را روی متای کاربر ذخیره می‌کنیم
-        // از این فلگ برای آزاد شدن «ویدیو بعدی» و باز شدن آیتم‌های بعدی در لیست/سایدبار استفاده می‌شود.
         add_action('jbg_quiz_passed', function ($user_id, $ad_id) {
             $user_id = (int) $user_id;
             $ad_id   = (int) $ad_id;
