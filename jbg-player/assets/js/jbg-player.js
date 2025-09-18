@@ -8,13 +8,12 @@
     var video = document.getElementById('jbg-player');
     if (!wrap || !video) return;
 
-    // هدر را داخل wrapper بیاور تا هم‌عرض پلیر باشد
+    // هدر داخل wrapper
     (function(){
       var header = document.querySelector('.jbg-single-header, .jbg-single-shell');
       if (header && header.parentElement!==wrap) wrap.appendChild(header);
     })();
 
-    // ابزار
     function adId(){
       if (window.JBG_PLAYER && JBG_PLAYER.adId) return String(JBG_PLAYER.adId);
       var d = wrap.getAttribute('data-ad-id');
@@ -60,9 +59,7 @@
     }catch(_){}
 
     // فقط عقب آزاد؛ جلو ممنوع
-    var maxAllowed = 0; // بیشترین زمان واقعاً دیده‌شده
-    var fixing = false;
-
+    var maxAllowed = 0, fixing = false;
     function clampForward(){
       if (fixing) return;
       var tol = 0.25;
@@ -75,7 +72,7 @@
     video.addEventListener('seeking', clampForward);
     video.addEventListener('seeked',  clampForward);
 
-    // نگهبان اسلایدر Plyr (max=1 یا 100 هر دو پوشش داده می‌شود)
+    // نگهبان اسلایدر
     function guardSlider(el){
       if (!el || el.__jbg_guarded) return;
       el.__jbg_guarded = true;
@@ -83,7 +80,7 @@
         var d = video.duration || 0; if (!d) return;
         var maxAttr = parseFloat(el.max || '100'); if (!isFinite(maxAttr) || maxAttr<=0) maxAttr = 100;
         var val = parseFloat(el.value || '0'); if (!isFinite(val)) val = 0;
-        var target = (val / maxAttr) * d; // زمان هدف
+        var target = (val / maxAttr) * d;
         if (target > maxAllowed + 0.25){
           e.preventDefault(); e.stopImmediatePropagation && e.stopImmediatePropagation();
           var back = (maxAllowed / d) * maxAttr;
@@ -113,10 +110,25 @@
       try{ document.dispatchEvent(new CustomEvent('jbg:watched_ok',{detail:{adId:adId(),pct:1}})); }catch(_){}
     }
 
-    // --- ثبت «بازدید روزانه» پس از کامل‌دیدن (هر ۲۴ ساعت یک‌بار) ---
+    // **جدید**: ثبت «تماشا کامل» روی سرور
+    function reportWatchComplete(pct){
+      try{
+        if (!JBG_PLAYER || !JBG_PLAYER.watch || !JBG_PLAYER.watch.enabled) return;
+        fetch(JBG_PLAYER.watch.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': JBG_PLAYER.watch.nonce
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ ad_id: JBG_PLAYER.watch.adId, watch_pct: pct })
+        }).catch(function(){ /* silent */ });
+      }catch(_){}
+    }
+
+    // ثبت بازدید روزانه بعد از ۱۰۰٪
     var dailyTracked = false;
     function trackDailyView(){
-      // نیازمند لوکالایز سرور: JBG_PLAYER.track = { url, nonce, adId, enabled:1 }
       try{
         if (!JBG_PLAYER || !JBG_PLAYER.track || !JBG_PLAYER.track.enabled || dailyTracked) return;
         dailyTracked = true;
@@ -126,25 +138,26 @@
             'Content-Type': 'application/json',
             'X-WP-Nonce': JBG_PLAYER.track.nonce
           },
+          credentials: 'same-origin',
           body: JSON.stringify({ ad_id: JBG_PLAYER.track.adId })
         }).catch(function(){ /* silent */ });
       }catch(_){}
     }
-    // ---------------------------------------------------------------
 
     function unlock(){
       if (unlocked) return;
       unlocked = true;
       showQuiz();
       markUnlocked();
-      trackDailyView(); // ← همین‌جا، پس از کامل‌دیدن ویدیو
+      reportWatchComplete(1.0);     // ←← مهم: این خط باعث ست شدن jbg_watched_ok_{ID} روی سرور می‌شود
+      trackDailyView();
       if (statusEl) statusEl.textContent = '100% watched';
     }
 
     function tick(){
       var d = video.duration;
       if (isFinite(d) && d>0){
-        if (video.currentTime > maxAllowed) maxAllowed = video.currentTime; // عقب آزاد
+        if (video.currentTime > maxAllowed) maxAllowed = video.currentTime;
         if (maxAllowed/d >= UNLOCK_AT || (d - maxAllowed) <= 0.2) unlock();
         if (statusEl && !unlocked) statusEl.textContent = Math.round((maxAllowed/d)*100) + '% watched';
       }
