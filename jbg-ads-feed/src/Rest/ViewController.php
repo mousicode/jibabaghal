@@ -3,7 +3,6 @@ namespace JBG\Ads\Rest;
 if (!defined('ABSPATH')) exit;
 
 class ViewTrackController {
-
     public static function register_routes(): void {
         register_rest_route('jbg/v1', '/view/track', [
             'methods'  => 'POST',
@@ -22,14 +21,14 @@ class ViewTrackController {
             return new \WP_Error('bad_ad','Invalid ad id', ['status'=>400]);
         }
 
-        // Idempotent: هر کاربر/ویدیو فقط یک بازدید در هر روز
+        // گارد روزانه: هر کاربر/ویدیو فقط یک بازدید در هر روز
         $ymd = wp_date('Y-m-d');
         $key = "jbg_viewed_{$ad_id}_{$ymd}";
         if (get_user_meta($uid, $key, true)) {
             return new \WP_REST_Response(['ok'=>true,'dedup'=>1], 200);
         }
 
-        // ثبت ساده روی post meta (در صورت داشتن جدول اختصاصی، اینجا INSERT کنید)
+        // ثبت ساده روی post meta (اگر جدول اختصاصی داری، همین‌جا INSERT کن)
         $total = (int) get_post_meta($ad_id, 'jbg_views_total', true);
         $total++;
         update_post_meta($ad_id, 'jbg_views_total', $total);

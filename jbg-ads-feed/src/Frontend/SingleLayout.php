@@ -6,10 +6,11 @@ if (!class_exists(__NAMESPACE__ . '\\SingleLayout')):
 
 class SingleLayout {
     public static function register(): void {
-        add_filter('the_content', [self::class, 'inject_next_button'], 50); // بعد از محتوا؛ پلیر و کوییز را دست نمی‌زنیم
+        // بعد از محتوا تزریق می‌کنیم تا هیچ بخشی از پلیر/کوییز تغییر نکند
+        add_filter('the_content', [self::class, 'inject_next_button'], 50);
     }
 
-    /** ترتیب واحد مطابق آرشیو: cpv↓, budget↓, boost↓, date↓ (فقط داخل دسته‌های همین آگهی) */
+    /** ترتیب: cpv↓, budget_remaining↓, priority_boost↓, date↓ فقط داخل دسته‌های همین ویدیو */
     private static function ordered_items_for(int $current_id): array {
         $tax_query = [];
         $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -57,6 +58,7 @@ class SingleLayout {
         return $items;
     }
 
+    /** لینک آیتم بعدی طبق ترتیب بالا */
     private static function next_url_for(int $current_id): string {
         $items = self::ordered_items_for($current_id);
         if (!$items) return '';
@@ -70,9 +72,9 @@ class SingleLayout {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
         $current_id = get_the_ID();
-        $next_url   = self::next_url_for($current_id);
+        $next_url   = self::next_url_for($current_id); // لینک ویدیو بعدی از الان مشخص
 
-        // دکمه مستقل؛ پلیر/کوییز را دست نمی‌زنیم
+        // دکمه مستقل؛ چیزی از مارک‌آپ پلیر/کوییز حذف نمی‌کنیم
         $btn  = '<div class="jbg-next-wrap" style="margin-top:16px;text-align:right">';
         if ($next_url) {
             $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="'.esc_url($next_url).'" '
@@ -80,24 +82,21 @@ class SingleLayout {
                  .  'background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none">'
                  .  'ویدیو بعدی</a>';
             $btn .= '<small id="jbg-next-hint" style="margin-right:8px;font-size:12px;color:#6b7280">'
-                 .  'برای رفتن به مرحله بعد، آزمون این ویدیو را درست پاسخ بده.</small>';
+                 .  'بعد از قبولی آزمون این ویدیو، دکمه فعال می‌شود.</small>';
         } else {
-            // آخرین ویدیو
-            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="#" aria-disabled="true" '
-                 .  'style="display:none"></a>'
-                 .  '<small id="jbg-next-hint" style="margin-right:8px;font-size:12px;color:#6b7280">'
+            $btn .= '<small id="jbg-next-hint" style="margin-right:8px;font-size:12px;color:#6b7280">'
                  .  'این آخرین ویدیو است.</small>';
         }
         $btn .= '</div>';
 
-        // اگر کاربر قبلاً این آزمون را پاس کرده باشد، دکمه از ابتدا باز باشد
+        // اگر قبلاً آزمون همین ویدیو پاس شده، از ابتدا باز باشد
         $passed = is_user_logged_in() ? (bool)get_user_meta(get_current_user_id(),'jbg_quiz_passed_'.$current_id,true) : false;
 
         $script = '<script>(function(){'
                 . 'var btn=document.getElementById("jbg-next-btn");var hint=document.getElementById("jbg-next-hint");'
                 . ($passed ? 'if(btn){btn.setAttribute("aria-disabled","false");btn.style.opacity="1";btn.style.pointerEvents="auto";if(hint)hint.textContent="";}' : '')
                 . 'function unlock(){if(!btn)return;btn.setAttribute("aria-disabled","false");btn.style.opacity="1";btn.style.pointerEvents="auto";if(hint)hint.textContent="";}'
-                // به محض قبولی آزمون، رویداد DOM را از اسکریپت کوییز فایر کن:
+                // ایونت DOM که اسکریپت آزمون باید بعد از پاسخ صحیح emit کند:
                 . 'document.addEventListener("jbg:quiz_passed",function(e){try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')unlock();}catch(_){unlock();}});'
                 . '})();</script>';
 
