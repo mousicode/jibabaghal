@@ -10,82 +10,60 @@ class SingleLayout {
     public static function wrap($content) {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
-        // سایدبار مرتبط‌ها
+        $current_id = get_the_ID();
         $sidebar = do_shortcode('[jbg_related limit="12" title="ویدیوهای مرتبط"]');
 
-        // دکمه و اسکریپت
-        $id  = get_the_ID();
-        $btn = '
-        <div id="jbg-next-wrap" style="margin:16px 0 24px;direction:rtl;text-align:right">
-            <a id="jbg-next-btn" class="button" href="#" aria-disabled="true"
-               style="opacity:.5;pointer-events:none;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600">
-               ویدیو بعدی
-            </a>
-            <small id="jbg-next-hint" style="margin-right:8px;color:#666"></small>
-        </div>
-        <script>
-        (function(){
-            const current = '.(int)$id.';
-            const REST = "'.esc_js(esc_url_raw( rest_url('jbg/v1/next') ) ).'";
-            const btn  = document.getElementById("jbg-next-btn");
-            const hint = document.getElementById("jbg-next-hint");
+        $style = '<style>
+          .jbg-two-col{display:grid;grid-template-columns:1fr;gap:24px}
+          @media(min-width:768px){.jbg-two-col{grid-template-columns:360px 1fr}}
+          .jbg-next-wrap{margin-top:16px;text-align:right}
+          .jbg-next-btn{display:inline-block;padding:10px 16px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none}
+          .jbg-next-btn[aria-disabled="false"]{opacity:1;pointer-events:auto}
+          .jbg-next-hint{margin-right:8px;font-size:12px;color:#6b7280}
+        </style>';
 
-            function setBtn(url){
-                if (!url) return;
-                btn.href = url;
-                btn.style.opacity = "1";
-                btn.style.pointerEvents = "auto";
-                btn.setAttribute("aria-disabled","false");
-                hint.textContent = "";
-            }
+        $btn  = '<div class="jbg-next-wrap">';
+        $btn .=   '<a id="jbg-next-btn" class="jbg-next-btn" aria-disabled="true" data-current-id="'.esc_attr($current_id).'" href="#">ویدیو بعدی</a>';
+        $btn .=   '<small id="jbg-next-hint" class="jbg-next-hint"></small>';
+        $btn .= '</div>';
 
-            function pollNext(tries){
-                fetch(REST + "?current=" + current, {credentials:"same-origin"})
-                  .then(r => r.text().then(t => { // robust JSON parse
-                       let j=null; try{ j = JSON.parse(t); }catch(e){ j=null; }
-                       return {status:r.status, data:j};
-                  }))
-                  .then(res => {
-                      if (res.status === 200 && res.data && res.data.ok && !res.data.end && res.data.url){
-                          setBtn(res.data.url);
-                      } else if (tries > 0) {
-                          hint.textContent = "در حال بررسی آزاد شدن…";
-                          setTimeout(()=>pollNext(tries-1), 1500);
-                      } else {
-                          // هنوز قفل است
-                          hint.textContent = "برای باز شدن، ویدیو فعلی را کامل ببینید و آزمون را صحیح پاس کنید.";
-                      }
-                  })
-                  .catch(()=> { if (tries>0) setTimeout(()=>pollNext(tries-1), 1500); });
-            }
+        $rest = esc_url_raw( rest_url('jbg/v1/next') );
+        $script = '<script>(function(){
+          var btn  = document.getElementById("jbg-next-btn");
+          var hint = document.getElementById("jbg-next-hint");
+          if(!btn) return;
+          var current = parseInt(btn.getAttribute("data-current-id"),10)||0;
+          var REST = "'.$rest.'";
 
-            // تلاش اولیه (ممکن است قبلا آزاد شده باشد)
-            pollNext(1);
+          function enable(url){
+            if(!url) return;
+            btn.href = url;
+            btn.setAttribute("aria-disabled","false");
+            if(hint) hint.textContent="";
+          }
+          function fetchNext(cb){
+            fetch(REST+"?current="+current,{credentials:"same-origin"})
+              .then(r=>r.json().then(d=>({ok:r.ok,d})))
+              .then(res=>{
+                if(res.ok && res.d && res.d.url){ enable(res.d.url); if(cb)cb(true); }
+                else { if(cb)cb(false); }
+              }).catch(()=>{ if(cb)cb(false); });
+          }
 
-            // وقتی پیام «پاسخ صحیح بود» در DOM ظاهر شد → شروع polling جدی
-            const mo = new MutationObserver(() => {
-                const ok = Array.from(document.body.querySelectorAll("*"))
-                              .some(n => /پاسخ\\s*صحیح\\s*بود/u.test(n.textContent||""));
-                if (ok) { pollNext(10); }
-            });
-            mo.observe(document.body, {subtree:true, childList:true, characterData:true});
+          // بعد از قبولی آزمون: ایونت سراسری
+          document.addEventListener("jbg:quiz_passed", function(e){ fetchNext(); });
 
-            // کلیک: اگر هنوز آزاد نشده باشد، مانع شو
-            btn.addEventListener("click", function(e){
-                if (btn.getAttribute("aria-disabled") === "true") {
-                    e.preventDefault();
-                    pollNext(5);
-                }
-            });
-        })();
-        </script>';
+          // بکاپ: چند بار هم خودمان چک می‌کنیم
+          var tries=5; function poll(){ if(tries--<=0) return; hint.textContent="در حال بررسی آزاد شدن..."; fetchNext(function(ok){ if(!ok) setTimeout(poll,1200); }); }
+          poll();
 
-        // چیدمان: چپ سایدبار، راست پلیر/محتوا
-        $html  = '<div class="jbg-two-col" style="display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start">';
-        $html .=   '<aside>'.$sidebar.'</aside>';
-        $html .=   '<main>'.$content.$btn.'</main>';
-        $html .= '</div>';
+          btn.addEventListener("click", function(e){
+            if(btn.getAttribute("aria-disabled")==="true"){ e.preventDefault(); fetchNext(); }
+          });
+        })();</script>';
 
-        return $html;
+        $html  = '<div class="jbg-two-col"><aside>'.$sidebar.'</aside><main>'.$content.$btn.'</main></div>';
+
+        return $style.$html.$script;
     }
 }

@@ -46,7 +46,7 @@ class RelatedShortcode {
         $limit = max(1, (int)$a['limit']);
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
 
-        // فیلتر jbg_cat برای مرتبط‌ها
+        // فیلتر jbg_cat
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -59,7 +59,7 @@ class RelatedShortcode {
             }
         }
 
-        // واکشی گسترده و مرتب‌سازی نهایی
+        // واکشی و مرتب‌سازی مثل آرشیو
         $args = [
             'post_type'      => 'jbg_ad',
             'posts_per_page' => $limit * 6,
@@ -100,30 +100,19 @@ class RelatedShortcode {
 
         $items = array_slice($items, 0, $limit);
 
-        // گیت مرحله‌ای: اول، همین ویدیو باید تکمیل شده باشد
+        // گیت مرحله‌ای سایدبار: فعلی باید «قبولی آزمون» داشته باشد
         $uid       = get_current_user_id();
         $is_logged = is_user_logged_in();
-        $current_ok = false;
-        if ($current_id && $is_logged) {
-            $w = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $current_id, true);
-            $b = (bool) get_user_meta($uid, 'jbg_billed_'     . $current_id, true);
-            $qz= (bool) get_user_meta($uid, 'jbg_quiz_passed_' . $current_id, true);
-            $current_ok = $w && ($b || $qz);
-        }
+        $current_ok = $current_id && $is_logged ? (bool) get_user_meta($uid, 'jbg_quiz_passed_'.$current_id, true) : false;
         $prev_ok = $current_ok;
 
         $rows = [];
-        foreach ($items as $i => $it) {
-            $ad_id = (int)$it['ID'];
-            $completed = $is_logged
-                ? ( (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true)
-                   && ( (bool) get_user_meta($uid, 'jbg_billed_' . $ad_id, true)
-                        || (bool) get_user_meta($uid, 'jbg_quiz_passed_'.$ad_id, true) ) )
-                : false;
-
-            $allowed = $completed || $prev_ok;
-            $rows[]  = $it + ['completed'=>$completed, 'allowed'=>$allowed];
-            $prev_ok = $completed;
+        foreach ($items as $it) {
+            $ad_id   = (int)$it['ID'];
+            $quiz_ok = $is_logged ? (bool) get_user_meta($uid, 'jbg_quiz_passed_' . $ad_id, true) : false;
+            $allowed = $quiz_ok || $prev_ok;
+            $rows[]  = $it + ['completed'=>$quiz_ok, 'allowed'=>$allowed];
+            $prev_ok = $quiz_ok;
         }
 
         ob_start(); ?>
