@@ -48,14 +48,16 @@ class AccessGate {
 
         $uid = get_current_user_id();
 
-        // همه‌ی آیتم‌های قبل از جاری باید completed باشند
-        $first_locked = null;
-        for ($i = 0; $i < $idx; $i++) {
-            $ad_id = (int)$items[$i]['ID'];
-            $watched = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true);
-            $billed  = (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
-            if (!($watched && $billed)) { $first_locked = $items[$i]; break; }
-        }
+      // همه‌ی آیتم‌های قبل از جاری باید completed باشند
+$first_locked = null;
+for ($i = 0; $i < $idx; $i++) {
+    $ad_id  = (int)$items[$i]['ID'];
+    $watched = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true);
+    $billed  = (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
+    $quiz    = (bool) get_user_meta($uid, 'jbg_quiz_passed_'.$ad_id, true);
+    if (!($watched && ($billed || $quiz))) { $first_locked = $items[$i]; break; }
+}
+
 
         if ($first_locked) {
             // ریدایرکت به اولین آیتمی که باید تمام/پاس شود

@@ -58,6 +58,17 @@ class Bootstrap {
                 }
             }
         });
+
+        // ───────── Quiz Pass Flag (unlock by quiz) ─────────
+        // وقتی کاربر آزمون را صحیح پاس می‌کند، فلگ مخصوصش را روی متای کاربر ذخیره می‌کنیم
+        // تا منطق قفل‌گشایی: watched_ok && (billed || quiz_passed) کار کند.
+        add_action('jbg_quiz_passed', function ($user_id, $ad_id) {
+            $user_id = (int) $user_id;
+            $ad_id   = (int) $ad_id;
+            if ($user_id > 0 && $ad_id > 0 && get_post_type($ad_id) === 'jbg_ad') {
+                update_user_meta($user_id, 'jbg_quiz_passed_' . $ad_id, current_time('mysql'));
+            }
+        }, 5, 2);
     }
 
     public static function activate(): void {

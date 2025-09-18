@@ -8,7 +8,6 @@ class ListShortcode {
         add_shortcode('jbg_ads', [self::class, 'render']);
     }
 
-    // ===== helpers خلاصه (هم‌سو با نسخهٔ قبلی) =====
     private static function compact_num(int $n): string {
         if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
         elseif ($n >= 1000000){ $num=$n/1000000;    $u=' میلیون'; }
@@ -30,7 +29,7 @@ class ListShortcode {
         $a = shortcode_atts([
             'limit'    => 12,
             'brand'    => '',
-            'category' => '',    // اختیاری: اگر دارید استفاده می‌کنید
+            'category' => '',
             'class'    => '',
         ], $atts, 'jbg_ads');
 
@@ -41,17 +40,17 @@ class ListShortcode {
             'meta_query'     => [['key'=>'jbg_cpv','compare'=>'EXISTS']],
         ];
 
-        // فیلتر برند/دسته در صورت نیاز
         $tax = [];
         if (!empty($a['brand'])) {
-            $tax[] = ['taxonomy'=>'jbg_brand','field'=> is_numeric($a['brand'])?'term_id':'slug', 'terms'=> is_numeric($a['brand'])?(int)$a['brand']:$a['brand']];
+            $tax[] = ['taxonomy'=>'jbg_brand','field'=> is_numeric($a['brand'])?'term_id':'slug',
+                      'terms'=> is_numeric($a['brand'])?(int)$a['brand']:$a['brand']];
         }
         if (!empty($a['category'])) {
-            $tax[] = ['taxonomy'=>'jbg_cat','field'=> is_numeric($a['category'])?'term_id':'slug', 'terms'=> is_numeric($a['category'])?(int)$a['category']:$a['category']];
+            $tax[] = ['taxonomy'=>'jbg_cat','field'=> is_numeric($a['category'])?'term_id':'slug',
+                      'terms'=> is_numeric($a['category'])?(int)$a['category']:$a['category']];
         }
         if ($tax) $args['tax_query'] = $tax;
 
-        // واکشی
         $q = new \WP_Query($args);
         $items = [];
         foreach ($q->posts as $p) {
@@ -68,7 +67,7 @@ class ListShortcode {
         }
         wp_reset_postdata();
 
-        // مرتب‌سازی مثل آرشیو
+        // مرتب‌سازی نهایی مثل آرشیو
         usort($items, function($a, $b){
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) {
@@ -80,25 +79,26 @@ class ListShortcode {
             return ($b['cpv']     <=> $a['cpv']);
         });
 
-        // === گیت مرحله‌ای برای UI لیست ===
+        // گیت مرحله‌ای در UI
         $uid = get_current_user_id();
         $is_logged = is_user_logged_in();
-        $prev_ok = true; // آیتم اول همیشه نقطه شروعه
+        $prev_ok = true;
 
         $rows = [];
         foreach ($items as $i => $it) {
             $ad_id = (int)$it['ID'];
             $completed = false;
             if ($is_logged) {
-                $completed = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true)
-                           && (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
+                $watched = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true);
+                $billed  = (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true);
+                $quiz    = (bool) get_user_meta($uid, 'jbg_quiz_passed_' . $ad_id, true);
+                $completed = $watched && ($billed || $quiz);
             }
             $allowed = $completed || $prev_ok;
             $rows[] = $it + ['completed'=>$completed, 'allowed'=>$allowed];
-            $prev_ok = $completed; // شرط مرحله‌ای
+            $prev_ok = $completed;
         }
 
-        // رندر کارت‌ها (با کلاس is-locked برای غیر مجازها)
         ob_start();
         $extra_class = $a['class'] ? ' '.sanitize_html_class($a['class']) : '';
         echo '<div class="jbg-list-grid'.$extra_class.'">';
@@ -135,8 +135,7 @@ class ListShortcode {
             }
             echo '</div>';
         }
-        echo '</div>';
-        ?>
+        echo '</div>'; ?>
         <style>
           .jbg-card.is-locked{opacity:.7; position:relative}
           .jbg-card-link.-nolink{cursor:not-allowed}

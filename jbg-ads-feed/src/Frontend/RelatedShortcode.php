@@ -46,7 +46,7 @@ class RelatedShortcode {
         $limit = max(1, (int)$a['limit']);
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
 
-        // فیلتر jbg_cat برای ویدیوهای مرتبط
+        // فیلتر jbg_cat برای مرتبط‌ها
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -59,7 +59,7 @@ class RelatedShortcode {
             }
         }
 
-        // واکشی گسترده و مرتب‌سازی نهایی چندمعیاره
+        // واکشی گسترده و مرتب‌سازی نهایی
         $args = [
             'post_type'      => 'jbg_ad',
             'posts_per_page' => $limit * 6,
@@ -100,13 +100,15 @@ class RelatedShortcode {
 
         $items = array_slice($items, 0, $limit);
 
-        // گیت مرحله‌ای (اول باید همین ویدیو پاس شود)
+        // گیت مرحله‌ای: اول، همین ویدیو باید تکمیل شده باشد
         $uid       = get_current_user_id();
         $is_logged = is_user_logged_in();
         $current_ok = false;
         if ($current_id && $is_logged) {
-            $current_ok = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $current_id, true)
-                       && (bool) get_user_meta($uid, 'jbg_billed_'     . $current_id, true);
+            $w = (bool) get_user_meta($uid, 'jbg_watched_ok_' . $current_id, true);
+            $b = (bool) get_user_meta($uid, 'jbg_billed_'     . $current_id, true);
+            $qz= (bool) get_user_meta($uid, 'jbg_quiz_passed_' . $current_id, true);
+            $current_ok = $w && ($b || $qz);
         }
         $prev_ok = $current_ok;
 
@@ -115,7 +117,8 @@ class RelatedShortcode {
             $ad_id = (int)$it['ID'];
             $completed = $is_logged
                 ? ( (bool) get_user_meta($uid, 'jbg_watched_ok_' . $ad_id, true)
-                 && (bool) get_user_meta($uid, 'jbg_billed_'     . $ad_id, true) )
+                   && ( (bool) get_user_meta($uid, 'jbg_billed_' . $ad_id, true)
+                        || (bool) get_user_meta($uid, 'jbg_quiz_passed_'.$ad_id, true) ) )
                 : false;
 
             $allowed = $completed || $prev_ok;
@@ -123,7 +126,6 @@ class RelatedShortcode {
             $prev_ok = $completed;
         }
 
-        // خروجی
         ob_start(); ?>
         <div class="jbg-related">
           <div class="jbg-related-title"><?php echo esc_html($a['title']); ?></div>
