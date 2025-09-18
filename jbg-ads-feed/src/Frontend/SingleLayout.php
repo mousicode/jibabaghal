@@ -6,11 +6,11 @@ if (!class_exists(__NAMESPACE__ . '\\SingleLayout')):
 
 class SingleLayout {
     public static function register(): void {
-        // بعد از محتوا تزریق می‌کنیم تا هیچ بخشی از پلیر/کوییز تغییر نکند
-        add_filter('the_content', [self::class, 'inject_next_button'], 50);
+        // در خروجی محتوای پست سینگل (بدون دستکاری خودِ محتوا) یک رپر دو ستونه اضافه می‌کنیم
+        add_filter('the_content', [self::class, 'wrap'], 30);
     }
 
-    /** ترتیب: cpv↓, budget_remaining↓, priority_boost↓, date↓ فقط داخل دسته‌های همین ویدیو */
+    /** ترتیب واحد (مثل آرشیو): cpv↓, budget_remaining↓, priority_boost↓, date↓ — فقط در دسته(های) همین ویدیو */
     private static function ordered_items_for(int $current_id): array {
         $tax_query = [];
         $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -58,7 +58,7 @@ class SingleLayout {
         return $items;
     }
 
-    /** لینک آیتم بعدی طبق ترتیب بالا */
+    /** لینک ویدیو بعدی طبق همان ترتیب */
     private static function next_url_for(int $current_id): string {
         $items = self::ordered_items_for($current_id);
         if (!$items) return '';
@@ -68,39 +68,57 @@ class SingleLayout {
         return get_permalink((int)$ids[$idx+1]) ?: '';
     }
 
-    public static function inject_next_button($content) {
+    public static function wrap($content) {
+        // فقط برای سینگل jbg_ad و حلقه اصلی
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
         $current_id = get_the_ID();
-        $next_url   = self::next_url_for($current_id); // لینک ویدیو بعدی از الان مشخص
+        $next_url   = self::next_url_for($current_id);
 
-        // دکمه مستقل؛ چیزی از مارک‌آپ پلیر/کوییز حذف نمی‌کنیم
-        $btn  = '<div class="jbg-next-wrap" style="margin-top:16px;text-align:right">';
+        // سایدبار (لیست مرتبط) — همانی که قبلاً خوب کار می‌کرد
+        $sidebar = do_shortcode('[jbg_related limit="12" title="ویدیوهای مرتبط"]');
+
+        // استایل خیلی سبک برای گرید؛ به پلیر/کنترل‌ها دست نمی‌زند
+        $style = '<style>
+          .jbg-two-col{display:grid;grid-template-columns:1fr;gap:24px}
+          @media(min-width:992px){.jbg-two-col{grid-template-columns:360px 1fr}}
+          .jbg-two-col > aside{order:1}
+          .jbg-two-col > main{order:2}
+          .jbg-next-wrap{margin-top:16px;text-align:right}
+          .jbg-next-btn{display:inline-block;padding:10px 16px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none}
+          .jbg-next-btn[aria-disabled="false"]{opacity:1;pointer-events:auto}
+          .jbg-next-hint{margin-right:8px;font-size:12px;color:#6b7280}
+        </style>';
+
+        // دکمه «ویدیو بعدی» — لینک از الان درست است، ولی قفل است تا آزمون پاس شود
+        $btn  = '<div class="jbg-next-wrap">';
         if ($next_url) {
-            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="'.esc_url($next_url).'" '
-                 .  'aria-disabled="true" style="display:inline-block;padding:10px 16px;border-radius:10px;'
-                 .  'background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none">'
-                 .  'ویدیو بعدی</a>';
-            $btn .= '<small id="jbg-next-hint" style="margin-right:8px;font-size:12px;color:#6b7280">'
-                 .  'بعد از قبولی آزمون این ویدیو، دکمه فعال می‌شود.</small>';
+            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="'.esc_url($next_url).'" aria-disabled="true">ویدیو بعدی</a>';
+            $btn .= '<small id="jbg-next-hint" class="jbg-next-hint">بعد از قبولی آزمون این ویدیو، دکمه فعال می‌شود.</small>';
         } else {
-            $btn .= '<small id="jbg-next-hint" style="margin-right:8px;font-size:12px;color:#6b7280">'
-                 .  'این آخرین ویدیو است.</small>';
+            $btn .= '<small id="jbg-next-hint" class="jbg-next-hint">این آخرین ویدیو است.</small>';
         }
         $btn .= '</div>';
 
-        // اگر قبلاً آزمون همین ویدیو پاس شده، از ابتدا باز باشد
+        // اگر قبلاً این کاربر آزمون همین ویدیو را پاس کرده باشد، دکمه از ابتدا باز است
         $passed = is_user_logged_in() ? (bool)get_user_meta(get_current_user_id(),'jbg_quiz_passed_'.$current_id,true) : false;
 
-        $script = '<script>(function(){'
-                . 'var btn=document.getElementById("jbg-next-btn");var hint=document.getElementById("jbg-next-hint");'
-                . ($passed ? 'if(btn){btn.setAttribute("aria-disabled","false");btn.style.opacity="1";btn.style.pointerEvents="auto";if(hint)hint.textContent="";}' : '')
-                . 'function unlock(){if(!btn)return;btn.setAttribute("aria-disabled","false");btn.style.opacity="1";btn.style.pointerEvents="auto";if(hint)hint.textContent="";}'
-                // ایونت DOM که اسکریپت آزمون باید بعد از پاسخ صحیح emit کند:
-                . 'document.addEventListener("jbg:quiz_passed",function(e){try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')unlock();}catch(_){unlock();}});'
-                . '})();</script>';
+        $script = '<script>(function(){
+          var btn=document.getElementById("jbg-next-btn"); var hint=document.getElementById("jbg-next-hint");
+          if(!btn) return;
+          '.($passed ? 'btn.setAttribute("aria-disabled","false"); if(hint) hint.textContent="";' : '').'
+          function unlock(){btn.setAttribute("aria-disabled","false"); if(hint) hint.textContent="";}
+          // ایونت را اسکریپت آزمون بعد از پاسخ صحیح فایر می‌کند:
+          document.addEventListener("jbg:quiz_passed", function(e){
+            try{ var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0; if(!id || id==='.$current_id.') unlock(); }
+            catch(_){ unlock(); }
+          });
+        })();</script>';
 
-        return $content . $btn . $script;
+        // چیدمان دو ستونه: سایدبار چپ، محتوای اصلی (پلیر + Start Quiz + هرچیز دیگر) راست
+        $html = '<div class="jbg-two-col"><aside>'.$sidebar.'</aside><main>'.$content.$btn.'</main></div>';
+
+        return $style . $html . $script;
     }
 }
 
