@@ -29,16 +29,16 @@ class Bootstrap {
             add_action('pre_get_posts', [Columns::class, 'handle_sorting']);
         }
 
-        // ───────── Frontend components ─────────
+        // ───────── Frontend components (شورتکدها/نما) ─────────
         add_action('init', function () {
             foreach ([
-                // ⬇️ این خط اضافه شد تا PlayerShim رجیستر شود و پلیر همیشه لود گردد
-                'src/Frontend/PlayerShim.php'      => '\\JBG\\Ads\\Frontend\\PlayerShim',
-                'src/Frontend/ListShortcode.php'   => '\\JBG\\Ads\\Frontend\\ListShortcode',
-                'src/Frontend/RelatedShortcode.php'=> '\\JBG\\Ads\\Frontend\\RelatedShortcode',
-                'src/Frontend/ViewBadge.php'       => '\\JBG\\Ads\\Frontend\\ViewBadge',
-                'src/Frontend/SingleLayout.php'    => '\\JBG\\Ads\\Frontend\\SingleLayout',
-                'src/Frontend/AccessGate.php'      => '\\JBG\\Ads\\Frontend\\AccessGate',
+                // تضمین نمایش پلیر حتی اگر محتوا پلیر نداشته باشد
+                'src/Frontend/PlayerShim.php'        => '\\JBG\\Ads\\Frontend\\PlayerShim',
+                'src/Frontend/ListShortcode.php'     => '\\JBG\\Ads\\Frontend\\ListShortcode',
+                'src/Frontend/RelatedShortcode.php'  => '\\JBG\\Ads\\Frontend\\RelatedShortcode',
+                'src/Frontend/ViewBadge.php'         => '\\JBG\\Ads\\Frontend\\ViewBadge',
+                'src/Frontend/SingleLayout.php'      => '\\JBG\\Ads\\Frontend\\SingleLayout',
+                'src/Frontend/AccessGate.php'        => '\\JBG\\Ads\\Frontend\\AccessGate',
             ] as $rel => $fqcn) {
                 $file = JBG_ADS_DIR . $rel;
                 if (file_exists($file)) {
@@ -48,27 +48,40 @@ class Bootstrap {
                     }
                 }
             }
-        });
+        }, 10);
 
-        // ───────── REST endpoints ─────────
-        add_action('rest_api_init', function () {
+        // ───────── REST: مرحله ۱ (init) → فقط require_once فایل‌ها ─────────
+        // این باعث می‌شود کلاس‌ها ۱۰۰٪ قبل از rest_api_init در دسترس باشند و ارور class-not-found رخ ندهد.
+        add_action('init', function () {
             foreach ([
-                'src/Rest/FeedController.php'      => '\\JBG\\Ads\\Rest\\FeedController',
-                'src/Rest/ViewController.php'      => '\\JBG\\Ads\\Rest\\ViewController',
-                'src/Rest/ViewTrackController.php' => '\\JBG\\Ads\\Rest\\ViewTrackController',
-                'src/Rest/NextController.php'      => '\\JBG\\Ads\\Rest\\NextController', // ← NEW
-            ] as $rel => $fqcn) {
+                'src/Rest/FeedController.php',
+                'src/Rest/ViewController.php',
+                'src/Rest/ViewTrackController.php',
+                'src/Rest/NextController.php',
+            ] as $rel) {
                 $file = JBG_ADS_DIR . $rel;
                 if (file_exists($file)) {
                     require_once $file;
-                    if (class_exists($fqcn) && method_exists($fqcn, 'register_routes')) {
-                        $fqcn::register_routes();
-                    }
                 }
             }
-        });
+        }, 6);
+
+        // ───────── REST: مرحله ۲ (rest_api_init) → فقط register_routes ─────────
+        add_action('rest_api_init', function () {
+            foreach ([
+                '\\JBG\\Ads\\Rest\\FeedController',
+                '\\JBG\\Ads\\Rest\\ViewController',
+                '\\JBG\\Ads\\Rest\\ViewTrackController',
+                '\\JBG\\Ads\\Rest\\NextController',
+            ] as $fqcn) {
+                if (class_exists($fqcn) && method_exists($fqcn, 'register_routes')) {
+                    $fqcn::register_routes();
+                }
+            }
+        }, 10);
 
         // ───────── Quiz Pass Flag (unlock by quiz) ─────────
+        // با پاس صحیح آزمون، فلگ روی متای کاربر ذخیره می‌شود تا «ویدیو بعدی» و آیتم‌های بعدی باز شوند.
         add_action('jbg_quiz_passed', function ($user_id, $ad_id) {
             $user_id = (int) $user_id;
             $ad_id   = (int) $ad_id;
