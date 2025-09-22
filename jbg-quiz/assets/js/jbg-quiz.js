@@ -9,19 +9,18 @@
     var result = document.getElementById('jbg-quiz-result');
     var adId   = JBG_QUIZ && JBG_QUIZ.adId ? String(JBG_QUIZ.adId) : '';
 
-    function msg(txt, cls){
+    function gateMsg(txt, cls){
       if (!result) return;
       result.textContent = txt;
       result.className = 'jbg-quiz-result' + (cls ? ' '+cls : '');
     }
-
     function disableQuiz(){
       if (form) form.querySelectorAll('input,button,select,textarea').forEach(function(el){ el.disabled = true; });
-      msg('Watch the video first 🔔', 'jbg-quiz-result--warn');
+      gateMsg('Watch the video first 🔔', 'jbg-quiz-result--warn');
     }
     function enableQuiz(){
       if (form) form.querySelectorAll('input,button,select,textarea').forEach(function(el){ el.disabled = false; });
-      msg('', '');
+      gateMsg('', '');
     }
 
     function isUnlocked(){
@@ -31,8 +30,10 @@
       return false;
     }
 
+    // حالت اولیه
     if (!isUnlocked()) disableQuiz(); else enableQuiz();
 
+    // وقتی پلیر سیگنال داد، باز کن
     document.addEventListener('jbg:watched_ok', function(ev){
       var ok = true;
       try{
@@ -41,6 +42,7 @@
       if (ok) enableQuiz();
     }, false);
 
+    // Submit با REST؛ بدون ری‌فرش
     if (form){
       form.addEventListener('submit', function(e){
         e.preventDefault();
@@ -52,12 +54,12 @@
 
         var answer = form.querySelector('input[name="jbg_answer"]:checked');
         if (!answer){
-          msg('یک گزینه را انتخاب کنید.', 'jbg-quiz-result--warn');
+          gateMsg('یک گزینه را انتخاب کنید.', 'jbg-quiz-result--warn');
           return;
         }
 
         var payload = { ad_id: adId, answer: parseInt(answer.value,10) || 0 };
-        msg('در حال بررسی...', 'jbg-quiz-result--info');
+        gateMsg('در حال بررسی...', 'jbg-quiz-result--info');
 
         fetch(JBG_QUIZ.rest, {
           method: 'POST',
@@ -71,21 +73,15 @@
         .then(function(r){ return r.json().catch(function(){ return {}; }); })
         .then(function(data){
           if (data && data.correct){
-            msg('✔ پاسخ صحیح بود!', 'jbg-quiz-result--ok');
-
-            // 🔔 ایونت باز شدن «ویدئو بعدی» برای SingleLayout
-            try {
-              document.dispatchEvent(new CustomEvent('jbg:quiz_passed', { detail: { adId: parseInt(adId,10)||0 } }));
-            } catch(_) {}
-
+            gateMsg('✔ پاسخ صحیح بود!', 'jbg-quiz-result--ok');
           } else if (data && data.message){
-            msg('✖ '+data.message, 'jbg-quiz-result--err');
+            gateMsg('✖ '+data.message, 'jbg-quiz-result--err');
           } else {
-            msg('✖ پاسخ نادرست. دوباره تلاش کنید.', 'jbg-quiz-result--err');
+            gateMsg('✖ پاسخ نادرست. دوباره تلاش کنید.', 'jbg-quiz-result--err');
           }
         })
         .catch(function(){
-          msg('خطا در ارتباط. دوباره امتحان کنید.', 'jbg-quiz-result--err');
+          gateMsg('خطا در ارتباط. دوباره امتحان کنید.', 'jbg-quiz-result--err');
         });
       });
     }

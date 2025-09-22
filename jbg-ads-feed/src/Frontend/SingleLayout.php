@@ -1,60 +1,64 @@
 <?php
+namespace JBG\Ads\Frontend;
+if (!defined('ABSPATH')) exit;
+
 /**
- * Safe 2-column layout for jbg_ad
- * Sidebar (related) on the LEFT, Main content (player + the rest) on the RIGHT.
- * If [jbg_related] is empty, fallback to [jbg_list limit="5"].
+ * Wrap single jbg_ad content into a two-column layout:
+ * - Right (main): player + view badge + quiz (همان خروجی فعلی)
+ * - Left (aside): related videos by current category via [jbg_related]
+ *
+ * هیچ رفتار قبلی را حذف نمی‌کند؛ فقط محتوا را در گرید می‌چیند.
  */
-namespace JBG\AdsFeed\Frontend;
+class SingleLayout {
 
-class SingleLayout
-{
-    public static function register(): void
-    {
-        if (!is_singular('jbg_ad')) return;
-        // خیلی دیر اجرا می‌کنیم تا همه‌ی تزریق‌ها (پلیر/کوییز/…) انجام شده باشد
-        add_filter('the_content', [self::class, 'wrap_two_cols'], 2000);
-        add_action('wp_enqueue_scripts', [self::class, 'enqueue_css']);
+    public static function register(): void {
+        // قبل از Player (که با priority=5 تزریق می‌شود) اجرا شود تا wrapper بیرونی ساخته شود
+        add_filter('the_content', [self::class, 'wrap'], 4);
     }
 
-    public static function enqueue_css(): void
-    {
-        if (!defined('JBG_ADS_FEED_URL')) {
-            $url_guess = trailingslashit(plugins_url('/', dirname(dirname(__DIR__))));
-            define('JBG_ADS_FEED_URL', $url_guess);
+    public static function wrap($content) {
+        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) {
+            return $content;
         }
-        wp_enqueue_style(
-            'jbg-ads-single',
-            trailingslashit(JBG_ADS_FEED_URL) . 'assets/css/single.css',
-            [],
-            '0.5.0'
-        );
-    }
 
-    public static function wrap_two_cols(string $content): string
-    {
-        if (!is_singular('jbg_ad')) return $content;
-        if (strpos($content, 'class="jbg-two-col"') !== false) return $content; // دوباره رپ نکن
+        // استایل‌های سبک و self-contained
+        $style = '<style id="jbg-single-2col-css">
+            .single-jbg_ad .jbg-two-col{display:grid;grid-template-columns:1fr;gap:24px;align-items:start; direction:rtl;}
+            @media(min-width:992px){
+              .single-jbg_ad .jbg-two-col{grid-template-columns: 320px 1fr;} /* چپ: سایدبار، راست: ویدیو */
+            }
+            .single-jbg_ad .jbg-col-aside{order:2;}
+            .single-jbg_ad .jbg-col-main{order:1;}
+            @media(min-width:992px){
+              .single-jbg_ad .jbg-col-aside{order:1;}
+              .single-jbg_ad .jbg-col-main{order:2;}
+            }
+            /* آیتم‌های related */
+            .jbg-related{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;}
+            .jbg-related-title{font-weight:800;margin:0 0 8px 0;font-size:16px;color:#111827;}
+            .jbg-related-list{display:flex;flex-direction:column;gap:10px;max-height:80vh;overflow:auto;}
+            .jbg-related-item{display:flex;gap:10px;text-decoration:none;border-radius:10px;padding:8px;align-items:center;border:1px solid transparent}
+            .jbg-related-item:hover{background:#f8fafc;border-color:#e5e7eb}
+            .jbg-related-thumb{width:110px;height:62px;background:#e5e7eb;background-size:cover;background-position:center;border-radius:8px;flex:none}
+            .jbg-related-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+            .jbg-related-title-text{font-size:14px;font-weight:700;color:#111827;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+            .jbg-related-sub{font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+            .jbg-related-sub .brand{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600}
+            .jbg-related-sub .dot{opacity:.55}
+          </style>';
 
-        // 1) Related
+        // سایدبار مرتبط‌ها (از شورت‌کد خودمان)
         $related = do_shortcode('[jbg_related limit="10"]');
 
-        // اگر خروجی مرتبط‌ها خالی بود (یا فقط whitespace)، برگرد به fallback
-        $plain = trim(wp_strip_all_tags($related));
-        if ($plain === '') {
-            $related = do_shortcode('[jbg_list limit="5" title="پیشنهادی"]');
-        }
+        // محتوا (Player + Badge + Quiz) سمت راست
+        $html  = '<div class="jbg-two-col">';
+        $html .=   '<aside class="jbg-col-aside">'.$related.'</aside>';
+        $html .=   '<main class="jbg-col-main">'.$content.'</main>';
+        $html .= '</div>';
 
-        $out = '
-        <div class="jbg-two-col" dir="rtl">
-          <aside class="jbg-two-col__sidebar" aria-label="ویدیوهای مرتبط">
-            <h3 class="jbg-two-col__title">'. esc_html__('ویدیوهای مرتبط', 'jbg') .'</h3>
-            <div class="jbg-two-col__related">'. $related .'</div>
-          </aside>
-          <div class="jbg-two-col__main">
-            '. $content .'
-          </div>
-        </div>';
+        static $once=false;
+        if (!$once) { $html = $style . $html; $once=true; }
 
-        return $out;
+        return $html;
     }
 }

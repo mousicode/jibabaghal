@@ -3,16 +3,14 @@ namespace JBG\Ads\Rest;
 
 if (!defined('ABSPATH')) exit;
 
-if (!class_exists(__NAMESPACE__ . '\\ViewTrackController')):
-
 class ViewTrackController {
 
     public static function register_routes(): void {
         register_rest_route('jbg/v1', '/view/track', [
             'methods'  => 'POST',
-            'permission_callback' => function () { return is_user_logged_in(); },
+            'permission_callback' => function(){ return is_user_logged_in(); },
             'args' => [
-                'ad_id' => ['type' => 'integer', 'required' => true, 'minimum' => 1],
+                'ad_id' => ['type'=>'integer', 'required'=>true, 'minimum'=>1],
             ],
             'callback' => [self::class, 'track'],
         ]);
@@ -23,16 +21,16 @@ class ViewTrackController {
         $uid   = get_current_user_id();
 
         if ($ad_id <= 0 || get_post_type($ad_id) !== 'jbg_ad') {
-            return new \WP_Error('bad_ad', 'Invalid ad_id', ['status' => 400]);
+            return new \WP_Error('bad_ad', 'Invalid ad_id', ['status'=>400]);
         }
         if ($uid <= 0) {
-            return new \WP_Error('no_user', 'User not logged in', ['status' => 401]);
+            return new \WP_Error('no_user', 'User not logged in', ['status'=>401]);
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'jbg_views';
+        $table = $wpdb->prefix.'jbg_views';
 
-        // جلوگیری از دوباره‌شماری در 24 ساعت
+        // اگر در 24 ساعت گذشته بازدیدی از این کاربر برای این آگهی داشته‌ایم، دوباره ثبت نکن
         $exists = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$table}
              WHERE ad_id=%d AND user_id=%d
@@ -41,7 +39,7 @@ class ViewTrackController {
             $ad_id, $uid
         ));
         if ($exists) {
-            return new \WP_REST_Response(['ok' => true, 'already' => true], 200);
+            return new \WP_REST_Response(['ok'=>true, 'already'=>true], 200);
         }
 
         // درج لاگ بازدید (amount=0 چون بیلینگ نیست)
@@ -57,14 +55,14 @@ class ViewTrackController {
         ], ['%d','%d','%d','%s','%s','%s']);
 
         if ($ins === false) {
-            return new \WP_Error('db_insert_failed', 'Insert failed: '.$wpdb->last_error, ['status' => 500]);
+            return new \WP_Error('db_insert_failed', 'Insert failed: '.$wpdb->last_error, ['status'=>500]);
         }
 
-        // افزایش شمارنده بازدید (هر دو کلید برای سازگاری)
+        // افزایش اتمی شمارنده‌ی بازدید (هر دو کلید برای سازگاری)
         self::incr_views_meta($ad_id, 'jbg_views_total');
         self::incr_views_meta($ad_id, 'jbg_views_count');
 
-        return new \WP_REST_Response(['ok' => true, 'already' => false], 200);
+        return new \WP_REST_Response(['ok'=>true, 'already'=>false], 200);
     }
 
     private static function incr_views_meta(int $ad_id, string $key): void {
@@ -86,5 +84,3 @@ class ViewTrackController {
         wp_cache_delete($ad_id, 'post_meta');
     }
 }
-
-endif; // class_exists guard

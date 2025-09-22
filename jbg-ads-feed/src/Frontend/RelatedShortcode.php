@@ -2,104 +2,136 @@
 namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
-if (!class_exists(__NAMESPACE__ . '\\RelatedShortcode')):
-
 class RelatedShortcode {
+
     public static function register(): void {
         add_shortcode('jbg_related', [self::class, 'render']);
     }
 
+    /* ---------- helpers (هم‌راستا با ListShortcode) ---------- */
+
+    private static function compact_num(int $n): string {
+        if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
+        elseif ($n >= 1000000){ $num=$n/1000000;    $u=' میلیون'; }
+        elseif ($n >= 1000)   { $num=$n/1000;       $u=' هزار'; }
+        else return number_format_i18n($n);
+        $s = number_format_i18n($num,1);
+        $s = preg_replace('/([0-9۰-۹]+)[\.\,٫]0$/u', '$1', $s);
+        return $s.$u;
+    }
+
+    private static function relative_time(int $post_id): string {
+        return trim(human_time_diff(get_the_time('U',$post_id), current_time('timestamp'))).' پیش';
+    }
+
+    private static function brand_name(int $post_id): string {
+        $names = wp_get_post_terms($post_id, 'jbg_brand', ['fields'=>'names']);
+        return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
+    }
+
+    /** شمارش بازدید (سازگار با کلیدهای جدید/قدیم) */
+    private static function views_count(int $ad_id): int {
+        $ad_id = absint($ad_id);
+        if ($ad_id <= 0) return 0;
+
+        // ترجیح متای جدید
+        $v = (int) get_post_meta($ad_id, 'jbg_views_total', true);
+        if ($v > 0) return $v;
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'jbg_views';
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists !== $table) return 0;
+
+        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id = %d", $ad_id));
+        // سینک هر دو کلید
+        update_post_meta($ad_id, 'jbg_views_total', $count);
+        update_post_meta($ad_id, 'jbg_views_count', $count);
+        wp_cache_delete($ad_id, 'post_meta');
+        return $count;
+    }
+
+    /* ---------- shortcode ---------- */
+
     public static function render($atts = []): string {
         $a = shortcode_atts([
-            'limit' => 12,
+            'limit' => 8,
             'title' => 'ویدیوهای مرتبط',
         ], $atts, 'jbg_related');
 
-        $current_id = is_singular('jbg_ad') ? get_queried_object_id() : 0;
-
-        // فقط دسته‌های همین ویدیو
+        // دسته‌های پست فعلی (taxonomy جدید jbg_cat)
+        $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
             if (!is_wp_error($terms) && !empty($terms)) {
-                $tax_query[] = ['taxonomy'=>'jbg_cat','field'=>'term_id','terms'=>array_map('intval',$terms)];
+                $tax_query[] = [
+                    'taxonomy' => 'jbg_cat',
+                    'field'    => 'term_id',
+                    'terms'    => array_map('intval', $terms),
+                ];
             }
         }
 
-        $q = new \WP_Query([
+        $args = [
             'post_type'      => 'jbg_ad',
-            'posts_per_page' => (int) $a['limit'],
+            'posts_per_page' => max(1, (int)$a['limit']),
             'no_found_rows'  => true,
-            'meta_query'     => [['key'=>'jbg_cpv','compare'=>'EXISTS']],
-            'orderby'        => 'date',
-            'order'          => 'DESC',
-            'tax_query'      => $tax_query ?: null,
-        ]);
+            'post__not_in'   => $current_id ? [$current_id] : [],
+            'meta_query'     => [
+                ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
+            ],
+        ];
+        if ($tax_query) $args['tax_query'] = $tax_query;
 
-        $rows = [];
+        $q = new \WP_Query($args);
+        $items = [];
         foreach ($q->posts as $p) {
-            $rows[] = [
-                'ID'    => (int) $p->ID,
-                'cpv'   => (int) get_post_meta($p->ID,'jbg_cpv',true),
-                'br'    => (int) get_post_meta($p->ID,'jbg_budget_remaining',true),
-                'boost' => (int) get_post_meta($p->ID,'jbg_priority_boost',true),
-                'date'  => get_post_time('U', true, $p->ID),
+            $items[] = [
+                'ID'    => $p->ID,
+                'title' => get_the_title($p),
+                'link'  => get_permalink($p),
+                'thumb' => get_the_post_thumbnail_url($p->ID, 'medium') ?: '',
+                'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
+                'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
+                'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
             ];
         }
         wp_reset_postdata();
 
-        // ترتیب مرکب
-        usort($rows, function($a,$b){
+        // همان منطق رتبه‌بندی لیست اصلی  (CPV ↓ → BudgetRemaining ↓ → Boost ↓)
+        usort($items, function($a, $b){
             if ($a['cpv'] === $b['cpv']) {
-                if ($a['br'] === $b['br']) {
-                    if ($a['boost'] === $b['boost']) return ($b['date'] <=> $a['date']);
-                    return ($b['boost'] <=> $a['boost']);
-                }
+                if ($a['br'] === $b['br']) return ($b['boost'] <=> $a['boost']);
                 return ($b['br'] <=> $a['br']);
             }
             return ($b['cpv'] <=> $a['cpv']);
         });
 
-        // قفل‌گذاری زنجیره‌ای: اولی باز؛ هر بعدی منوط به قبولی قبلی
-        $uid = get_current_user_id();
-        $max_open = 0;
-        if ($uid) {
-            for ($i = 0; $i < count($rows); $i++) {
-                $passed = (bool) get_user_meta($uid, 'jbg_quiz_passed_'.$rows[$i]['ID'], true);
-                if ($i === 0 || $passed) $max_open = $i + 1; else break;
-            }
-        } else {
-            $max_open = 1;
+        // خروجی عمودی برای سایدبار
+        ob_start();
+        echo '<div class="jbg-related">';
+        echo '<div class="jbg-related-title">'.esc_html($a['title']).'</div>';
+        echo '<div class="jbg-related-list">';
+        foreach ($items as $it) {
+            $views  = self::views_count((int)$it['ID']);
+            $viewsF = self::compact_num($views) . ' بازدید';
+            $when   = self::relative_time((int)$it['ID']);
+            $brand  = self::brand_name((int)$it['ID']);
+
+            echo '<a class="jbg-related-item" href="'.esc_url($it['link']).'">';
+            echo   '<span class="jbg-related-thumb"'.($it['thumb']?' style="background-image:url(\''.esc_url($it['thumb']).'\')"':'').'></span>';
+            echo   '<span class="jbg-related-meta">';
+            echo     '<span class="jbg-related-title-text">'.esc_html($it['title']).'</span>';
+            echo     '<span class="jbg-related-sub">';
+            if ($brand) echo '<span class="brand">'.esc_html($brand).'</span><span class="dot">•</span>';
+            echo       '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
+            echo     '</span>';
+            echo   '</span>';
+            echo '</a>';
         }
-
-        // خروجی کارت سایدبار
-        $out  = '<div class="jbg-related" style="border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:12px">';
-        $out .= '<h3 style="margin:0 0 8px 0">'.$a['title'].'</h3>';
-
-        foreach ($rows as $idx => $it) {
-            $locked = ($idx >= $max_open);
-            $perma  = get_permalink($it['ID']);
-            $title  = esc_html(get_the_title($it['ID']));
-            $age    = human_time_diff($it['date'], current_time('timestamp')) . ' پیش';
-            $views  = (int) get_post_meta($it['ID'],'jbg_views_count',true);
-
-            $out .= '<div class="jbg-related-item'.($locked?' is-locked':'').'" style="display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;background:#f9fafb;margin:8px 0">';
-            $out .= '  <div class="thumb" style="width:72px;height:54px;background:#e5e7eb;border-radius:8px;flex:none"></div>';
-            $out .= '  <div class="meta" style="flex:1 1 auto">';
-            $out .= '    <div style="font-weight:700">'.$title.'</div>';
-            $out .= '    <div style="font-size:12px;color:#6b7280">بازدید '.$views.' • '.$age.'</div>';
-            $out .= '  </div>';
-            if ($locked) {
-                $out .= '  <a aria-disabled="true" class="btn" style="pointer-events:none;opacity:.6;display:inline-block;background:#2563eb;color:#fff;padding:6px 10px;border-radius:10px;text-decoration:none">قفل</a>';
-            } else {
-                $out .= '  <a class="btn" href="'.esc_url($perma).'" style="display:inline-block;background:#2563eb;color:#fff;padding:6px 10px;border-radius:10px;text-decoration:none">مشاهده</a>';
-            }
-            $out .= '</div>';
-        }
-        $out .= '</div>';
-
-        return $out;
+        echo '</div>';
+        echo '</div>';
+        return (string) ob_get_clean();
     }
 }
-
-endif;
