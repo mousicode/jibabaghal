@@ -8,7 +8,22 @@ class MetaBox
 {
     public static function register(): void
     {
-        // فقط برای پست‌تایپ آگهی
+        // فقط در ادمین متاباکس را رجیستر کن و به موقع (روی add_meta_boxes)
+        if (!\is_admin()) {
+            return;
+        }
+
+        \add_action('add_meta_boxes', [self::class, 'add_box']);
+        \add_action('save_post_jbg_ad', [self::class, 'save'], 10, 2);
+    }
+
+    public static function add_box(): void
+    {
+        // اطمینان از در دسترس بودن توابع ادمین (در بعضی هاست‌ها لازم می‌شود)
+        if (!\function_exists('add_meta_box') && \file_exists(ABSPATH . 'wp-admin/includes/template.php')) {
+            require_once ABSPATH . 'wp-admin/includes/template.php';
+        }
+
         \add_meta_box(
             'jbg_quiz_box',
             __('JBG Quiz', 'jbg'),
@@ -17,9 +32,6 @@ class MetaBox
             'normal',
             'high'
         );
-
-        // ذخیره متاها
-        \add_action('save_post_jbg_ad', [self::class, 'save'], 10, 2);
     }
 
     public static function render(\WP_Post $post): void
@@ -32,7 +44,6 @@ class MetaBox
         $a3  = \get_post_meta($post->ID, 'jbg_quiz_a3', true);
         $a4  = \get_post_meta($post->ID, 'jbg_quiz_a4', true);
         $ans = (int) \get_post_meta($post->ID, 'jbg_quiz_ans', true);
-
         ?>
         <style>
             .jbg-field {margin:8px 0;}
@@ -67,7 +78,7 @@ class MetaBox
 
         <div class="jbg-field">
             <label for="jbg_quiz_ans"><?php echo \esc_html__('Correct answer (1-4)', 'jbg'); ?></label>
-            <input id="jbg_quiz_ans" type="number" min="1" max="4" step="1" name="jbg_quiz_ans" value="<?php echo \esc_attr((string)( $ans ?: 1 )); ?>">
+            <input id="jbg_quiz_ans" type="number" min="1" max="4" step="1" name="jbg_quiz_ans" value="<?php echo \esc_attr((string)($ans ?: 1)); ?>">
         </div>
         <?php
     }
@@ -94,7 +105,7 @@ class MetaBox
         $a4  = isset($_POST['jbg_quiz_a4'])  ? \sanitize_text_field($_POST['jbg_quiz_a4']) : '';
         $ans = isset($_POST['jbg_quiz_ans']) ? (int) $_POST['jbg_quiz_ans'] : 1;
 
-        $ans = max(1, min(4, $ans));
+        $ans = \max(1, \min(4, $ans));
 
         \update_post_meta($post_id, 'jbg_quiz_q',   $q);
         \update_post_meta($post_id, 'jbg_quiz_a1',  $a1);
