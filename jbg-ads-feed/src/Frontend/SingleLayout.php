@@ -106,8 +106,18 @@ class SingleLayout {
         // سایدبار/ویدیوهای مرتبط را «بعد از محتوا» می‌آوریم تا روی لود پلیر هیچ اثری نگذارد
         $related = '<div class="jbg-related-wrap">'.do_shortcode('[jbg_related limit="8" title="ویدیوهای مرتبط"]').'</div>';
 
-    // Add player before after-content section
-    $player = do_shortcode('[jbg_player]');
+    // Render video player markup using post meta
+    $video_src = get_post_meta($current_id, 'jbg_video_src', true);
+    $player = '';
+    if ($video_src) {
+        $is_hls = (stripos($video_src, '.m3u8') !== false);
+        $player = '<div class="jbg-player-wrapper"><video id="jbg-player" class="plyr" controls playsinline poster="'.esc_url(get_the_post_thumbnail_url($current_id)).'"'.($is_hls ? ' data-hls="true"' : '').' style="width:100%;max-width:800px;aspect-ratio:16/9;">'
+            .'<source src="'.esc_url($video_src).'" type="'.($is_hls ? 'application/x-mpegURL' : 'video/mp4').'">'
+            .__('مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.','jbg-ads')
+            .'</video></div>';
+    } else {
+        $player = '<div class="jbg-player-wrapper"><div class="jbg-player-error">'.__('ویدیو یافت نشد','jbg-ads').'</div></div>';
+    }
     return $player . $content . '<div class="jbg-after">'.$style.$btn.$related.'</div>'.$script;
     }
 }
