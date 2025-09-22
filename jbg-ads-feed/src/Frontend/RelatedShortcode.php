@@ -64,7 +64,7 @@ class RelatedShortcode {
 
         $q = new \WP_Query($args);
 
-        // Fallback: اگر نتیجه صفر بود، بدون meta_query
+        // Fallback: اگر صفر بود، بدون meta_query
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);

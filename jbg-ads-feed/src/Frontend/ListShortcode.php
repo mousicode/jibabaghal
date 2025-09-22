@@ -33,17 +33,17 @@ class ListShortcode {
     public static function render($atts = []): string {
         if (!wp_style_is('jbg-list', 'enqueued')) {
             $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.4');
+            wp_enqueue_style('jbg-list', $css, [], '0.1.5');
         }
 
         $a = shortcode_atts([
             'limit'    => 12,
             'brand'    => '',
-            'category' => '',
+            'category' => '',  // اسلاگ‌های jbg_cat
             'class'    => '',
         ], $atts, 'jbg_ads');
 
-        // --- Query 1: فقط آگهی‌هایی که CPV دارند
+        // --- Query 1: فقط آگهی‌های دارای CPV
         $args = [
             'post_type'      => 'jbg_ad',
             'posts_per_page' => max(1, (int)$a['limit']),
@@ -52,7 +52,7 @@ class ListShortcode {
                 ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
             ],
             'orderby'        => [
-                'meta_value_num' => 'ASC',
+                'meta_value_num' => 'ASC', // seq اگر باشد
                 'date'           => 'ASC',
             ],
             'meta_key'       => 'jbg_seq',
@@ -69,12 +69,12 @@ class ListShortcode {
                 ];
             }
         }
-        // فیلتر دسته‌بندی سفارشی (اگر jbg_category وجود دارد)
-        if (taxonomy_exists('jbg_category') && !empty($a['category'])) {
+        // فیلتر دسته: **jbg_cat** (نه jbg_category)
+        if (!empty($a['category'])) {
             $cats = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['category']))));
             if ($cats) {
                 $args['tax_query'][] = [
-                    'taxonomy' => 'jbg_category',
+                    'taxonomy' => 'jbg_cat',
                     'field'    => 'slug',
                     'terms'    => $cats,
                 ];
@@ -83,7 +83,7 @@ class ListShortcode {
 
         $q = new \WP_Query($args);
 
-        // --- Fallback: اگر نتیجه صفر بود، شرط CPV را حذف کن تا کارت‌ها خالی نماند
+        // --- Fallback: اگر صفر آیتم بود، شرط CPV را حذف کن تا صفحه خالی نماند
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);
@@ -104,7 +104,7 @@ class ListShortcode {
         }
         wp_reset_postdata();
 
-        // مرتب‌سازی: seq سپس CPV/BR/Boost
+        // مرتب‌سازی نهایی (همان قبلی)
         usort($items, function($a, $b){
             if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
             if ($a['cpv'] === $b['cpv']) {
