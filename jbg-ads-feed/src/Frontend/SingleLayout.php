@@ -106,7 +106,9 @@ class SingleLayout {
         // سایدبار/ویدیوهای مرتبط را «بعد از محتوا» می‌آوریم تا روی لود پلیر هیچ اثری نگذارد
         $related = '<div class="jbg-related-wrap">'.do_shortcode('[jbg_related limit="8" title="ویدیوهای مرتبط"]').'</div>';
 
-        return $content . '<div class="jbg-after">'.$style.$btn.$related.'</div>'.$script;
+    // Add player before after-content section
+    $player = do_shortcode('[jbg_player]');
+    return $player . $content . '<div class="jbg-after">'.$style.$btn.$related.'</div>'.$script;
     }
 }
 
