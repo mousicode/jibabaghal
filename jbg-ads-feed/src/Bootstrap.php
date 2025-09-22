@@ -8,6 +8,7 @@ use JBG\Ads\Taxonomy\Category;
 use JBG\Ads\PostType\Ad;
 use JBG\Ads\Admin\MetaBox;
 use JBG\Ads\Admin\Columns;
+use JBG\Ads\Admin\VideoMetaBox; // ← متاباکس ویدئو/ایمبد
 
 class Bootstrap {
     public static function init(): void {
@@ -18,8 +19,13 @@ class Bootstrap {
         add_action('init', [Ad::class, 'register'], 7);
 
         // ───────── Metaboxes ─────────
+        // متاباکس‌های مالی/اولیه
         add_action('add_meta_boxes', [MetaBox::class, 'register']);
         add_action('save_post_jbg_ad', [MetaBox::class, 'save'], 10, 2);
+
+        // متاباکس «ویدئو/ایمبد» برای تأمین منبع پلیر
+        add_action('add_meta_boxes', [VideoMetaBox::class, 'register']);
+        add_action('save_post_jbg_ad', [VideoMetaBox::class, 'save'], 10, 2);
 
         // ───────── Admin columns ─────────
         if (is_admin()) {
@@ -30,8 +36,9 @@ class Bootstrap {
         }
 
         // ───────── Frontend components (شورتکدها/نما) ─────────
+        // ابتدا فایل‌ها را لود می‌کنیم؛ سپس اگر کلاس و متد register وجود داشت، رجیسترشان می‌کنیم
         add_action('init', function () {
-            foreach ([
+            $map = [
                 // تضمین نمایش پلیر حتی اگر محتوا پلیر نداشته باشد
                 'src/Frontend/PlayerShim.php'        => '\\JBG\\Ads\\Frontend\\PlayerShim',
                 'src/Frontend/ListShortcode.php'     => '\\JBG\\Ads\\Frontend\\ListShortcode',
@@ -39,13 +46,16 @@ class Bootstrap {
                 'src/Frontend/ViewBadge.php'         => '\\JBG\\Ads\\Frontend\\ViewBadge',
                 'src/Frontend/SingleLayout.php'      => '\\JBG\\Ads\\Frontend\\SingleLayout',
                 'src/Frontend/AccessGate.php'        => '\\JBG\\Ads\\Frontend\\AccessGate',
-            ] as $rel => $fqcn) {
+            ];
+
+            foreach ($map as $rel => $fqcn) {
                 $file = JBG_ADS_DIR . $rel;
-                if (file_exists($file)) {
+                if (is_file($file)) {
                     require_once $file;
-                    if (class_exists($fqcn) && method_exists($fqcn, 'register')) {
-                        $fqcn::register();
-                    }
+                }
+                if (class_exists($fqcn) && method_exists($fqcn, 'register')) {
+                    // کلاس‌هایی که register دارند را فعال کن
+                    $fqcn::register();
                 }
             }
         }, 10);
@@ -60,7 +70,7 @@ class Bootstrap {
                 'src/Rest/NextController.php',
             ] as $rel) {
                 $file = JBG_ADS_DIR . $rel;
-                if (file_exists($file)) {
+                if (is_file($file)) {
                     require_once $file;
                 }
             }
