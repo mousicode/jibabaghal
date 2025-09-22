@@ -60,10 +60,8 @@ class RelatedShortcode {
             'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
             'meta_key'            => 'jbg_seq',
             'post__not_in'        => $current_id ? [$current_id] : [],
+            'lang'                => 'all',
         ];
-        if (defined('ICL_SITEPRESS_VERSION') || function_exists('pll_current_language')) {
-            $base['lang'] = 'all';
-        }
 
         // 1) با CPV + tax
         $args = $base;
@@ -83,6 +81,14 @@ class RelatedShortcode {
             $q = new \WP_Query($args);
         }
 
+        // 4) در صورت نیاز، allow-filters
+        if (!$q->have_posts()) {
+            $args4 = $args;
+            $args4['suppress_filters'] = false;
+            $q = new \WP_Query($args4);
+            if ($q->have_posts()) $args = $args4;
+        }
+
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
@@ -100,7 +106,18 @@ class RelatedShortcode {
 
         if (empty($items)) {
             if (current_user_can('manage_options')) {
-                echo "\n<!-- jbg_related: empty after fallback; final args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+                global $wpdb;
+                $db_count = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish'",
+                        'jbg_ad'
+                    )
+                );
+                $sql = isset($q) && isset($q->request) ? $q->request : '(no-sql)';
+                echo "\n<!-- jbg_related: EMPTY after 4-stage fallback.\n"
+                   . "db_count(publish jbg_ad)={$db_count}\n"
+                   . "final args:\n".esc_html(print_r($args, true))."\n"
+                   . "sql:\n".esc_html($sql)."\n-->\n";
             }
             return '';
         }

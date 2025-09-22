@@ -43,7 +43,7 @@ class ListShortcode {
     public static function render($atts = []): string {
         if (!wp_style_is('jbg-list', 'enqueued')) {
             $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.8');
+            wp_enqueue_style('jbg-list', $css, [], '0.1.9');
         }
 
         $a = shortcode_atts([
@@ -64,14 +64,12 @@ class ListShortcode {
             'posts_per_page'      => max(1, (int)$a['limit']),
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
-            'suppress_filters'    => true,  // فیلترهای خارجی روی SQL را خنثی کن
+            'suppress_filters'    => true,   // ابتدا تمام فیلترها را خنثی می‌کنیم
             'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
             'meta_key'            => 'jbg_seq',
         ];
-        // سازگاری با چندزبانه‌ها: همهٔ زبان‌ها را بگیر
-        if (defined('ICL_SITEPRESS_VERSION') || function_exists('pll_current_language')) {
-            $base['lang'] = 'all';
-        }
+        // چندزبانه: همهٔ زبان‌ها
+        $base['lang'] = 'all'; // WP بی‌اثر است؛ Polylang/WPML از آن پشتیبانی می‌کنند
 
         // مرحله 1: با CPV + فیلترها
         $args = $base;
@@ -93,6 +91,14 @@ class ListShortcode {
             $q = new \WP_Query($args);
         }
 
+        // مرحله 4: اگر هنوز صفر، یک بار با allow-filters (برای سازگاری با بعضی پلاگین‌ها)
+        if (!$q->have_posts()) {
+            $args4 = $args;
+            $args4['suppress_filters'] = false;
+            $q = new \WP_Query($args4);
+            if ($q->have_posts()) $args = $args4; // برای دیباگ نهایی
+        }
+
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
@@ -110,7 +116,19 @@ class ListShortcode {
 
         if (empty($items)) {
             if (current_user_can('manage_options')) {
-                echo "\n<!-- jbg_ads: empty after 3-stage fallback; final args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+                global $wpdb;
+                $db_count = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish'",
+                        'jbg_ad'
+                    )
+                );
+                $sql = isset($q) && isset($q->request) ? $q->request : '(no-sql)';
+                echo "\n<!-- jbg_ads: EMPTY after 4-stage fallback.\n"
+                   . "post_type_exists(jbg_ad)=".(post_type_exists('jbg_ad')?'yes':'NO')."\n"
+                   . "db_count(publish jbg_ad)={$db_count}\n"
+                   . "final args:\n".esc_html(print_r($args, true))."\n"
+                   . "sql:\n".esc_html($sql)."\n-->\n";
             }
             return '';
         }
