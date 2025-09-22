@@ -3,6 +3,14 @@ namespace JBG\Ads\Rest;
 
 if (!defined('ABSPATH')) exit;
 
+/**
+ * اگر به هر دلیلی این فایل دوباره load شود (مسیر متفاوت، symlink، include دیگر)،
+ * از تعریف مجدد کلاس جلوگیری می‌کنیم تا Fatal نشود.
+ */
+if (class_exists(__NAMESPACE__ . '\\ViewTrackController', /*autoload*/ false)) {
+    return; // کلاس قبلاً تعریف شده است
+}
+
 class ViewTrackController {
 
     public static function register_routes(): void {
@@ -27,10 +35,13 @@ class ViewTrackController {
             return new \WP_Error('no_user', 'User not logged in', ['status'=>401]);
         }
 
+        // تضمین ساخت جدول لاگ (مستقل از بیلینگ)
+        self::ensure_table();
+
         global $wpdb;
         $table = $wpdb->prefix.'jbg_views';
 
-        // اگر در 24 ساعت گذشته بازدیدی از این کاربر برای این آگهی داشته‌ایم، دوباره ثبت نکن
+        // اگر در ۲۴ ساعت گذشته همین کاربر برای همین آگهی ثبت داشته، دوباره ثبت نکن
         $exists = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$table}
              WHERE ad_id=%d AND user_id=%d
@@ -58,13 +69,13 @@ class ViewTrackController {
             return new \WP_Error('db_insert_failed', 'Insert failed: '.$wpdb->last_error, ['status'=>500]);
         }
 
-        // افزایش اتمی شمارنده‌ی بازدید (هر دو کلید برای سازگاری)
-        self::incr_views_meta($ad_id, 'jbg_views_total');
+        // افزایش اتمی شمارنده‌ی بازدید فقط روی کلید واحد (یکپارچه)
         self::incr_views_meta($ad_id, 'jbg_views_count');
 
         return new \WP_REST_Response(['ok'=>true, 'already'=>false], 200);
     }
 
+    /** افزایش اتمی متای شمارنده */
     private static function incr_views_meta(int $ad_id, string $key): void {
         global $wpdb;
         $meta_id = (int) $wpdb->get_var($wpdb->prepare(
@@ -82,5 +93,29 @@ class ViewTrackController {
             add_post_meta($ad_id, $key, 1, true);
         }
         wp_cache_delete($ad_id, 'post_meta');
+    }
+
+    /** ایجاد جدول jbg_views در صورت عدم وجود */
+    private static function ensure_table(): void {
+        global $wpdb;
+        $table  = $wpdb->prefix . 'jbg_views';
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists !== $table) {
+            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+            $charset = $wpdb->get_charset_collate();
+            $sql = "CREATE TABLE {$table} (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                ad_id BIGINT UNSIGNED NOT NULL,
+                user_id BIGINT UNSIGNED NOT NULL,
+                amount INT UNSIGNED NOT NULL,
+                created_at DATETIME NOT NULL,
+                ip VARCHAR(45) DEFAULT '' NOT NULL,
+                ua VARCHAR(255) DEFAULT '' NOT NULL,
+                PRIMARY KEY (id),
+                KEY ad_id (ad_id),
+                KEY user_id (user_id)
+            ) {$charset};";
+            dbDelta($sql);
+        }
     }
 }
