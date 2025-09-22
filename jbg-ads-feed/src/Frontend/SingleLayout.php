@@ -1,125 +1,113 @@
 <?php
-namespace JBG\Ads\Frontend;
-if (!defined('ABSPATH')) exit;
+/**
+ * Single layout for jbg_ad (2-column: sidebar left + main)
+ */
+namespace JBG\AdsFeed\Frontend;
 
-if (!class_exists(__NAMESPACE__ . '\\SingleLayout')):
-
-class SingleLayout {
-
-    public static function register(): void {
-        // فقط بلاک خودمان را در انتهای محتوا اضافه می‌کنیم؛ به خود محتوا/پلیر/کوییز دست نمی‌زنیم
-        add_filter('the_content', [self::class, 'append_block'], 99);
+class SingleLayout
+{
+    public static function bootstrap(): void
+    {
+        if (!is_singular('jbg_ad')) {
+            return;
+        }
+        add_filter('the_content', [self::class, 'render'], 999);
+        add_action('wp_enqueue_scripts', [self::class, 'enqueue_css']);
     }
 
-    /** ترتیب واحد: CPV↓, budget_remaining↓, priority_boost↓, date↓ (فقط دسته‌های همین ویدیو) */
-    private static function ordered_items_for(int $current_id): array {
-        $tax_query = [];
-        $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
-        if (!is_wp_error($terms) && !empty($terms)) {
-            $tax_query[] = ['taxonomy'=>'jbg_cat','field'=>'term_id','terms'=>array_map('intval',$terms)];
+    public static function enqueue_css(): void
+    {
+        // اگر قبلاً ثابت مسیر تعریف نشده، حدس بزن
+        if (!defined('JBG_ADS_FEED_URL')) {
+            $url_guess = trailingslashit(plugins_url('/', dirname(dirname(__DIR__))));
+            define('JBG_ADS_FEED_URL', $url_guess);
         }
-
-        $q = new \WP_Query([
-            'post_type'      => 'jbg_ad',
-            'posts_per_page' => 500,
-            'no_found_rows'  => true,
-            'meta_query'     => [['key'=>'jbg_cpv','compare'=>'EXISTS']],
-            'orderby'        => 'date',
-            'order'          => 'DESC',
-            'tax_query'      => $tax_query ?: null,
-        ]);
-
-        $rows = [];
-        foreach ($q->posts as $p) {
-            $rows[] = [
-                'ID'    => (int)$p->ID,
-                'cpv'   => (int)get_post_meta($p->ID,'jbg_cpv',true),
-                'br'    => (int)get_post_meta($p->ID,'jbg_budget_remaining',true),
-                'boost' => (int)get_post_meta($p->ID,'jbg_priority_boost',true),
-                'date'  => get_post_time('U', true, $p->ID),
-            ];
-        }
-        wp_reset_postdata();
-
-        usort($rows, function($a,$b){
-            if ($a['cpv'] === $b['cpv']) {
-                if ($a['br'] === $b['br']) {
-                    if ($a['boost'] === $b['boost']) return ($b['date'] <=> $a['date']);
-                    return ($b['boost'] <=> $a['boost']);
-                }
-                return ($b['br'] <=> $a['br']);
-            }
-            return ($b['cpv'] <=> $a['cpv']);
-        });
-
-        return $rows;
+        wp_enqueue_style(
+            'jbg-ads-single',
+            trailingslashit(JBG_ADS_FEED_URL) . 'assets/css/single.css',
+            [],
+            '0.2.0'
+        );
     }
 
-    /** لینک ویدیو بعدی طبق همان ترتیب */
-    private static function next_url_for(int $current_id): string {
-        $items = self::ordered_items_for($current_id);
-        if (!$items) return '';
-        $ids = array_map(fn($it)=>(int)$it['ID'], $items);
-        $idx = array_search($current_id, $ids, true);
-        if ($idx === false || $idx >= count($ids)-1) return '';
-        return get_permalink((int)$ids[$idx+1]) ?: '';
+    public static function render(string $content): string
+    {
+        // شناسه آگهی
+        $ad_id = get_the_ID();
+
+        // بلوک سایدبار: ویدیوهای مرتبط (می‌تونی پارامتر limit/category دلخواه بدی)
+        $sidebar = do_shortcode('[jbg_related limit="10"]');
+
+        // محتوای ستون اصلی: خود محتوا + پلیر + کوییز + دکمه «ویدئوی بعدی»
+        // اگر قبلاً Rendererها/HTML دیگری اضافه می‌کنی، همون‌ها درج می‌شن.
+        $main = self::wrap_player($content) . self::quiz_hint() . self::next_btn($ad_id);
+
+        // ساختار ۲ ستونه (سایدبار در چپ)
+        $html = '
+        <div class="jbg-ad-layout" dir="rtl">
+            <aside class="jbg-ad-sidebar" aria-label="ویدیوهای مرتبط">
+                <h3 class="jbg-ad-sidebar__title">' . esc_html__('ویدیوهای مرتبط', 'jbg') . '</h3>
+                ' . $sidebar . '
+            </aside>
+            <main class="jbg-ad-main">
+                ' . $main . '
+            </main>
+        </div>';
+
+        return $html;
     }
 
-    public static function append_block($content) {
-        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
-
-        $current_id = get_the_ID();
-        $next_url   = self::next_url_for($current_id);
-
-        // استایل بسیار مینیمال (تداخلی با تم ایجاد نمی‌کند)
-        $style = '<style>
-          .jbg-after{margin-top:16px}
-          .jbg-next-wrap{text-align:right;margin:10px 0 18px}
-          .jbg-next-btn{display:inline-block;padding:10px 16px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;opacity:.5;pointer-events:none}
-          .jbg-next-btn[aria-disabled="false"]{opacity:1;pointer-events:auto}
-          .jbg-next-hint{margin-right:8px;font-size:12px;color:#6b7280}
-          .jbg-related-wrap{margin-top:16px}
-        </style>';
-
-        // دکمه «ویدیو بعدی»: لینک از الان درست است اما تا پاس آزمون قفل است
-        $btn  = '<div class="jbg-next-wrap">';
-        if ($next_url) {
-            $btn .= '<a id="jbg-next-btn" class="jbg-next-btn" href="'.esc_url($next_url).'" aria-disabled="true">ویدیو بعدی</a>';
-            $btn .= '<small id="jbg-next-hint" class="jbg-next-hint">بعد از قبولی آزمون این ویدیو، دکمه فعال می‌شود.</small>';
-        } else {
-            $btn .= '<small id="jbg-next-hint" class="jbg-next-hint">این آخرین ویدیو است.</small>';
+    /**
+     * ویدئو را در یک رپر 16:9 می‌پیچد تا نسبت تصویر حفظ شود
+     */
+    private static function wrap_player(string $content): string
+    {
+        // اگر قبلاً ویدئو/پلیر داری، همان را در یک پوشش 16:9 جاگذاری می‌کنیم
+        // در غیر این صورت همان content را برمی‌گردانیم
+        $hasVideo = (bool) preg_match('~<(video|iframe|div[^>]+class="[^"]*plyr[^"]*")[^>]*>~i', $content);
+        if (!$hasVideo) {
+            return $content;
         }
-        $btn .= '</div>';
+        return '<div class="jbg-player-wrap">' . $content . '</div>';
+    }
 
-        // اگر قبلاً پاس شده، از بدو ورود باز باشد
-        $passed = is_user_logged_in() ? (bool)get_user_meta(get_current_user_id(),'jbg_quiz_passed_'.$current_id,true) : false;
+    private static function quiz_hint(): string
+    {
+        // پیام «بعد از تماشای کامل…» که قبلاً داشتی
+        return '<div class="jbg-quiz-hint">' .
+            esc_html__('بعد از تماشای کامل این ویدئو، دکمه فعال می‌شود.', 'jbg') .
+            '</div>';
+    }
 
-        $script = '<script>(function(){
-          var b=document.getElementById("jbg-next-btn"),h=document.getElementById("jbg-next-hint");
-          if(b && '.($passed ? 'true' : 'false').'){ b.setAttribute("aria-disabled","false"); if(h) h.textContent=""; }
-          function openBtn(){ if(!b) return; b.setAttribute("aria-disabled","false"); if(h) h.textContent=""; }
-          document.addEventListener("jbg:quiz_passed",function(e){
-            try{var id=e&&e.detail&&e.detail.adId?parseInt(e.detail.adId,10):0;if(!id||id==='.$current_id.')openBtn();}catch(_){openBtn();}
+    private static function next_btn(int $ad_id): string
+    {
+        // دکمه «ویدئوی بعدی» که با رویداد jbg:quiz_passed آزاد می‌شود
+        $next_url = self::calc_next_url($ad_id);
+        $disabled = 'disabled aria-disabled="true"';
+        return '
+        <div class="jbg-next">
+            <a class="jbg-next__btn" href="' . esc_url($next_url) . '" ' . $disabled . '>' .
+                esc_html__('ویدئو بعدی', 'jbg') .
+            '</a>
+        </div>
+        <script>
+        (function(){
+          document.addEventListener("jbg:quiz_passed", function(){
+            var a = document.querySelector(".jbg-next__btn");
+            if(a){ a.removeAttribute("disabled"); a.removeAttribute("aria-disabled"); a.classList.add("is-unlocked"); }
           });
-        })();</script>';
-
-        // سایدبار/ویدیوهای مرتبط را «بعد از محتوا» می‌آوریم تا روی لود پلیر هیچ اثری نگذارد
-        $related = '<div class="jbg-related-wrap">'.do_shortcode('[jbg_related limit="8" title="ویدیوهای مرتبط"]').'</div>';
-
-    // Render video player markup using post meta
-    $video_src = get_post_meta($current_id, 'jbg_video_src', true);
-    $player = '';
-    if ($video_src) {
-        $is_hls = (stripos($video_src, '.m3u8') !== false);
-        $player = '<div class="jbg-player-wrapper"><video id="jbg-player" class="plyr" controls playsinline poster="'.esc_url(get_the_post_thumbnail_url($current_id)).'"'.($is_hls ? ' data-hls="true"' : '').' style="width:100%;max-width:800px;aspect-ratio:16/9;">'
-            .'<source src="'.esc_url($video_src).'" type="'.($is_hls ? 'application/x-mpegURL' : 'video/mp4').'">'
-            .__('مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.','jbg-ads')
-            .'</video></div>';
-    } else {
-        $player = '<div class="jbg-player-wrapper"><div class="jbg-player-error">'.__('ویدیو یافت نشد','jbg-ads').'</div></div>';
+        })();
+        </script>';
     }
-    return $player . $content . '<div class="jbg-after">'.$style.$btn.$related.'</div>'.$script;
+
+    private static function calc_next_url(int $ad_id): string
+    {
+        // همان منطقی که قبلاً برای انتخاب «بعدی» داشتی؛
+        // در صورت نبود، می‌توان ساده‌ترین حالت را گذاشت (برگشت به آرشیو)
+        $next = get_adjacent_post(true, '', false, 'jbg_cat'); // مثال: بر اساس همین کتگوری سفارشی
+        if ($next) {
+            return get_permalink($next);
+        }
+        return get_post_type_archive_link('jbg_ad') ?: home_url('/');
     }
 }
-
-endif;
