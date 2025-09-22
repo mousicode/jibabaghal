@@ -1,7 +1,8 @@
 <?php
 /**
- * Safe 2-column layout for jbg_ad: sidebar (related) on the left, main content on the right
- * – Does NOT alter existing player/quiz markup. Just wraps and places the related list alongside.
+ * Safe 2-column layout for jbg_ad:
+ * Sidebar (related) on the LEFT, Main content (player + rest) on the RIGHT.
+ * Does NOT alter existing player/quiz markup. Runs very late to avoid conflicts.
  */
 namespace JBG\AdsFeed\Frontend;
 
@@ -12,8 +13,8 @@ class SingleLayout
         if (!is_singular('jbg_ad')) {
             return;
         }
-        // run after most content filters but before very-late filters
-        add_filter('the_content', [self::class, 'wrap_two_cols'], 50);
+        // خیلی دیر اجرا بشه تا هر افزونه/قالبی که محتوا/پلیر رو تزریق می‌کنه، کارش را کرده باشد.
+        add_filter('the_content', [self::class, 'wrap_two_cols'], 2000);
         add_action('wp_enqueue_scripts', [self::class, 'enqueue_css']);
     }
 
@@ -27,19 +28,26 @@ class SingleLayout
             'jbg-ads-single',
             trailingslashit(JBG_ADS_FEED_URL) . 'assets/css/single.css',
             [],
-            '0.3.0'
+            '0.4.0'
         );
     }
 
-    /**
-     * Wrap original content + add related sidebar – without touching the player's HTML.
-     */
     public static function wrap_two_cols(string $content): string
     {
-        // Build the related block via shortcode (no assumptions about theme markup)
+        // فقط در سینگل jbg_ad
+        if (!is_singular('jbg_ad')) {
+            return $content;
+        }
+
+        // اگر قبلاً رپ شده بود، دوباره رپ نکن
+        if (strpos($content, 'class="jbg-two-col"') !== false) {
+            return $content;
+        }
+
+        // Related list via shortcode (دست‌کاری داخل محتوا نمی‌کنیم)
         $related = do_shortcode('[jbg_related limit="10"]');
 
-        // Just wrap – keep the original $content untouched
+        // رپر سبک; محتوای اصلی دست‌نخورده میاد داخل ستون Main
         $out = '
         <div class="jbg-two-col" dir="rtl">
           <aside class="jbg-two-col__sidebar" aria-label="ویدیوهای مرتبط">

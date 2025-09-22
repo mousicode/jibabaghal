@@ -1,4 +1,4 @@
-/* Two-column layout: sidebar on the LEFT, main on the RIGHT (RTL-friendly) */
+/* Two-column: sidebar LEFT, main RIGHT */
 .jbg-two-col{
   display:grid;
   grid-template-columns: 320px 1fr; /* left: sidebar, right: main */
@@ -10,23 +10,17 @@
   padding: 0 16px;
 }
 
-/* Sidebar (left) */
-.jbg-two-col__sidebar{
-  grid-area: sidebar;
-}
+.jbg-two-col__sidebar{ grid-area: sidebar; }
+.jbg-two-col__main{ grid-area: main; min-width: 0; }
+
 .jbg-two-col__title{
   margin: 0 0 12px;
   font-size: 16px; font-weight: 700;
 }
+
 .jbg-two-col__related{ display:block; }
 
-/* Main (right) – keep all player markup intact */
-.jbg-two-col__main{
-  grid-area: main;
-  min-width: 0; /* avoid overflow with iframes/players */
-}
-
-/* Make sure embedded players/iframes scale to container width */
+/* Ensure embeds scale to container width */
 .jbg-two-col__main iframe,
 .jbg-two-col__main video,
 .jbg-two-col__main .plyr,
@@ -36,7 +30,7 @@
   height: auto;
 }
 
-/* Responsive: stack on small screens */
+/* Stack on small screens */
 @media (max-width: 1024px){
   .jbg-two-col{
     grid-template-columns: 1fr;
