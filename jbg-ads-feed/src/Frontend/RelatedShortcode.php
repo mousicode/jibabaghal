@@ -57,8 +57,7 @@ class RelatedShortcode {
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
             'suppress_filters'    => true,
-            'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
-            'meta_key'            => 'jbg_seq',
+            'orderby'             => ['menu_order' => 'ASC', 'date' => 'ASC', 'ID' => 'ASC'],
             'post__not_in'        => $current_id ? [$current_id] : [],
             'lang'                => 'all',
         ];
@@ -81,10 +80,9 @@ class RelatedShortcode {
             $q = new \WP_Query($args);
         }
 
-        // 4) در صورت نیاز، allow-filters
+        // 4) اجازهٔ فیلترها در صورت نیاز
         if (!$q->have_posts()) {
-            $args4 = $args;
-            $args4['suppress_filters'] = false;
+            $args4 = $args; $args4['suppress_filters'] = false;
             $q = new \WP_Query($args4);
             if ($q->have_posts()) $args = $args4;
         }
@@ -106,12 +104,8 @@ class RelatedShortcode {
 
         if (empty($items)) {
             if (current_user_can('manage_options')) {
-                global $wpdb;
-                $db_count = (int) $wpdb->get_var(
-                    $wpdb->prepare(
-                        "SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish'",
-                        'jbg_ad'
-                    )
+                global $wpdb; $db_count = (int)$wpdb->get_var(
+                    $wpdb->prepare("SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish'", 'jbg_ad')
                 );
                 $sql = isset($q) && isset($q->request) ? $q->request : '(no-sql)';
                 echo "\n<!-- jbg_related: EMPTY after 4-stage fallback.\n"
@@ -122,6 +116,7 @@ class RelatedShortcode {
             return '';
         }
 
+        // مرتب‌سازی نهایی با seq
         usort($items, function($a, $b){
             if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
             if ($a['cpv'] === $b['cpv']) {

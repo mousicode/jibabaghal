@@ -43,7 +43,7 @@ class ListShortcode {
     public static function render($atts = []): string {
         if (!wp_style_is('jbg-list', 'enqueued')) {
             $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.9');
+            wp_enqueue_style('jbg-list', $css, [], '0.2.0');
         }
 
         $a = shortcode_atts([
@@ -53,50 +53,47 @@ class ListShortcode {
             'class'    => '',
         ], $atts, 'jbg_ads');
 
-        // آماده‌سازی فیلترها (فقط اسلاگ معتبر)
+        // فیلترها (فقط اسلاگ معتبر)
         $brand_slugs = $a['brand']    ? self::valid_slugs('jbg_brand', array_map('trim', explode(',', $a['brand']))) : [];
         $cat_slugs   = $a['category'] ? self::valid_slugs('jbg_cat',   array_map('trim', explode(',', $a['category']))) : [];
 
-        // پایهٔ مشترک کوئری
+        // پایهٔ کوئری — بدون meta_key/meta_value (تا INNER JOIN نخورد)
         $base = [
             'post_type'           => 'jbg_ad',
             'post_status'         => 'publish',
             'posts_per_page'      => max(1, (int)$a['limit']),
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
-            'suppress_filters'    => true,   // ابتدا تمام فیلترها را خنثی می‌کنیم
-            'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
-            'meta_key'            => 'jbg_seq',
+            'suppress_filters'    => true,
+            'orderby'             => ['menu_order' => 'ASC', 'date' => 'ASC', 'ID' => 'ASC'],
         ];
-        // چندزبانه: همهٔ زبان‌ها
-        $base['lang'] = 'all'; // WP بی‌اثر است؛ Polylang/WPML از آن پشتیبانی می‌کنند
+        // چندزبانه
+        $base['lang'] = 'all';
 
-        // مرحله 1: با CPV + فیلترها
+        // --- مرحله 1: با CPV + tax
         $args = $base;
         $args['meta_query'] = [['key'=>'jbg_cpv','compare'=>'EXISTS']];
         if ($brand_slugs) $args['tax_query'][] = ['taxonomy'=>'jbg_brand','field'=>'slug','terms'=>$brand_slugs];
         if ($cat_slugs)   $args['tax_query'][] = ['taxonomy'=>'jbg_cat','field'=>'slug','terms'=>$cat_slugs];
-
         $q = new \WP_Query($args);
 
-        // مرحله 2: بدون CPV
+        // --- مرحله 2: حذف شرط CPV
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);
         }
 
-        // مرحله 3: بدون tax_query
+        // --- مرحله 3: حذف فیلترهای tax
         if (!$q->have_posts() && !empty($args['tax_query'])) {
             unset($args['tax_query']);
             $q = new \WP_Query($args);
         }
 
-        // مرحله 4: اگر هنوز صفر، یک بار با allow-filters (برای سازگاری با بعضی پلاگین‌ها)
+        // --- مرحله 4: اجازهٔ فیلترها (برای سازگاری با بعضی افزونه‌ها)
         if (!$q->have_posts()) {
-            $args4 = $args;
-            $args4['suppress_filters'] = false;
+            $args4 = $args; $args4['suppress_filters'] = false;
             $q = new \WP_Query($args4);
-            if ($q->have_posts()) $args = $args4; // برای دیباگ نهایی
+            if ($q->have_posts()) $args = $args4;
         }
 
         $items = [];
@@ -109,19 +106,15 @@ class ListShortcode {
                 'cpv'    => (int) get_post_meta($p->ID, 'jbg_cpv', true),
                 'br'     => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
                 'boost'  => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
-                'seq'    => Access::seq($p->ID),
+                'seq'    => Access::seq($p->ID), // مرتب‌سازی صحیح در PHP
             ];
         }
         wp_reset_postdata();
 
         if (empty($items)) {
             if (current_user_can('manage_options')) {
-                global $wpdb;
-                $db_count = (int) $wpdb->get_var(
-                    $wpdb->prepare(
-                        "SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish'",
-                        'jbg_ad'
-                    )
+                global $wpdb; $db_count = (int)$wpdb->get_var(
+                    $wpdb->prepare("SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish'", 'jbg_ad')
                 );
                 $sql = isset($q) && isset($q->request) ? $q->request : '(no-sql)';
                 echo "\n<!-- jbg_ads: EMPTY after 4-stage fallback.\n"
@@ -133,7 +126,7 @@ class ListShortcode {
             return '';
         }
 
-        // مرتب‌سازی نهایی
+        // مرتب‌سازی نهایی با seq
         usort($items, function($a, $b){
             if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
             if ($a['cpv'] === $b['cpv']) {
