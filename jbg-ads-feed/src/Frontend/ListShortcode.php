@@ -30,35 +30,6 @@ class ListShortcode {
         return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
     }
 
-    /**
-     * تعداد بازدید:
-     * 1) ابتدا از متای جدید jbg_views_total می‌خوانیم
-     * 2) اگر نبود/صفر بود، از جدول لاگ‌ها جمع می‌زنیم
-     * 3) سپس هر دو متای jbg_views_total و jbg_views_count را با هم همگام می‌کنیم
-     */
-    private static function views_count(int $ad_id): int {
-        $ad_id = absint($ad_id);
-        if ($ad_id <= 0) return 0;
-
-        // متای جدید
-        $v = (int) get_post_meta($ad_id, 'jbg_views_total', true);
-        if ($v > 0) return $v;
-
-        global $wpdb;
-        $table = $wpdb->prefix . 'jbg_views';
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists !== $table) return 0;
-
-        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id = %d", $ad_id));
-
-        // سینک هر دو کلید برای سازگاری
-        update_post_meta($ad_id, 'jbg_views_total', $count);
-        update_post_meta($ad_id, 'jbg_views_count', $count);
-        wp_cache_delete($ad_id, 'post_meta');
-
-        return $count;
-    }
-
     /* ---------- shortcode ---------- */
 
     public static function render($atts = []): string {
@@ -135,7 +106,7 @@ class ListShortcode {
         ob_start();
         echo '<div class="jbg-grid '.esc_attr($a['class']).'">';
         foreach ($items as $it) {
-            $views  = self::views_count((int)$it['ID']);
+            $views  = Helpers::views_count((int)$it['ID']); // ← هلسپر واحد
             $viewsF = self::compact_num($views) . ' بازدید';
             $when   = self::relative_time((int)$it['ID']);
             $brand  = self::brand_name((int)$it['ID']);

@@ -29,28 +29,6 @@ class RelatedShortcode {
         return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
     }
 
-    /** شمارش بازدید (سازگار با کلیدهای جدید/قدیم) */
-    private static function views_count(int $ad_id): int {
-        $ad_id = absint($ad_id);
-        if ($ad_id <= 0) return 0;
-
-        // ترجیح متای جدید
-        $v = (int) get_post_meta($ad_id, 'jbg_views_total', true);
-        if ($v > 0) return $v;
-
-        global $wpdb;
-        $table = $wpdb->prefix . 'jbg_views';
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists !== $table) return 0;
-
-        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id = %d", $ad_id));
-        // سینک هر دو کلید
-        update_post_meta($ad_id, 'jbg_views_total', $count);
-        update_post_meta($ad_id, 'jbg_views_count', $count);
-        wp_cache_delete($ad_id, 'post_meta');
-        return $count;
-    }
-
     /* ---------- shortcode ---------- */
 
     public static function render($atts = []): string {
@@ -114,7 +92,7 @@ class RelatedShortcode {
         echo '<div class="jbg-related-title">'.esc_html($a['title']).'</div>';
         echo '<div class="jbg-related-list">';
         foreach ($items as $it) {
-            $views  = self::views_count((int)$it['ID']);
+            $views  = Helpers::views_count((int)$it['ID']); // ← هلسپر واحد
             $viewsF = self::compact_num($views) . ' بازدید';
             $when   = self::relative_time((int)$it['ID']);
             $brand  = self::brand_name((int)$it['ID']);

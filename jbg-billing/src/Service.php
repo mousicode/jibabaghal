@@ -106,71 +106,84 @@ class Service {
         $cpv = (int) get_post_meta($ad_id, 'jbg_cpv', true);
         if ($cpv <= 0) return false;
 
-        // جلوگیری از دوباربیلینگ برای همین کاربر/آگهی
-        $billed_key = 'jbg_billed_' . $ad_id;
-        if (get_user_meta($user_id, $billed_key, true)) {
-            return false; // idempotent
+        // --- قفل سبک برای جلوگیری از Race (Atomic-ish) ---
+        $lock_key = 'jbg_bill_lock_' . $ad_id . '_' . $user_id;
+        $got_lock = add_option($lock_key, '1', '', 'no'); // ایجاد فقط در صورت نبود
+        if (!$got_lock) {
+            // قفل در جریان است؛ درخواست موازی را رد کن
+            return false;
         }
 
-        // بودجه فعلی و کفایت آن
-        $br = (int) get_post_meta($ad_id, 'jbg_budget_remaining', true);
-        if ($br < $cpv) {
-            update_post_meta($ad_id, 'jbg_is_fundable', 0);
-            return false; // بودجه کافی نیست
-        }
-
-        // کسر بودجه + تنظیم fundable
-        $new_br = max(0, $br - $cpv);
-        update_post_meta($ad_id, 'jbg_budget_remaining', $new_br);
-        update_post_meta($ad_id, 'jbg_is_fundable', ($new_br >= $cpv) ? 1 : 0);
-
-        // مارک‌کردن به‌عنوان «بیل شده» برای این کاربر
-        update_user_meta($user_id, $billed_key, current_time('mysql'));
-
-        // درج لاگ در جدول اختصاصی
-        self::ensure_table();
-        global $wpdb;
-        $table  = $wpdb->prefix . 'jbg_views';
-        $ins_ok = $wpdb->insert($table, [
-            'ad_id'      => $ad_id,
-            'user_id'    => $user_id,
-            'amount'     => $cpv,
-            'created_at' => current_time('mysql'),
-            'ip'         => isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : '',
-            'ua'         => isset($_SERVER['HTTP_USER_AGENT']) ? substr(sanitize_text_field($_SERVER['HTTP_USER_AGENT']), 0, 255) : '',
-        ], ['%d','%d','%d','%s','%s','%s']);
-
-        if ($ins_ok === false && function_exists('error_log')) {
-            error_log('JBG Billing DB insert failed: ' . $wpdb->last_error);
-        }
-
-        // ✅ شمارندهٔ بازدید آگهی (اتمی)
         try {
-            self::incr_views_atomic($ad_id);
-        } catch (\Throwable $e) {
-            if (function_exists('error_log')) {
-                error_log('JBG Views counter update error: ' . $e->getMessage());
+            // جلوگیری از دوباربیلینگ برای همین کاربر/آگهی (داخل قفل)
+            $billed_key = 'jbg_billed_' . $ad_id;
+            if (get_user_meta($user_id, $billed_key, true)) {
+                return false; // idempotent
             }
-        }
 
-        // ✅ افزایش خرج برند(ها)ی متصل به آگهی
-        try {
-            $brand_ids = wp_get_post_terms($ad_id, 'jbg_brand', ['fields' => 'ids']);
-            if (!is_wp_error($brand_ids) && is_array($brand_ids)) {
-                foreach ($brand_ids as $tid) {
-                    $spent = (int) get_term_meta($tid, 'jbg_brand_spent', true);
-                    update_term_meta($tid, 'jbg_brand_spent', $spent + (int) $cpv);
+            // بودجه فعلی و کفایت آن
+            $br = (int) get_post_meta($ad_id, 'jbg_budget_remaining', true);
+            if ($br < $cpv) {
+                update_post_meta($ad_id, 'jbg_is_fundable', 0);
+                return false; // بودجه کافی نیست
+            }
+
+            // کسر بودجه + تنظیم fundable
+            $new_br = max(0, $br - $cpv);
+            update_post_meta($ad_id, 'jbg_budget_remaining', $new_br);
+            update_post_meta($ad_id, 'jbg_is_fundable', ($new_br >= $cpv) ? 1 : 0);
+
+            // مارک‌کردن به‌عنوان «بیل شده» برای این کاربر
+            update_user_meta($user_id, $billed_key, current_time('mysql'));
+
+            // درج لاگ در جدول اختصاصی
+            self::ensure_table();
+            global $wpdb;
+            $table  = $wpdb->prefix . 'jbg_views';
+            $ins_ok = $wpdb->insert($table, [
+                'ad_id'      => $ad_id,
+                'user_id'    => $user_id,
+                'amount'     => $cpv,
+                'created_at' => current_time('mysql'),
+                'ip'         => isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : '',
+                'ua'         => isset($_SERVER['HTTP_USER_AGENT']) ? substr(sanitize_text_field($_SERVER['HTTP_USER_AGENT']), 0, 255) : '',
+            ], ['%d','%d','%d','%s','%s','%s']);
+
+            if ($ins_ok === false && function_exists('error_log')) {
+                error_log('JBG Billing DB insert failed: ' . $wpdb->last_error);
+            }
+
+            // ✅ شمارندهٔ بازدید آگهی (اتمی)
+            try {
+                self::incr_views_atomic($ad_id);
+            } catch (\Throwable $e) {
+                if (function_exists('error_log')) {
+                    error_log('JBG Views counter update error: ' . $e->getMessage());
                 }
             }
-        } catch (\Throwable $e) {
-            if (function_exists('error_log')) {
-                error_log('JBG Brand spend update error: ' . $e->getMessage());
+
+            // ✅ افزایش خرج برند(ها)ی متصل به آگهی
+            try {
+                $brand_ids = wp_get_post_terms($ad_id, 'jbg_brand', ['fields' => 'ids']);
+                if (!is_wp_error($brand_ids) && is_array($brand_ids)) {
+                    foreach ($brand_ids as $tid) {
+                        $spent = (int) get_term_meta($tid, 'jbg_brand_spent', true);
+                        update_term_meta($tid, 'jbg_brand_spent', $spent + (int) $cpv);
+                    }
+                }
+            } catch (\Throwable $e) {
+                if (function_exists('error_log')) {
+                    error_log('JBG Brand spend update error: ' . $e->getMessage());
+                }
             }
+
+            // هوک عمومی برای گزارش/آنالیتیکس
+            do_action('jbg_billed', $user_id, $ad_id, $cpv, $new_br);
+
+            return true;
+        } finally {
+            // آزادسازی قفل
+            delete_option($lock_key);
         }
-
-        // هوک عمومی برای گزارش/آنالیتیکس
-        do_action('jbg_billed', $user_id, $ad_id, $cpv, $new_br);
-
-        return true;
     }
 }
