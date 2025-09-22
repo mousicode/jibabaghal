@@ -30,67 +30,68 @@ class ListShortcode {
         return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
     }
 
+    /** اسلاگ‌های معتبر یک taxonomy را برمی‌گرداند */
+    private static function valid_slugs(string $tax, array $slugs): array {
+        if (!taxonomy_exists($tax)) return [];
+        $slugs = array_filter(array_map('sanitize_title', array_map('trim', $slugs)));
+        if (!$slugs) return [];
+        $terms = get_terms(['taxonomy'=>$tax, 'hide_empty'=>false, 'slug'=>$slugs]);
+        if (is_wp_error($terms) || empty($terms)) return [];
+        return array_map(fn($t)=>$t->slug, $terms);
+    }
+
     public static function render($atts = []): string {
         if (!wp_style_is('jbg-list', 'enqueued')) {
             $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.4');
+            wp_enqueue_style('jbg-list', $css, [], '0.1.6');
         }
 
         $a = shortcode_atts([
             'limit'    => 12,
             'brand'    => '',
-            'category' => '',
+            'category' => '',   // اسلاگ‌های jbg_cat
             'class'    => '',
         ], $atts, 'jbg_ads');
 
-        // --- Query (با CPV، ترتیب بر اساس seq سپس تاریخ)
-        $args = [
+        // آماده‌سازی فیلترها (فقط اسلاگ معتبر)
+        $brand_slugs = $a['brand']    ? self::valid_slugs('jbg_brand', array_map('trim', explode(',', $a['brand']))) : [];
+        $cat_slugs   = $a['category'] ? self::valid_slugs('jbg_cat',   array_map('trim', explode(',', $a['category']))) : [];
+
+        // مرحله 1: با CPV + فیلترها
+        $args_base = [
             'post_type'      => 'jbg_ad',
             'post_status'    => 'publish',
             'posts_per_page' => max(1, (int)$a['limit']),
             'no_found_rows'  => true,
-            'meta_query'     => [
-                ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
-            ],
-            'orderby'        => [
-                'meta_value_num' => 'ASC',
-                'date'           => 'ASC',
-            ],
+            'orderby'        => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
             'meta_key'       => 'jbg_seq',
         ];
+        $args = $args_base;
+        $args['meta_query'] = [['key'=>'jbg_cpv','compare'=>'EXISTS']];
 
-        // فیلتر برند
-        if (!empty($a['brand'])) {
-            $brands = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['brand']))));
-            if ($brands) {
-                $args['tax_query'][] = [
-                    'taxonomy' => 'jbg_brand',
-                    'field'    => 'slug',
-                    'terms'    => $brands,
-                ];
-            }
+        if ($brand_slugs) {
+            $args['tax_query'][] = ['taxonomy'=>'jbg_brand','field'=>'slug','terms'=>$brand_slugs];
+        }
+        if ($cat_slugs) {
+            $args['tax_query'][] = ['taxonomy'=>'jbg_cat','field'=>'slug','terms'=>$cat_slugs];
         }
 
-        // ✅ فیلتر دسته‌بندی روی taxonomy درست: jbg_cat
-        if (taxonomy_exists('jbg_cat') && !empty($a['category'])) {
-            $cats = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['category']))));
-            if ($cats) {
-                $args['tax_query'][] = [
-                    'taxonomy' => 'jbg_cat',
-                    'field'    => 'slug',
-                    'terms'    => $cats,
-                ];
-            }
-        }
-
+        // مرحله 1
         $q = new \WP_Query($args);
 
-        // --- Fallback: اگر نتیجه صفر بود، شرط CPV را حذف کن تا کارت‌ها خالی نماند
+        // مرحله 2: اگر صفر، شرط CPV را بردار
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);
         }
 
+        // مرحله 3: اگر هنوز صفر، تمام فیلترهای tax را هم بردار (برای اینکه صفحه خالی نماند)
+        if (!$q->have_posts() && !empty($args['tax_query'])) {
+            unset($args['tax_query']);
+            $q = new \WP_Query($args);
+        }
+
+        // جمع‌آوری
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
@@ -106,7 +107,16 @@ class ListShortcode {
         }
         wp_reset_postdata();
 
-        // مرتب‌سازی: seq سپس CPV/BR/Boost
+        // اگر باز هم هیچ، کلاً خروجی نده (نه ظرف خالی)
+        if (empty($items)) {
+            if (current_user_can('manage_options')) {
+                // دیباگ فقط برای ادمین در سورس HTML
+                echo "\n<!-- jbg_ads: empty after 3-stage fallback; last args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+            }
+            return '';
+        }
+
+        // مرتب‌سازی نهایی
         usort($items, function($a, $b){
             if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
             if ($a['cpv'] === $b['cpv']) {
@@ -115,9 +125,6 @@ class ListShortcode {
             }
             return ($b['cpv'] <=> $a['cpv']);
         });
-
-        // اگر باز هم آیتمی نبود، خروجی خالی بده (نه باکس سفید)
-        if (empty($items)) return '';
 
         $user_id = get_current_user_id();
 
@@ -146,6 +153,12 @@ class ListShortcode {
             echo '</div>';
         }
         echo '</div>';
+
+        // دیباگ فقط برای ادمین
+        if (current_user_can('manage_options')) {
+            echo "\n<!-- jbg_ads: rendered ".count($items)." items. final args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+        }
+
         return (string) ob_get_clean();
     }
 }

@@ -39,10 +39,14 @@ class SingleLayout {
             if (!empty(trim($quiz_html))) {
                 $html .= '<div class="jbg-section">'.$quiz_html.'</div>';
             }
-            // مرتبط‌ها
-            $html .= '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
+
+            // مرتبط‌ها را فقط اگر خروجی دارد اضافه کن
+            $rel_html = do_shortcode('[jbg_related limit="10"]');
+            if (!empty(trim($rel_html))) {
+                $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            }
         } else {
-            // پیام قفل + مرتبط‌ها
+            // پیام قفل
             $seq     = Access::seq($ad_id);
             $allowed = ($user_id>0) ? Access::unlocked_max($user_id) : 1;
             $html .= '<div class="jbg-locked"><div class="title">این ویدیو هنوز باز نشده</div>'
@@ -51,7 +55,12 @@ class SingleLayout {
                   .  ' را کامل ببینید و آزمونش را درست پاسخ دهید.'
                   .  ($user_id>0 ? ' (مرحلهٔ باز شما: ' . esc_html($allowed) . ')' : ' (ابتدا وارد شوید)') 
                   .  '</div></div>';
-            $html .= '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
+
+            // مرتبط‌ها را فقط اگر خروجی دارد اضافه کن
+            $rel_html = do_shortcode('[jbg_related limit="10"]');
+            if (!empty(trim($rel_html))) {
+                $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            }
         }
 
         $html .= '</div>';
