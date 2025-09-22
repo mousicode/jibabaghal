@@ -3,49 +3,25 @@ namespace JBG\Quiz\Frontend;
 
 class Renderer {
 
-    /**
-     * Boot on single Ad pages.
-     */
     public static function bootstrap(): void {
         if (is_singular('jbg_ad')) {
-            // فقط استایل/اسکریپت را لود می‌کنیم
             add_action('wp_enqueue_scripts', [self::class, 'enqueue_assets']);
-            // شورتکد برای نمایش آزمون هرجا که بخواهیم
             add_shortcode('jbg_quiz', [self::class, 'render_shortcode']);
         }
     }
 
-    /**
-     * Enqueue assets and pass REST endpoints to JS.
-     */
     public static function enqueue_assets(): void {
-        wp_enqueue_style(
-            'jbg-quiz',
-            JBG_QUIZ_URL . 'assets/css/jbg-quiz.css',
-            [],
-            '0.1.2'
-        );
-
-        wp_enqueue_script(
-            'jbg-quiz',
-            JBG_QUIZ_URL . 'assets/js/jbg-quiz.js',
-            [],
-            '0.1.2',
-            true
-        );
-
+        wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL . 'assets/css/jbg-quiz.css', [], '0.1.2');
+        wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL . 'assets/js/jbg-quiz.js', [], '0.1.2', true);
         wp_localize_script('jbg-quiz', 'JBG_QUIZ', [
-            'rest'     => rest_url('jbg/v1/quiz/submit'),   // submit answer
-            'restView' => rest_url('jbg/v1/view/confirm'),  // confirm full view when Start Quiz is clicked
+            'rest'     => rest_url('jbg/v1/quiz/submit'),
+            'restView' => rest_url('jbg/v1/view/confirm'),
             'nonce'    => wp_create_nonce('wp_rest'),
             'adId'     => get_the_ID(),
         ]);
     }
 
-    /**
-     * Shortcode renderer: [jbg_quiz]
-     * (بدون عنوان/برند/زمان؛ فقط خود آزمون)
-     */
+    /** شورتکد: [jbg_quiz] */
     public static function render_shortcode($atts = []) {
         $id = get_the_ID();
 
@@ -55,10 +31,8 @@ class Renderer {
         $a3 = (string) get_post_meta($id, 'jbg_quiz_a3', true);
         $a4 = (string) get_post_meta($id, 'jbg_quiz_a4', true);
 
-        // اگر کوییز کامل تنظیم نشده، چیزی نشان نده
-        if (!$q || !$a1 || !$a2 || !$a3 || !$a4) {
-            return '';
-        }
+        // اگر کوییز کامل نیست، خروجی خالی بده (تا باکس سفید نداشته باشیم)
+        if (!$q || !$a1 || !$a2 || !$a3 || !$a4) return '';
 
         $html  = '<div id="jbg-quiz" class="jbg-quiz" data-ad="' . esc_attr($id) . '" style="display:none">';
         $html .= '  <div class="jbg-quiz-card">';
@@ -78,9 +52,6 @@ class Renderer {
         return $html;
     }
 
-    /**
-     * Helper to render a single radio option.
-     */
     private static function radio(string $name, string $label, int $val): string {
         $id_attr = 'jbg-quiz-' . sanitize_html_class($name);
         return '<label class="jbg-quiz-opt">'

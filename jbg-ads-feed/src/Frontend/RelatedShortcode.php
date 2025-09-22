@@ -48,6 +48,7 @@ class RelatedShortcode {
             }
         }
 
+        // Query 1: فقط با CPV
         $args = [
             'post_type'      => 'jbg_ad',
             'posts_per_page' => max(1, (int)$a['limit']),
@@ -62,6 +63,13 @@ class RelatedShortcode {
         if ($tax_query) $args['tax_query'] = $tax_query;
 
         $q = new \WP_Query($args);
+
+        // Fallback: اگر نتیجه صفر بود، بدون meta_query
+        if (!$q->have_posts()) {
+            unset($args['meta_query']);
+            $q = new \WP_Query($args);
+        }
+
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [

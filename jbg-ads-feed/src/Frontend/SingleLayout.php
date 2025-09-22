@@ -4,10 +4,6 @@ if (!defined('ABSPATH')) exit;
 
 use JBG\Ads\Progress\Access;
 
-/**
- * Single jbg_ad layout:
- * Player/Badge → (اگر باز است) Quiz + Related  |  (اگر باز نیست) پیامِ قفل
- */
 class SingleLayout {
 
     public static function register(): void {
@@ -30,7 +26,6 @@ class SingleLayout {
           .jbg-locked{background:#fff;border:1px dashed #9ca3af;border-radius:12px;padding:18px;margin-top:16px;color:#374151}
           .jbg-locked .title{font-weight:800;margin-bottom:8px}
           .jbg-locked .note{font-size:13px;color:#6b7280}
-          /* Related styles (همان قبلی) */
           .jbg-related{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;}
           .jbg-related-title{font-weight:800;margin:0 0 8px 0;font-size:16px;color:#111827;}
           .jbg-related-list{display:flex;flex-direction:column;gap:10px;max-height:80vh;overflow:auto;}
@@ -42,21 +37,23 @@ class SingleLayout {
           .jbg-related-sub{font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
           .jbg-related-sub .brand{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600}
           .jbg-related-sub .dot{opacity:.55}
-          .jbg-card.locked{opacity:.6; pointer-events:none; position:relative}
-          .jbg-card.locked:after{content:"قفل"; position:absolute; top:8px; left:8px; background:#111827; color:#fff; font-size:12px; padding:2px 8px; border-radius:999px}
         </style>';
 
         $html  = '<div class="jbg-main-stack">';
 
-        // محتوای اصلی (پلیر/Badge) همیشه رندر می‌شود
+        // محتوای اصلی (پلیر/Badge)
         $html .= $content;
 
         if ($is_open) {
-            // آزمون و مرتبط‌ها
-            $html .= '<div class="jbg-section">'. do_shortcode('[jbg_quiz]') .'</div>';
+            // آزمون را فقط اگر واقعاً خروجی دارد، اضافه کن
+            $quiz_html = do_shortcode('[jbg_quiz]');
+            if (!empty(trim($quiz_html))) {
+                $html .= '<div class="jbg-section">'.$quiz_html.'</div>';
+            }
+            // مرتبط‌ها
             $html .= '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
         } else {
-            // پیام قفل + مرتبط‌ها (برای انگیزه/پیش‌نمایش)
+            // پیام قفل + مرتبط‌ها
             $seq     = Access::seq($ad_id);
             $allowed = ($user_id>0) ? Access::unlocked_max($user_id) : 1;
             $html .= '<div class="jbg-locked"><div class="title">این ویدیو هنوز باز نشده</div>'
@@ -65,7 +62,6 @@ class SingleLayout {
                   .  ' را کامل ببینید و آزمونش را درست پاسخ دهید.'
                   .  ($user_id>0 ? ' (مرحلهٔ باز شما: ' . esc_html($allowed) . ')' : ' (ابتدا وارد شوید)') 
                   .  '</div></div>';
-            // مرتبط‌ها را هم نشان بدهیم
             $html .= '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
         }
 

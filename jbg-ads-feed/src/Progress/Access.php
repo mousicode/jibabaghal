@@ -4,8 +4,7 @@ namespace JBG\Ads\Progress;
 if (!defined('ABSPATH')) exit;
 
 class Access {
-
-    /** شمارهٔ ترتیب ویدیو: از meta jbg_seq، بعد menu_order، وگرنه 1 */
+    /** شمارهٔ ترتیب ویدیو: meta jbg_seq → menu_order → 1 */
     public static function seq(int $ad_id): int {
         $seq = (int) get_post_meta($ad_id, 'jbg_seq', true);
         if ($seq > 0) return $seq;

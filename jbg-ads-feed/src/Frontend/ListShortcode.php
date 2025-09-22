@@ -43,6 +43,7 @@ class ListShortcode {
             'class'    => '',
         ], $atts, 'jbg_ads');
 
+        // --- Query 1: فقط آگهی‌هایی که CPV دارند
         $args = [
             'post_type'      => 'jbg_ad',
             'posts_per_page' => max(1, (int)$a['limit']),
@@ -51,12 +52,13 @@ class ListShortcode {
                 ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
             ],
             'orderby'        => [
-                'meta_value_num' => 'ASC', // ترتیب بر اساس jbg_seq اگر باشد
+                'meta_value_num' => 'ASC',
                 'date'           => 'ASC',
             ],
             'meta_key'       => 'jbg_seq',
         ];
 
+        // فیلتر برند
         if (!empty($a['brand'])) {
             $brands = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['brand']))));
             if ($brands) {
@@ -67,6 +69,7 @@ class ListShortcode {
                 ];
             }
         }
+        // فیلتر دسته‌بندی سفارشی (اگر jbg_category وجود دارد)
         if (taxonomy_exists('jbg_category') && !empty($a['category'])) {
             $cats = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['category']))));
             if ($cats) {
@@ -79,6 +82,13 @@ class ListShortcode {
         }
 
         $q = new \WP_Query($args);
+
+        // --- Fallback: اگر نتیجه صفر بود، شرط CPV را حذف کن تا کارت‌ها خالی نماند
+        if (!$q->have_posts()) {
+            unset($args['meta_query']);
+            $q = new \WP_Query($args);
+        }
+
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
@@ -94,7 +104,7 @@ class ListShortcode {
         }
         wp_reset_postdata();
 
-        // مرتب‌سازی نهایی: بر اساس seq سپس CPV/BR/Boost (برای هم‌خوانی با قبل)
+        // مرتب‌سازی: seq سپس CPV/BR/Boost
         usort($items, function($a, $b){
             if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
             if ($a['cpv'] === $b['cpv']) {
@@ -115,7 +125,7 @@ class ListShortcode {
             $brand  = self::brand_name((int)$it['ID']);
             $open   = Access::is_unlocked($user_id, (int)$it['ID']);
 
-            $cls = 'jbg-card' . ($open ? '' : ' locked');
+            $cls  = 'jbg-card' . ($open ? '' : ' locked');
             $href = $open ? esc_url($it['link']) : '#';
 
             echo '<div class="'.$cls.'">';

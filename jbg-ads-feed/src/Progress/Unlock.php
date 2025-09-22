@@ -4,21 +4,14 @@ namespace JBG\Ads\Progress;
 if (!defined('ABSPATH')) exit;
 
 /**
- * هر وقت کاربر آزمون را پاس کند و بیلینگ موفق شود (رویداد jbg_billed)،
+ * وقتی کاربر آزمون را پاس کند و بیلینگ انجام شود (jbg_billed)،
  * مرحلهٔ بعدی برایش باز می‌شود.
  */
 class Unlock {
-
     public static function bootstrap(): void {
         add_action('jbg_billed', [self::class, 'on_billed'], 10, 4);
     }
 
-    /**
-     * @param int    $user_id
-     * @param int    $ad_id
-     * @param int    $cpv
-     * @param int    $budget_remaining
-     */
     public static function on_billed($user_id, $ad_id, $cpv, $budget_remaining): void {
         $user_id = (int) $user_id;
         $ad_id   = (int) $ad_id;
