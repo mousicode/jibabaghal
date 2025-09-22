@@ -58,9 +58,27 @@ class Renderer {
             return $content;
         }
 
+        // --- Meta needed under the quiz title: post title, brand tag, relative time
+        $title = get_the_title($id);
+        $brandN = wp_get_post_terms($id, 'jbg_brand', ['fields' => 'names']);
+        $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
+        $when   = trim(human_time_diff(get_the_time('U', $id), current_time('timestamp'))) . ' پیش';
+
+        $meta  = '<div class="jbg-quiz-meta" style="margin:-6px 0 10px 0">';
+        $meta .= '  <div class="jbg-quiz-meta-title" style="font-weight:700;font-size:14px;">' . esc_html($title) . '</div>';
+        $meta .= '  <div class="jbg-quiz-meta-sub" style="font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap">';
+        if ($brand) {
+            $meta .= '<span class="brand" style="background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600">'
+                  .  esc_html($brand) . '</span><span class="dot" style="opacity:.55">•</span>';
+        }
+        $meta .= '    <span class="when">' . esc_html($when) . '</span>';
+        $meta .= '  </div>';
+        $meta .= '</div>';
+
         $html  = '<div id="jbg-quiz" class="jbg-quiz" data-ad="' . esc_attr($id) . '" style="display:none">';
         $html .= '  <div class="jbg-quiz-card">';
         $html .= '    <h3 class="jbg-quiz-title">' . esc_html__('Quiz', 'jbg-quiz') . '</h3>';
+        $html .=          $meta; // ← عنوان، برند، زمان انتشار درست زیر تیتر Quiz
         $html .= '    <p class="jbg-quiz-q">' . wp_kses_post($q) . '</p>';
         $html .= '    <form id="jbg-quiz-form">';
         $html .=          self::radio('a1', $a1, 1);

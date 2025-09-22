@@ -11,3 +11,9 @@ margin-top:10px; background:#16a34a; color:#fff; border:none; padding:10px 14px;
 }
 .jbg-quiz-btn:hover{ background:#15803d; }
 .jbg-quiz-result{ margin-top:10px; font-weight:600; }
+
+.jbg-quiz-meta{margin:-6px 0 10px 0}
+.jbg-quiz-meta-title{font-weight:700;font-size:14px}
+.jbg-quiz-meta-sub{font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.jbg-quiz-meta-sub .brand{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600}
+.jbg-quiz-meta-sub .dot{opacity:.55}
