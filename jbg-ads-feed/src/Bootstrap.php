@@ -8,6 +8,9 @@ use JBG\Ads\Taxonomy\Category;            // ← NEW
 use JBG\Ads\PostType\Ad;
 use JBG\Ads\Admin\MetaBox;
 use JBG\Ads\Admin\Columns;
+// برای سیستم قطره‌ای (progress)
+use JBG\Ads\Progress\Unlock;              // ← NEW (bootstrap)
+use JBG\Ads\Progress\Access;              // ← NEW (type-hint/use در کلاس‌های دیگر)
 
 class Bootstrap {
     public static function init(): void {
@@ -40,7 +43,7 @@ class Bootstrap {
             }
         });
 
-        // Shortcode: related (by category)  ← NEW
+        // Shortcode: related (by category)
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/RelatedShortcode.php';
             if (file_exists($file)) {
@@ -51,7 +54,7 @@ class Bootstrap {
             }
         });
 
-        // Single two-column layout wrapper (Right: player, Left: related)  ← NEW
+        // Single layout (stack: Player → Quiz → Related)
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
             if (file_exists($file)) {
@@ -62,13 +65,29 @@ class Bootstrap {
             }
         });
 
-        // Single header badge
+        // View badge (header)
         add_action('init', function () {
             $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
             if (file_exists($vb)) {
                 require_once $vb;
                 if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
                     \JBG\Ads\Frontend\ViewBadge::register();
+                }
+            }
+        });
+
+        // --- NEW: Progress/Gating (قطره‌ای)
+        add_action('init', function () {
+            // Access: ابزارهای کمکی فقط use می‌شوند؛ بوت لازم ندارد
+            $access = JBG_ADS_DIR . 'src/Progress/Access.php';
+            if (file_exists($access)) require_once $access;
+
+            // Unlock: شنوندهٔ رویداد بیلینگ برای باز کردن مرحله بعد
+            $unlock = JBG_ADS_DIR . 'src/Progress/Unlock.php';
+            if (file_exists($unlock)) {
+                require_once $unlock;
+                if (class_exists('\\JBG\\Ads\\Progress\\Unlock')) {
+                    \JBG\Ads\Progress\Unlock::bootstrap();
                 }
             }
         });
@@ -83,6 +102,7 @@ class Bootstrap {
                 }
             }
 
+            // اگر ViewController را حذف کرده‌ای، این بلوک به‌صورت امن نادیده گرفته می‌شود
             $view = JBG_ADS_DIR . 'src/Rest/ViewController.php';
             if (file_exists($view)) {
                 require_once $view;
@@ -91,7 +111,7 @@ class Bootstrap {
                 }
             }
 
-            // ← NEW: ViewTrackController
+            // ViewTrackController (ثبت تعامل روزانه — بدون افزایش شمارنده)
             $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
             if (file_exists($viewTrack)) {
                 require_once $viewTrack;

@@ -2,13 +2,13 @@
 namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
+use JBG\Ads\Progress\Access;
+
 class RelatedShortcode {
 
     public static function register(): void {
         add_shortcode('jbg_related', [self::class, 'render']);
     }
-
-    /* ---------- helpers (هم‌راستا با ListShortcode) ---------- */
 
     private static function compact_num(int $n): string {
         if ($n >= 1000000000) { $num=$n/1000000000; $u=' میلیارد'; }
@@ -29,15 +29,12 @@ class RelatedShortcode {
         return (!is_wp_error($names) && !empty($names)) ? (string) $names[0] : '';
     }
 
-    /* ---------- shortcode ---------- */
-
     public static function render($atts = []): string {
         $a = shortcode_atts([
             'limit' => 8,
             'title' => 'ویدیوهای مرتبط',
         ], $atts, 'jbg_related');
 
-        // دسته‌های پست فعلی (taxonomy جدید jbg_cat)
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
         $tax_query = [];
         if ($current_id) {
@@ -59,6 +56,8 @@ class RelatedShortcode {
             'meta_query'     => [
                 ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
             ],
+            'orderby'        => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
+            'meta_key'       => 'jbg_seq',
         ];
         if ($tax_query) $args['tax_query'] = $tax_query;
 
@@ -73,12 +72,13 @@ class RelatedShortcode {
                 'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
                 'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
                 'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
+                'seq'   => Access::seq($p->ID),
             ];
         }
         wp_reset_postdata();
 
-        // همان منطق رتبه‌بندی لیست اصلی  (CPV ↓ → BudgetRemaining ↓ → Boost ↓)
         usort($items, function($a, $b){
+            if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
             if ($a['cpv'] === $b['cpv']) {
                 if ($a['br'] === $b['br']) return ($b['boost'] <=> $a['boost']);
                 return ($b['br'] <=> $a['br']);
@@ -86,18 +86,23 @@ class RelatedShortcode {
             return ($b['cpv'] <=> $a['cpv']);
         });
 
-        // خروجی عمودی برای سایدبار
+        $user_id = get_current_user_id();
+
         ob_start();
         echo '<div class="jbg-related">';
         echo '<div class="jbg-related-title">'.esc_html($a['title']).'</div>';
         echo '<div class="jbg-related-list">';
         foreach ($items as $it) {
-            $views  = Helpers::views_count((int)$it['ID']); // ← هلسپر واحد
+            $views  = Helpers::views_count((int)$it['ID']);
             $viewsF = self::compact_num($views) . ' بازدید';
             $when   = self::relative_time((int)$it['ID']);
             $brand  = self::brand_name((int)$it['ID']);
+            $open   = Access::is_unlocked($user_id, (int)$it['ID']);
 
-            echo '<a class="jbg-related-item" href="'.esc_url($it['link']).'">';
+            $href = $open ? esc_url($it['link']) : '#';
+            $lock = $open ? '' : ' style="opacity:.6;pointer-events:none"';
+
+            echo '<a class="jbg-related-item" href="'.$href.'"'.$lock.'>';
             echo   '<span class="jbg-related-thumb"'.($it['thumb']?' style="background-image:url(\''.esc_url($it['thumb']).'\')"':'').'></span>';
             echo   '<span class="jbg-related-meta">';
             echo     '<span class="jbg-related-title-text">'.esc_html($it['title']).'</span>';

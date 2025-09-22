@@ -2,15 +2,15 @@
 namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
+use JBG\Ads\Progress\Access;
+
 /**
  * Single jbg_ad layout:
- * - ستون اصلی: Player (prio=5) → ViewBadge (prio=7) → Quiz (shorcode) → Related
- * - بدون سایدبار؛ همه‌چیز زیر هم قرار می‌گیرد و ظاهر کانتینرها مشابه قبلی است.
+ * Player/Badge → (اگر باز است) Quiz + Related  |  (اگر باز نیست) پیامِ قفل
  */
 class SingleLayout {
 
     public static function register(): void {
-        // قبل از Player (priority=5) تا wrapper بیرونی آماده باشد
         add_filter('the_content', [self::class, 'wrap'], 4);
     }
 
@@ -19,11 +19,18 @@ class SingleLayout {
             return $content;
         }
 
-        // CSS سبک برای کانتینرها
+        $user_id = get_current_user_id();
+        $ad_id   = get_the_ID();
+        $is_open = Access::is_unlocked($user_id, $ad_id);
+
+        // CSS سبک
         $style = '<style id="jbg-single-stack-css">
           .single-jbg_ad .jbg-main-stack{display:block; direction:rtl;}
           .single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
-          /* Related styles */
+          .jbg-locked{background:#fff;border:1px dashed #9ca3af;border-radius:12px;padding:18px;margin-top:16px;color:#374151}
+          .jbg-locked .title{font-weight:800;margin-bottom:8px}
+          .jbg-locked .note{font-size:13px;color:#6b7280}
+          /* Related styles (همان قبلی) */
           .jbg-related{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;}
           .jbg-related-title{font-weight:800;margin:0 0 8px 0;font-size:16px;color:#111827;}
           .jbg-related-list{display:flex;flex-direction:column;gap:10px;max-height:80vh;overflow:auto;}
@@ -35,22 +42,33 @@ class SingleLayout {
           .jbg-related-sub{font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
           .jbg-related-sub .brand{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600}
           .jbg-related-sub .dot{opacity:.55}
+          .jbg-card.locked{opacity:.6; pointer-events:none; position:relative}
+          .jbg-card.locked:after{content:"قفل"; position:absolute; top:8px; left:8px; background:#111827; color:#fff; font-size:12px; padding:2px 8px; border-radius:999px}
         </style>';
 
-
-        $main = $content;
-
-        // 2) باکس آزمون همان‌جا که قبلاً «مرتبط‌ها» می‌نشست:
-        $quizBox = '<div class="jbg-section">'. do_shortcode('[jbg_quiz]') .'</div>';
-
-        // 3) بعد از آزمون، باکس «ویدیوهای مرتبط»
-        $relatedBox = '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
-
-        // چینش نهایی
         $html  = '<div class="jbg-main-stack">';
-        $html .=   $main;
-        $html .=   $quizBox;
-        $html .=   $relatedBox;
+
+        // محتوای اصلی (پلیر/Badge) همیشه رندر می‌شود
+        $html .= $content;
+
+        if ($is_open) {
+            // آزمون و مرتبط‌ها
+            $html .= '<div class="jbg-section">'. do_shortcode('[jbg_quiz]') .'</div>';
+            $html .= '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
+        } else {
+            // پیام قفل + مرتبط‌ها (برای انگیزه/پیش‌نمایش)
+            $seq     = Access::seq($ad_id);
+            $allowed = ($user_id>0) ? Access::unlocked_max($user_id) : 1;
+            $html .= '<div class="jbg-locked"><div class="title">این ویدیو هنوز باز نشده</div>'
+                  .  '<div class="note">برای دسترسی، ابتدا ویدیوی مرحلهٔ '
+                  .  '<strong>' . esc_html(max(1, $seq - 1)) . '</strong>'
+                  .  ' را کامل ببینید و آزمونش را درست پاسخ دهید.'
+                  .  ($user_id>0 ? ' (مرحلهٔ باز شما: ' . esc_html($allowed) . ')' : ' (ابتدا وارد شوید)') 
+                  .  '</div></div>';
+            // مرتبط‌ها را هم نشان بدهیم
+            $html .= '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
+        }
+
         $html .= '</div>';
 
         static $once=false;
