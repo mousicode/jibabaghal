@@ -1,19 +1,17 @@
 <?php
 /**
- * Safe 2-column layout for jbg_ad:
- * Sidebar (related) on the LEFT, Main content (player + rest) on the RIGHT.
- * Does NOT alter existing player/quiz markup. Runs very late to avoid conflicts.
+ * Safe 2-column layout for jbg_ad
+ * Sidebar (related) on the LEFT, Main content (player + the rest) on the RIGHT.
+ * If [jbg_related] is empty, fallback to [jbg_list limit="5"].
  */
 namespace JBG\AdsFeed\Frontend;
 
 class SingleLayout
 {
-    public static function bootstrap(): void
+    public static function register(): void
     {
-        if (!is_singular('jbg_ad')) {
-            return;
-        }
-        // خیلی دیر اجرا بشه تا هر افزونه/قالبی که محتوا/پلیر رو تزریق می‌کنه، کارش را کرده باشد.
+        if (!is_singular('jbg_ad')) return;
+        // خیلی دیر اجرا می‌کنیم تا همه‌ی تزریق‌ها (پلیر/کوییز/…) انجام شده باشد
         add_filter('the_content', [self::class, 'wrap_two_cols'], 2000);
         add_action('wp_enqueue_scripts', [self::class, 'enqueue_css']);
     }
@@ -28,26 +26,24 @@ class SingleLayout
             'jbg-ads-single',
             trailingslashit(JBG_ADS_FEED_URL) . 'assets/css/single.css',
             [],
-            '0.4.0'
+            '0.5.0'
         );
     }
 
     public static function wrap_two_cols(string $content): string
     {
-        // فقط در سینگل jbg_ad
-        if (!is_singular('jbg_ad')) {
-            return $content;
-        }
+        if (!is_singular('jbg_ad')) return $content;
+        if (strpos($content, 'class="jbg-two-col"') !== false) return $content; // دوباره رپ نکن
 
-        // اگر قبلاً رپ شده بود، دوباره رپ نکن
-        if (strpos($content, 'class="jbg-two-col"') !== false) {
-            return $content;
-        }
-
-        // Related list via shortcode (دست‌کاری داخل محتوا نمی‌کنیم)
+        // 1) Related
         $related = do_shortcode('[jbg_related limit="10"]');
 
-        // رپر سبک; محتوای اصلی دست‌نخورده میاد داخل ستون Main
+        // اگر خروجی مرتبط‌ها خالی بود (یا فقط whitespace)، برگرد به fallback
+        $plain = trim(wp_strip_all_tags($related));
+        if ($plain === '') {
+            $related = do_shortcode('[jbg_list limit="5" title="پیشنهادی"]');
+        }
+
         $out = '
         <div class="jbg-two-col" dir="rtl">
           <aside class="jbg-two-col__sidebar" aria-label="ویدیوهای مرتبط">

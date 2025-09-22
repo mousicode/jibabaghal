@@ -1,4 +1,4 @@
-/* Two-column: sidebar LEFT, main RIGHT */
+/* Two-column: sidebar LEFT, main RIGHT (RTL-friendly) */
 .jbg-two-col{
   display:grid;
   grid-template-columns: 320px 1fr; /* left: sidebar, right: main */
@@ -18,9 +18,9 @@
   font-size: 16px; font-weight: 700;
 }
 
-.jbg-two-col__related{ display:block; }
+.jbg-two-col__related{ display:block; min-height: 40px; } /* حتی اگر کم بود، ستون خالی نشود */
 
-/* Ensure embeds scale to container width */
+/* مطمئن شو پلیر/iframe به عرض ستون فیت می‌شود */
 .jbg-two-col__main iframe,
 .jbg-two-col__main video,
 .jbg-two-col__main .plyr,
