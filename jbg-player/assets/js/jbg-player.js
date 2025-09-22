@@ -23,6 +23,20 @@
 
     // وقتی ویدیو تمام شد ارسال کن (UI پلیر تغییر نمی‌کند)
     var v = document.querySelector('video');
-    if (v) v.addEventListener('ended', trackDailyOnce);
+    if (v) {
+      v.addEventListener('ended', trackDailyOnce);
+
+      // کنترل seekbar: فقط عقب رفتن مجاز است تا جایی که دیده شده
+      var maxWatched = 0;
+      v.addEventListener('timeupdate', function() {
+        if (v.currentTime > maxWatched) maxWatched = v.currentTime;
+      });
+      v.addEventListener('seeking', function(e) {
+        // اگر کاربر جلوتر از maxWatched برود، برگردان به maxWatched
+        if (v.currentTime > maxWatched + 0.5) {
+          v.currentTime = maxWatched;
+        }
+      });
+    }
   });
 })();
