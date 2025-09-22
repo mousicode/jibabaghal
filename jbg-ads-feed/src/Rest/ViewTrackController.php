@@ -4,11 +4,10 @@ namespace JBG\Ads\Rest;
 if (!defined('ABSPATH')) exit;
 
 /**
- * اگر به هر دلیلی این فایل دوباره load شود (مسیر متفاوت، symlink، include دیگر)،
- * از تعریف مجدد کلاس جلوگیری می‌کنیم تا Fatal نشود.
+ * جلوگیری از تعریف مجدد کلاس در صورت دوبار لود شدن فایل‌ها
  */
-if (class_exists(__NAMESPACE__ . '\\ViewTrackController', /*autoload*/ false)) {
-    return; // کلاس قبلاً تعریف شده است
+if (class_exists(__NAMESPACE__ . '\\ViewTrackController', false)) {
+    return;
 }
 
 class ViewTrackController {
@@ -35,13 +34,13 @@ class ViewTrackController {
             return new \WP_Error('no_user', 'User not logged in', ['status'=>401]);
         }
 
-        // تضمین ساخت جدول لاگ (مستقل از بیلینگ)
+        // جدول لاگ وجود داشته باشد
         self::ensure_table();
 
         global $wpdb;
         $table = $wpdb->prefix.'jbg_views';
 
-        // اگر در ۲۴ ساعت گذشته همین کاربر برای همین آگهی ثبت داشته، دوباره ثبت نکن
+        // جلوگیری از ثبت چندباره در ۲۴ ساعت
         $exists = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$table}
              WHERE ad_id=%d AND user_id=%d
@@ -53,7 +52,7 @@ class ViewTrackController {
             return new \WP_REST_Response(['ok'=>true, 'already'=>true], 200);
         }
 
-        // درج لاگ بازدید (amount=0 چون بیلینگ نیست)
+        // درج لاگ تعامل (amount=0؛ بیلینگ نیست)
         $ip = isset($_SERVER['REMOTE_ADDR']) ? substr(sanitize_text_field($_SERVER['REMOTE_ADDR']), 0, 45) : '';
         $ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr(sanitize_text_field($_SERVER['HTTP_USER_AGENT']), 0, 255) : '';
         $ins = $wpdb->insert($table, [
@@ -69,30 +68,10 @@ class ViewTrackController {
             return new \WP_Error('db_insert_failed', 'Insert failed: '.$wpdb->last_error, ['status'=>500]);
         }
 
-        // افزایش اتمی شمارنده‌ی بازدید فقط روی کلید واحد (یکپارچه)
-        self::incr_views_meta($ad_id, 'jbg_views_count');
+        // ⚠️ شمارنده‌ی jbg_views_count اینجا افزایش داده نمی‌شود.
+        // شمارش قابل‌پرداخت فقط در Billing انجام می‌شود. :contentReference[oaicite:6]{index=6}
 
         return new \WP_REST_Response(['ok'=>true, 'already'=>false], 200);
-    }
-
-    /** افزایش اتمی متای شمارنده */
-    private static function incr_views_meta(int $ad_id, string $key): void {
-        global $wpdb;
-        $meta_id = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT meta_id FROM {$wpdb->postmeta} WHERE post_id=%d AND meta_key=%s LIMIT 1",
-            $ad_id, $key
-        ));
-        if ($meta_id > 0) {
-            $wpdb->query($wpdb->prepare(
-                "UPDATE {$wpdb->postmeta}
-                 SET meta_value = CAST(meta_value AS UNSIGNED) + 1
-                 WHERE post_id=%d AND meta_key=%s",
-                $ad_id, $key
-            ));
-        } else {
-            add_post_meta($ad_id, $key, 1, true);
-        }
-        wp_cache_delete($ad_id, 'post_meta');
     }
 
     /** ایجاد جدول jbg_views در صورت عدم وجود */
