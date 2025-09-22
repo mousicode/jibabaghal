@@ -1,129 +1,88 @@
-(function(){
-  if (typeof JBG_PLAYER === 'undefined') return;
-  function onReady(fn){ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fn); else fn(); }
+(function () {
+  if (typeof window === 'undefined') return;
 
-  onReady(function(){
-    // گارد بازدید روزانه (اختیاری) – اصلا به UI دست نمی‌زند
-    function trackDailyOnce(){
-      try{
-        if (!JBG_PLAYER || !JBG_PLAYER.track || !JBG_PLAYER.track.enabled) return;
-        var id = String(JBG_PLAYER.track.adId||''); if(!id) return;
-        var ymd = new Date().toISOString().slice(0,10);
-        var key = 'jbg_viewed_'+id+'_'+ymd;
-        if (localStorage.getItem(key)) return;
-        localStorage.setItem(key,'1');
-        fetch(JBG_PLAYER.track.url,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','X-WP-Nonce':JBG_PLAYER.track.nonce},
-          credentials:'same-origin',
-          body:JSON.stringify({ad_id:JBG_PLAYER.track.adId})
-        }).catch(function(){});
-      }catch(_){}
-    }
-
-    // وقتی ویدیو تمام شد ارسال کن (UI پلیر تغییر نمی‌کند)
-    var v = document.querySelector('video');
-    if (!v) return;
-
-    // Helper: safe getter for ad id
-    var adId = (JBG_PLAYER && JBG_PLAYER.track && JBG_PLAYER.track.adId) ? String(JBG_PLAYER.track.adId) : null;
-
-    // max watched time (seconds) — persisted per-ad within session/localStorage
-    var maxWatched = 0;
-    var storageKey = adId ? 'jbg_maxwatched_' + adId : null;
-    try{ if (storageKey && localStorage.getItem(storageKey)) maxWatched = parseFloat(localStorage.getItem(storageKey)) || 0; }catch(_){ }
-
-    function persistMax() {
-      try{ if (storageKey) localStorage.setItem(storageKey, String(maxWatched)); }catch(_){ }
-    }
-
-    // attach ended tracker
-    v.addEventListener('ended', trackDailyOnce);
-
-    // Ensure HLS is attached if needed, then init Plyr if available
-    function initPlayer() {
-      var player = null;
-      try{ if (window.Plyr) player = new Plyr(v); }catch(_){ player = null; }
-
-      // clamp helper
-      function clampForward() {
-        if (v.currentTime > maxWatched + 0.02) {
-          // prevent forward progress
-          v.currentTime = maxWatched;
-        }
-      }
-
-      // update maxWatched as user watches forward
-      v.addEventListener('timeupdate', function(){
-        if (v.currentTime > maxWatched) {
-          maxWatched = v.currentTime;
-          persistMax();
-        }
-      });
-
-      // intercept programmatic seeking
-      v.addEventListener('seeking', function(){
-        // allow tiny headroom for decimals
-        if (v.currentTime > maxWatched + 0.02) {
-          clampForward();
-        }
-      });
-
-      // block clicks/drags on Plyr progress bar (if present)
-      var progress = document.querySelector('.plyr__progress');
-      if (progress) {
-        progress.addEventListener('pointerdown', function(e){
-          try {
-            var rect = progress.getBoundingClientRect();
-            var clickX = (e.clientX - rect.left);
-            var pct = Math.max(0, Math.min(1, clickX / rect.width));
-            var requested = (v.duration || 0) * pct;
-            if (requested > maxWatched + 0.5) {
-              // prevent seeking forward via click
-              e.preventDefault();
-              e.stopPropagation();
-              if (player && typeof player.pause === 'function') player.pause();
-              v.currentTime = maxWatched;
-            }
-          }catch(_){ }
-        }, {passive:false});
-      }
-
-      // intercept keyboard forward seeks when player has focus
-      document.addEventListener('keydown', function(e){
-        // common forward keys: ArrowRight, PageDown, 'L' (some players)
-        var step = 5;
-        if (e.key === 'ArrowRight') step = 5;
-        if (e.key === 'PageDown') step = 10;
-        if (e.key === 'l' || e.key === 'L') step = 10;
-        if (['ArrowRight','PageDown','l','L'].indexOf(e.key) === -1) return;
-        // only when focus is inside player container
-        if (!v.closest || !v.closest('.plyr')) return;
-        var future = Math.min((v.duration||0), v.currentTime + step);
-        if (future > maxWatched + 0.02) {
-          e.preventDefault(); e.stopPropagation();
-          v.currentTime = maxWatched;
-        }
-      }, true);
-
-      // also guard clicks on native progress (some browsers)
-      var nativeProgress = v;
-      nativeProgress.addEventListener('click', function(e){
-        setTimeout(function(){ if (v.currentTime > maxWatched + 0.02) v.currentTime = maxWatched; }, 1);
-      }, true);
-    }
-
-    // If HLS needed
-    var isHls = v.getAttribute('data-hls') === 'true' || (v.querySelector && v.querySelector('source') && (v.querySelector('source').getAttribute('type')||'').indexOf('mpegURL')>-1);
-    if (isHls && window.Hls) {
-      try{
-        var hls = new Hls();
-        var src = v.querySelector('source') ? v.querySelector('source').getAttribute('src') : v.getAttribute('src');
-        if (src) { hls.loadSource(src); hls.attachMedia(v); hls.on(Hls.Events.MANIFEST_PARSED, function(){ initPlayer(); }); }
-        else initPlayer();
-      }catch(_){ initPlayer(); }
+  function onReady(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn);
     } else {
-      initPlayer();
+      fn();
     }
+  }
+
+  function pct(curr, dur) {
+    if (!dur || dur < 1) return 0;
+    return Math.max(0, Math.min(1, curr / dur));
+  }
+
+  onReady(function () {
+    var adId = (window.JBG_PLAYER && JBG_PLAYER.adId) ? parseInt(JBG_PLAYER.adId, 10) : 0;
+    var video =
+      document.getElementById('jbg-player') ||
+      document.querySelector('.jbg-player video, video');
+    if (!video) return;
+
+    // HLS attach if needed + Plyr init
+    try {
+      var isHls =
+        video.getAttribute('data-hls') === 'true' ||
+        (video.currentSrc && /\.m3u8(\?|$)/i.test(video.currentSrc));
+
+      if (isHls && window.Hls && Hls.isSupported()) {
+        var hls = new Hls();
+        var srcEl = video.querySelector('source');
+        var src = srcEl ? srcEl.getAttribute('src') : (video.getAttribute('src') || '');
+        if (src) {
+          hls.loadSource(src);
+          hls.attachMedia(video);
+        }
+      }
+      if (window.Plyr) {
+        new Plyr(video, (window.PLYR_DEFAULTS || {}));
+      }
+    } catch (_) {}
+
+    var maxT = 0, sent = false;
+
+    video.addEventListener('timeupdate', function () {
+      if (isFinite(video.currentTime)) {
+        if (video.currentTime > maxT) maxT = video.currentTime;
+      }
+      var p = pct(video.currentTime, video.duration);
+
+      if (!sent && p >= 0.95) {
+        sent = true;
+
+        // فلگ‌های UI/لوکال برای آنلاک‌کردن کوییز
+        try {
+          document.body.setAttribute('data-jbg-watched', '1');
+          if (adId) localStorage.setItem('jbg_watched_' + adId, '1');
+          document.dispatchEvent(new CustomEvent('jbg:watched_ok', { detail: { adId: adId, pct: p } }));
+        } catch (_) {}
+
+        // ping به REST برای ثبت سمت سرور
+        try {
+          if (window.JBG_PLAYER && JBG_PLAYER.watch) {
+            fetch(JBG_PLAYER.watch, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-WP-Nonce': (JBG_PLAYER.nonce || '')
+              },
+              credentials: 'same-origin',
+              body: JSON.stringify({ ad_id: adId, watch_pct: p })
+            }).catch(function () { });
+          }
+        } catch (_) {}
+      }
+    });
+
+    // جلوگیری از Seek به جلو (۲ ثانیه تلرانس)
+    video.addEventListener('seeking', function () {
+      try {
+        if (video.currentTime > maxT + 2) {
+          video.currentTime = Math.max(0, maxT - 0.25);
+        }
+      } catch (_) {}
+    });
   });
 })();

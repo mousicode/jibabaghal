@@ -1,23 +1,27 @@
 <?php
+/**
+ * Quiz Bootstrap
+ */
 namespace JBG\Quiz;
-
 
 use JBG\Quiz\Admin\MetaBox;
 use JBG\Quiz\Frontend\Renderer;
-use JBG\Quiz\Rest\QuizController;
+use JBG\Quiz\Rest\SubmitController; // استفاده از کنترلر اعتبارسنجی‌شده
 
-
-class Bootstrap {
-public static function init(): void {
-add_action('add_meta_boxes', [MetaBox::class, 'register']);
-add_action('save_post_jbg_ad', [MetaBox::class, 'save'], 10, 2);
-
-
-add_action('wp', [Renderer::class, 'bootstrap']);
-add_action('rest_api_init', [QuizController::class, 'register_routes']);
+class Bootstrap
+{
+    public static function init(): void
+    {
+        // ادیتور/متاباکس
+        add_action('init', [MetaBox::class, 'register']);
+        // فرانت
+        add_action('wp', [Renderer::class, 'bootstrap']);
+        // REST (نسخه امن با permission و validation)
+        add_action('rest_api_init', [SubmitController::class, 'register_routes']);
+    }
 }
 
-
-public static function activate(): void { }
-public static function deactivate(): void { }
+// اجرای خودکار در لود افزونه
+if (function_exists('add_action')) {
+    add_action('plugins_loaded', [Bootstrap::class, 'init']);
 }
