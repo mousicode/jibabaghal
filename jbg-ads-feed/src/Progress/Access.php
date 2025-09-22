@@ -4,9 +4,8 @@ if (!defined('ABSPATH')) exit;
 
 class Access {
 
-    private static array $ranked = []; // کش ترتیب بر اساس CPV/BR/Boost
+    private static array $ranked = []; // کش بر اساس CPV/BR/Boost
 
-    /** همه‌ی آگهی‌ها بر اساس CPV ↓، BR ↓، Boost ↓ */
     private static function ranked_ids(): array {
         if (!empty(self::$ranked)) return self::$ranked;
 
@@ -42,27 +41,23 @@ class Access {
         return self::$ranked;
     }
 
-    /** شمارهٔ مرحله (۱‌پایه) در رتبه‌بندی CPV/BR/Boost */
     public static function seq(int $ad_id): int {
         $ids = self::ranked_ids();
         $pos = array_search($ad_id, $ids, true);
         return ($pos === false) ? 1 : ($pos + 1);
     }
 
-    /** بیشینهٔ مرحلهٔ باز کاربر (پیش‌فرض = 1) */
     public static function unlocked_max(int $user_id): int {
         $v = (int) get_user_meta($user_id, 'jbg_unlocked_max_seq', true);
         return max(1, $v);
     }
 
-    /** دسترسی؟ مهمان فقط مرحله 1 */
     public static function is_unlocked(?int $user_id, int $ad_id): bool {
         $seq = self::seq($ad_id);
         if ($user_id <= 0) return ($seq <= 1);
         return $seq <= self::unlocked_max((int)$user_id);
     }
 
-    /** ویدئوی بعدی طبق همین رتبه‌بندی */
     public static function next_ad_id(int $current_id): int {
         $ids = self::ranked_ids();
         $i   = array_search($current_id, $ids, true);

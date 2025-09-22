@@ -16,11 +16,10 @@ class Renderer {
         wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL.'assets/css/jbg-quiz.css', [], '0.1.4');
         wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL.'assets/js/jbg-quiz.js', [], '0.1.4', true);
 
-        // لینک ویدئوی بعدی طبق رتبه‌بندی CPV/BR/Boost
-        $nextHref = ''; $nextTitle = ''; $curId = (int) get_queried_object_id();
-        if ($curId > 0 && class_exists('\\JBG\\Ads\\Progress\\Access')) {
-            $nextId = \JBG\Ads\Progress\Access::next_ad_id($curId);
-            if ($nextId) { $nextHref = get_permalink($nextId); $nextTitle = get_the_title($nextId); }
+        $nextHref=''; $nextTitle=''; $curId=(int)get_queried_object_id();
+        if ($curId>0 && class_exists('\\JBG\\Ads\\Progress\\Access')) {
+            $nextId=\JBG\Ads\Progress\Access::next_ad_id($curId);
+            if ($nextId) { $nextHref=get_permalink($nextId); $nextTitle=get_the_title($nextId); }
         }
 
         wp_localize_script('jbg-quiz', 'JBG_QUIZ', [
@@ -33,14 +32,14 @@ class Renderer {
         ]);
     }
 
-    public static function render_shortcode($atts = []) {
-        $id = get_the_ID();
-        $q  = (string) get_post_meta($id, 'jbg_quiz_q',  true);
-        $a1 = (string) get_post_meta($id, 'jbg_quiz_a1', true);
-        $a2 = (string) get_post_meta($id, 'jbg_quiz_a2', true);
-        $a3 = (string) get_post_meta($id, 'jbg_quiz_a3', true);
-        $a4 = (string) get_post_meta($id, 'jbg_quiz_a4', true);
-        if (!$q || !$a1 || !$a2 || !$a3 || !$a4) return '';
+    public static function render_shortcode($atts = []){
+        $id=get_the_ID();
+        $q  =(string)get_post_meta($id,'jbg_quiz_q',true);
+        $a1 =(string)get_post_meta($id,'jbg_quiz_a1',true);
+        $a2 =(string)get_post_meta($id,'jbg_quiz_a2',true);
+        $a3 =(string)get_post_meta($id,'jbg_quiz_a3',true);
+        $a4 =(string)get_post_meta($id,'jbg_quiz_a4',true);
+        if(!$q||!$a1||!$a2||!$a3||!$a4) return '';
 
         $h  = '<div id="jbg-quiz" class="jbg-quiz" data-ad="'.esc_attr($id).'" style="display:none">';
         $h .= '  <div class="jbg-quiz-card">';

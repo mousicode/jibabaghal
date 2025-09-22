@@ -7,7 +7,7 @@ use JBG\Ads\Progress\Access;
 class SingleLayout {
 
     public static function register(): void {
-        // گارد قبل از رندر: جلوی inject پلیر را می‌گیریم
+        // گارد قبل از رندر
         add_action('template_redirect', [self::class, 'guard'], 1);
         // محتوا
         add_filter('the_content', [self::class, 'wrap'], 4);
@@ -18,9 +18,9 @@ class SingleLayout {
         $user_id = get_current_user_id();
         $ad_id   = (int) get_queried_object_id();
         if (!Access::is_unlocked($user_id, $ad_id)) {
-            // هر فیلتری که با priority=5 پلیر را تزریق می‌کند بردار
+            // هر فیلتر the_content با priority=5 که معمولاً پلیر inject می‌کند را بردار
             remove_all_filters('the_content', 5);
-            $GLOBALS['JBG_LOCKED_AD'] = true; // فلگ برای استفاده احتمالی
+            $GLOBALS['JBG_LOCKED_AD'] = true;
         }
     }
 
@@ -45,19 +45,19 @@ class SingleLayout {
             $html .= $content;
 
             $quiz_html = do_shortcode('[jbg_quiz]');
-            if (trim($quiz_html) !== '') $html .= '<div class="jbg-section">'.$quiz_html.'</div>';
+            if (trim($quiz_html)!=='') $html .= '<div class="jbg-section">'.$quiz_html.'</div>';
 
             $rel_html = do_shortcode('[jbg_related limit="10"]');
-            if (trim($rel_html) !== '') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            if (trim($rel_html)!=='') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
         } else {
             $seq = Access::seq($ad_id);
             $html .= '<div class="jbg-locked"><div class="title">این ویدیو هنوز برای شما باز نیست</div>'
-                . '<div class="note">برای دسترسی، ابتدا ویدیوی مرحلهٔ <strong>'.esc_html(max(1,$seq-1)).'</strong> را کامل ببینید و آزمونش را درست پاسخ دهید.'
-                . ($user_id>0 ? '' : ' (لطفاً ابتدا وارد شوید)')
-                . '</div></div>';
+                   . '<div class="note">برای دسترسی، ابتدا ویدیوی مرحلهٔ <strong>'.esc_html(max(1,$seq-1)).'</strong> را کامل ببینید و آزمونش را درست پاسخ دهید.'
+                   . ($user_id>0 ? '' : ' (لطفاً ابتدا وارد شوید)')
+                   . '</div></div>';
 
             $rel_html = do_shortcode('[jbg_related limit="10"]');
-            if (trim($rel_html) !== '') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            if (trim($rel_html)!=='') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
         }
 
         $html .= '</div>';
