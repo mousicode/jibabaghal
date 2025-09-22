@@ -48,9 +48,9 @@ class RelatedShortcode {
             }
         }
 
-        // Query 1: فقط با CPV
         $args = [
             'post_type'      => 'jbg_ad',
+            'post_status'    => 'publish',
             'posts_per_page' => max(1, (int)$a['limit']),
             'no_found_rows'  => true,
             'post__not_in'   => $current_id ? [$current_id] : [],
@@ -64,7 +64,7 @@ class RelatedShortcode {
 
         $q = new \WP_Query($args);
 
-        // Fallback: اگر صفر بود، بدون meta_query
+        // Fallback: بدون شرط CPV
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);
@@ -84,6 +84,9 @@ class RelatedShortcode {
             ];
         }
         wp_reset_postdata();
+
+        // اگر چیزی نداریم، اصلاً خروجی نده (تا باکس سفید نیاید)
+        if (empty($items)) return '';
 
         usort($items, function($a, $b){
             if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);

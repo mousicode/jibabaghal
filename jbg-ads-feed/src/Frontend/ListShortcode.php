@@ -33,26 +33,27 @@ class ListShortcode {
     public static function render($atts = []): string {
         if (!wp_style_is('jbg-list', 'enqueued')) {
             $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.5');
+            wp_enqueue_style('jbg-list', $css, [], '0.1.4');
         }
 
         $a = shortcode_atts([
             'limit'    => 12,
             'brand'    => '',
-            'category' => '',  // اسلاگ‌های jbg_cat
+            'category' => '',
             'class'    => '',
         ], $atts, 'jbg_ads');
 
-        // --- Query 1: فقط آگهی‌های دارای CPV
+        // --- Query (با CPV، ترتیب بر اساس seq سپس تاریخ)
         $args = [
             'post_type'      => 'jbg_ad',
+            'post_status'    => 'publish',
             'posts_per_page' => max(1, (int)$a['limit']),
             'no_found_rows'  => true,
             'meta_query'     => [
                 ['key'=>'jbg_cpv', 'compare'=>'EXISTS'],
             ],
             'orderby'        => [
-                'meta_value_num' => 'ASC', // seq اگر باشد
+                'meta_value_num' => 'ASC',
                 'date'           => 'ASC',
             ],
             'meta_key'       => 'jbg_seq',
@@ -69,8 +70,9 @@ class ListShortcode {
                 ];
             }
         }
-        // فیلتر دسته: **jbg_cat** (نه jbg_category)
-        if (!empty($a['category'])) {
+
+        // ✅ فیلتر دسته‌بندی روی taxonomy درست: jbg_cat
+        if (taxonomy_exists('jbg_cat') && !empty($a['category'])) {
             $cats = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $a['category']))));
             if ($cats) {
                 $args['tax_query'][] = [
@@ -83,7 +85,7 @@ class ListShortcode {
 
         $q = new \WP_Query($args);
 
-        // --- Fallback: اگر صفر آیتم بود، شرط CPV را حذف کن تا صفحه خالی نماند
+        // --- Fallback: اگر نتیجه صفر بود، شرط CPV را حذف کن تا کارت‌ها خالی نماند
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);
@@ -104,7 +106,7 @@ class ListShortcode {
         }
         wp_reset_postdata();
 
-        // مرتب‌سازی نهایی (همان قبلی)
+        // مرتب‌سازی: seq سپس CPV/BR/Boost
         usort($items, function($a, $b){
             if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
             if ($a['cpv'] === $b['cpv']) {
@@ -113,6 +115,9 @@ class ListShortcode {
             }
             return ($b['cpv'] <=> $a['cpv']);
         });
+
+        // اگر باز هم آیتمی نبود، خروجی خالی بده (نه باکس سفید)
+        if (empty($items)) return '';
 
         $user_id = get_current_user_id();
 
