@@ -42,7 +42,11 @@
       var t=e.target && e.target.closest && e.target.closest('#jbg-quiz-btn,.jbg-quiz-trigger,[data-jbg-quiz-trigger]');
       if (!t) return;
       var q=document.getElementById('jbg-quiz');
-      if (q){ if (q.style.display==='none') q.style.display='block'; try{ q.scrollIntoView({behavior:'smooth',block:'start'});}catch(_){ } }
+      if (q){
+        if (q.style.display==='none') q.style.display='block';
+        // حذف اسکرول خودکار به باکس آزمون:
+        // q.scrollIntoView({behavior:'smooth',block:'start'});
+      }
     });
 
     // منبع و Plyr
@@ -137,7 +141,7 @@
       unlocked = true;
       showQuiz();
       markUnlocked();
-      trackDailyView(); // ← همین‌جا، پس از کامل‌دیدن ویدیو
+      trackDailyView(); // ← پس از کامل‌دیدن ویدیو
       if (statusEl) statusEl.textContent = '100% watched';
     }
 
