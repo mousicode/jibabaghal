@@ -54,7 +54,7 @@
       if (ok) enableQuiz();
     }, false);
 
-    // Submit با REST؛ بدون ری‌فرش
+    // ارسال پاسخ
     if (form){
       form.addEventListener('submit', function(e){
         e.preventDefault();
@@ -83,8 +83,7 @@
         .then(function(data){
           if (data && data.correct){
             gateMsg('✔ پاسخ صحیح بود!', 'jbg-quiz-result--ok');
-            // بیلینگ در سرور انجام می‌شود و Unlock → user_meta را بالا می‌برد
-            // دکمه‌ی «ویدیو بعدی» را همین‌جا نشان بده
+            // بعد از پاس‌شدن، دکمهٔ «ویدئوی بعدی» را نشان بده
             showNextIfAny();
           } else if (data && data.message){
             gateMsg('✖ '+data.message, 'jbg-quiz-result--err');

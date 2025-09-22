@@ -14,7 +14,7 @@ class Renderer {
         wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL . 'assets/css/jbg-quiz.css', [], '0.1.3');
         wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL . 'assets/js/jbg-quiz.js', [], '0.1.3', true);
 
-        // محاسبه‌ی «ویدئوی بعدی» بر اساس seq (یا menu_order)
+        // محاسبهٔ ویدئوی بعدی (کمترین seq بزرگ‌تر از ویدئوی جاری)
         $nextHref  = '';
         $nextTitle = '';
         $curId     = (int) get_queried_object_id();
@@ -83,7 +83,7 @@ class Renderer {
         $a3 = (string) get_post_meta($id, 'jbg_quiz_a3', true);
         $a4 = (string) get_post_meta($id, 'jbg_quiz_a4', true);
 
-        // اگر کوییز کامل نیست، خروجی خالی بده
+        // اگر کوییز کامل نیست، خروجی خالی
         if (!$q || !$a1 || !$a2 || !$a3 || !$a4) return '';
 
         $html  = '<div id="jbg-quiz" class="jbg-quiz" data-ad="' . esc_attr($id) . '" style="display:none">';
@@ -98,7 +98,7 @@ class Renderer {
         $html .= '      <button type="submit" class="jbg-quiz-btn">' . esc_html__('Submit', 'jbg-quiz') . '</button>';
         $html .= '    </form>';
         $html .= '    <div id="jbg-quiz-result" class="jbg-quiz-result"></div>';
-        // دکمه ویدئوی بعدی (ابتدا مخفی؛ JS پرش می‌کند)
+        // جایی برای دکمهٔ «ویدئوی بعدی»
         $html .= '    <div id="jbg-next-wrap" style="margin-top:10px">';
         $html .= '      <a id="jbg-next-btn" class="jbg-btn" style="display:none"></a>';
         $html .= '    </div>';
