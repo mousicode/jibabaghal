@@ -4,8 +4,8 @@ if (!defined('ABSPATH')) exit;
 
 /**
  * Single jbg_ad layout:
- * - ستون اصلی: Player (prio=5) → ViewBadge (prio=7) → Quiz (prio=8) → Related
- * - بدون سایدبار؛ همه‌چیز زیر هم قرار می‌گیرد.
+ * - ستون اصلی: Player (prio=5) → ViewBadge (prio=7) → Quiz (shorcode) → Related
+ * - بدون سایدبار؛ همه‌چیز زیر هم قرار می‌گیرد و ظاهر کانتینرها مشابه قبلی است.
  */
 class SingleLayout {
 
@@ -19,11 +19,11 @@ class SingleLayout {
             return $content;
         }
 
-        // CSS سبک (یک‌بار درج می‌شود)
+        // CSS سبک برای کانتینرها
         $style = '<style id="jbg-single-stack-css">
           .single-jbg_ad .jbg-main-stack{display:block; direction:rtl;}
           .single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
-          /* Related styles (قبلی‌ها را نگه داشتیم) */
+          /* Related styles */
           .jbg-related{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;}
           .jbg-related-title{font-weight:800;margin:0 0 8px 0;font-size:16px;color:#111827;}
           .jbg-related-list{display:flex;flex-direction:column;gap:10px;max-height:80vh;overflow:auto;}
@@ -37,13 +37,20 @@ class SingleLayout {
           .jbg-related-sub .dot{opacity:.55}
         </style>';
 
-        // خروجی مرتبط‌ها (همان شورت‌کد قبلی)
-        $related = do_shortcode('[jbg_related limit="10"]');
 
-        // ستون اصلی: محتوا (که شامل Player/Badge/Quiz می‌شود) سپس Related
+        $main = $content;
+
+        // 2) باکس آزمون همان‌جا که قبلاً «مرتبط‌ها» می‌نشست:
+        $quizBox = '<div class="jbg-section">'. do_shortcode('[jbg_quiz]') .'</div>';
+
+        // 3) بعد از آزمون، باکس «ویدیوهای مرتبط»
+        $relatedBox = '<div class="jbg-section">'. do_shortcode('[jbg_related limit="10"]') .'</div>';
+
+        // چینش نهایی
         $html  = '<div class="jbg-main-stack">';
-        $html .=   $content;                // Player@5 → Badge@7 → Quiz@8 در همین content تزریق می‌شوند
-        $html .=   '<div class="jbg-section">'.$related.'</div>'; // Related زیر آزمون
+        $html .=   $main;
+        $html .=   $quizBox;
+        $html .=   $relatedBox;
         $html .= '</div>';
 
         static $once=false;

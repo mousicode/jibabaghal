@@ -4,13 +4,14 @@ namespace JBG\Quiz\Frontend;
 class Renderer {
 
     /**
-     * Boot only on single Ad pages.
+     * Boot on single Ad pages.
      */
     public static function bootstrap(): void {
         if (is_singular('jbg_ad')) {
-            // Inject quiz markup after the player markup (player runs at ~5)
-            add_filter('the_content', [self::class, 'inject_quiz'], 8);
+            // فقط استایل/اسکریپت را لود می‌کنیم
             add_action('wp_enqueue_scripts', [self::class, 'enqueue_assets']);
+            // شورتکد برای نمایش آزمون هرجا که بخواهیم
+            add_shortcode('jbg_quiz', [self::class, 'render_shortcode']);
         }
     }
 
@@ -22,14 +23,14 @@ class Renderer {
             'jbg-quiz',
             JBG_QUIZ_URL . 'assets/css/jbg-quiz.css',
             [],
-            '0.1.1'
+            '0.1.2'
         );
 
         wp_enqueue_script(
             'jbg-quiz',
             JBG_QUIZ_URL . 'assets/js/jbg-quiz.js',
             [],
-            '0.1.1',
+            '0.1.2',
             true
         );
 
@@ -42,9 +43,10 @@ class Renderer {
     }
 
     /**
-     * Append the quiz block to the content if a quiz is configured.
+     * Shortcode renderer: [jbg_quiz]
+     * (بدون عنوان/برند/زمان؛ فقط خود آزمون)
      */
-    public static function inject_quiz($content) {
+    public static function render_shortcode($atts = []) {
         $id = get_the_ID();
 
         $q  = (string) get_post_meta($id, 'jbg_quiz_q',  true);
@@ -53,32 +55,14 @@ class Renderer {
         $a3 = (string) get_post_meta($id, 'jbg_quiz_a3', true);
         $a4 = (string) get_post_meta($id, 'jbg_quiz_a4', true);
 
-        // If quiz is not fully set, don't render anything.
+        // اگر کوییز کامل تنظیم نشده، چیزی نشان نده
         if (!$q || !$a1 || !$a2 || !$a3 || !$a4) {
-            return $content;
+            return '';
         }
-
-        // --- Meta needed under the quiz title: post title, brand tag, relative time
-        $title = get_the_title($id);
-        $brandN = wp_get_post_terms($id, 'jbg_brand', ['fields' => 'names']);
-        $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
-        $when   = trim(human_time_diff(get_the_time('U', $id), current_time('timestamp'))) . ' پیش';
-
-        $meta  = '<div class="jbg-quiz-meta" style="margin:-6px 0 10px 0">';
-        $meta .= '  <div class="jbg-quiz-meta-title" style="font-weight:700;font-size:14px;">' . esc_html($title) . '</div>';
-        $meta .= '  <div class="jbg-quiz-meta-sub" style="font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap">';
-        if ($brand) {
-            $meta .= '<span class="brand" style="background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600">'
-                  .  esc_html($brand) . '</span><span class="dot" style="opacity:.55">•</span>';
-        }
-        $meta .= '    <span class="when">' . esc_html($when) . '</span>';
-        $meta .= '  </div>';
-        $meta .= '</div>';
 
         $html  = '<div id="jbg-quiz" class="jbg-quiz" data-ad="' . esc_attr($id) . '" style="display:none">';
         $html .= '  <div class="jbg-quiz-card">';
         $html .= '    <h3 class="jbg-quiz-title">' . esc_html__('Quiz', 'jbg-quiz') . '</h3>';
-        $html .=          $meta; // ← عنوان، برند، زمان انتشار درست زیر تیتر Quiz
         $html .= '    <p class="jbg-quiz-q">' . wp_kses_post($q) . '</p>';
         $html .= '    <form id="jbg-quiz-form">';
         $html .=          self::radio('a1', $a1, 1);
@@ -91,7 +75,7 @@ class Renderer {
         $html .= '  </div>';
         $html .= '</div>';
 
-        return $content . $html;
+        return $html;
     }
 
     /**
