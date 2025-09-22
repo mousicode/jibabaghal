@@ -5,100 +5,101 @@ if (!defined('ABSPATH')) exit;
 if (!class_exists(__NAMESPACE__ . '\\PlayerShim')):
 
 /**
- * PlayerShim
- * پلیر را فقط داخل محتوای «لوپ اصلی» همان پست jbg_ad تزریق می‌کند؛
- * هیچ تزریقی داخل هدر/فوتر Elementor یا سایر کانتکست‌ها انجام نمی‌شود.
+ * تزریق پلیر فقط وقتی که داخل محتوای پست هیچ ویدئو/iframe/پلیر از قبل وجود نداشته باشد.
+ * اولویت 20 تا بعد از پردازش المنتور/فیلترهای معمول اجرا شود و دقیقاً داخل body/ابتدای content بیاید.
  */
-class PlayerShim {
-
-    public static function register(): void {
-        // فقط the_content (دیگر elementor/frontend/the_content را دستکاری نمی‌کنیم)
-        add_filter('the_content', [self::class, 'inject'], 999);
+class PlayerShim
+{
+    public static function register(): void
+    {
+        // اولویت را بالاتر می‌گذاریم تا خروجی نهاییِ content را بگیریم
+        add_filter('the_content', [self::class, 'inject_player_if_missing'], 20);
     }
 
-    public static function inject($content) {
-        // فقط سینگل jbg_ad
-        if (!is_singular('jbg_ad')) return $content;
-
-        // فقط داخل لوپ اصلیِ کوئری اصلی (تا در هدر/فوتر/ویجت‌ها اجرا نشود)
-        if (!in_the_loop() || !is_main_query()) return $content;
-
-        global $post;
-        $main_id = (int) get_queried_object_id();
-        if (!$post || $post->post_type !== 'jbg_ad' || (int)$post->ID !== $main_id) {
+    public static function inject_player_if_missing($content)
+    {
+        // فقط روی single آگهی و کوئری اصلی
+        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) {
             return $content;
         }
 
-        // گارد تک‌بار
-        static $done = [];
-        if (isset($done[$main_id])) return $content;
+        // اگر همین حالا پلیر/ویدئو/iframe یا jbg-player/شورتکد وجود دارد: دست نزن
+        $haystack = strtolower($content);
+        $alreadyHasPlayer =
+            strpos($haystack, '<video') !== false ||
+            strpos($haystack, '<iframe') !== false ||
+            strpos($haystack, 'wp-video-shortcode') !== false ||
+            strpos($haystack, 'jbg-player') !== false ||
+            // اگر کاربر خودش شورتکدی مثل [video] یا [jbg_player] گذاشته باشد
+            strpos($haystack, '[video') !== false ||
+            strpos($haystack, '[jbg_player') !== false;
 
-        // اگر خود محتوا پلیر دارد، کاری نکن
-        if (strpos($content, 'class="jbg-player-wrapper"') !== false ||
-            preg_match('~<(video|iframe|amp-video)\b~i', $content) ||
-            strpos($content, 'wp-video-shortcode') !== false) {
-            $done[$main_id] = true;
+        if ($alreadyHasPlayer) {
             return $content;
         }
 
-        $src = self::resolve_video_src($main_id, $content);
-        if (!$src) return $content;
+        $id = get_the_ID();
+        if (!$id) return $content;
 
-        // ساخت پلیر
+        // منبع ویدئو را از متاها یا اولین ضمیمه پیدا کن
+        $src = '';
+        foreach ([
+            get_post_meta($id, 'jbg_player', true),
+            get_post_meta($id, 'jbg_video_url', true),
+            get_post_meta($id, '_jbg_video_url', true),
+            get_post_meta($id, 'video_url', true),
+            get_post_meta($id, 'embed_html', true),
+        ] as $v) {
+            if (is_string($v) && trim($v) !== '') { $src = trim($v); break; }
+        }
+
+        if ($src === '') {
+            $att = get_children([
+                'post_parent'    => $id,
+                'post_type'      => 'attachment',
+                'post_mime_type' => 'video',
+                'numberposts'    => 1,
+                'orderby'        => 'menu_order ID',
+                'order'          => 'ASC',
+            ]);
+            if ($att) {
+                $first = array_shift($att);
+                $u = wp_get_attachment_url($first->ID);
+                if ($u) $src = $u;
+            }
+        }
+
+        // اگر چیزی پیدا نشد، محتوا را دست نزن
+        if ($src === '') return $content;
+
+        // ساخت HTML پلیر
         if (stripos($src, '<iframe') !== false || stripos($src, '<video') !== false) {
-            $player = $src;
-        } elseif (preg_match('/\.(mp4|webm|ogg)(\?.*)?$/i', $src)) {
-            $player = wp_video_shortcode(['src' => esc_url_raw($src), 'preload' => 'metadata']);
-        } elseif (preg_match('/\.m3u8(\?.*)?$/i', $src)) {
-            $player =
-              '<video id="jbg-player" controls playsinline preload="metadata"></video>'.
-              '<script>(function(){var v=document.getElementById("jbg-player");if(!v)return;var u="'.esc_js($src).'";'.
-              'if(window.Hls&&window.Hls.isSupported()){var h=new Hls();h.loadSource(u);h.attachMedia(v);}else{v.src=u;}'.
-              '})();</script>';
+            // خودِ HTML آماده است
+            $playerHtml = $src;
         } else {
-            $embed = wp_oembed_get($src);
-            $player = $embed ? $embed : '<iframe src="'.esc_url($src).'" style="width:100%;aspect-ratio:16/9" loading="lazy" allowfullscreen></iframe>';
+            if (preg_match('/\.(mp4|webm|ogg)(\?.*)?$/i', $src)) {
+                $playerHtml = wp_video_shortcode(['src' => esc_url_raw($src)]);
+            } else {
+                // oEmbed (مثل آپارات/یوتیوب و ...)
+                $embed = wp_oembed_get($src);
+                if ($embed) {
+                    $playerHtml = $embed;
+                } else {
+                    // fallback: iframe ساده
+                    $esc = esc_url($src);
+                    $playerHtml = '<iframe src="'.$esc.'" style="width:100%;aspect-ratio:16/9" loading="lazy" allowfullscreen></iframe>';
+                }
+            }
         }
 
-        $html =
-          '<div class="jbg-player">'.
-            '<div class="jbg-player-wrapper">'.$player.'</div>'.
-          '</div>'."\n".
-          '<!-- jbg-player: injected for post '.$main_id.' -->';
-
-        $done[$main_id] = true;
-
-        // پلیر را ابتدای بدنهٔ پست قرار می‌دهیم (داخل body و قبل از related)
-        return $html . "\n" . $content;
-    }
-
-    /** استخراج آدرس ویدیو از متا / ضمیمه / URL داخل محتوا */
-    private static function resolve_video_src(int $post_id, string $content): string {
-        $m = (string) get_post_meta($post_id, 'jbg_video_src', true);
-        if (is_string($m) && trim($m) !== '') return trim($m);
-
-        foreach (['jbg_player','jbg_video_url','_jbg_video_url','video_url','embed_html'] as $k) {
-            $v = get_post_meta($post_id, $k, true);
-            if (is_string($v) && trim($v) !== '') return trim($v);
+        // یک‌بارِ دیگر مطمئن شویم که دو بار تزریق نکنیم (در صورت اجرای مجدد فیلتر توسط پلاگینی دیگر)
+        if (strpos($content, 'class="jbg-player"') !== false) {
+            return $content;
         }
 
-        $att = get_children([
-            'post_parent'   => $post_id,
-            'post_type'     => 'attachment',
-            'post_mime_type'=> 'video',
-            'numberposts'   => 1,
-            'orderby'       => 'menu_order ID',
-            'order'         => 'ASC',
-        ]);
-        if ($att) {
-            $first = array_shift($att);
-            $url   = wp_get_attachment_url($first->ID);
-            if ($url) return $url;
-        }
-
-        if (preg_match('~https?://[^\s"<]+~i', $content, $m)) return $m[0];
-
-        return '';
+        // پلیر را در ابتدای content قرار می‌دهیم (داخل body و قبل از هدر/کوییز/سایدبار)
+        $wrapper = '<div class="jbg-player" style="margin:12px 0;">'.$playerHtml.'</div>'."\n";
+        return $wrapper . $content;
     }
 }
 
