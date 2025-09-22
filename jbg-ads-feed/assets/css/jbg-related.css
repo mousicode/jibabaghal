@@ -1,0 +1,21 @@
+/* jbg-related.css */
+.jbg-related{direction:rtl}
+.jbg-related-title{font-weight:700;margin:6px 0 10px}
+.jbg-related-list{display:flex;flex-direction:column;gap:10px}
+
+.jbg-related-item{
+  display:flex;align-items:flex-start;gap:12px;
+  background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+  padding:10px;text-decoration:none;color:inherit
+}
+.jbg-related-item:hover{background:#fafafa}
+
+.jbg-related-thumb{
+  display:block;flex:0 0 auto;width:120px;aspect-ratio:16/9;
+  background-size:cover;background-position:center;border-radius:8px
+}
+
+.jbg-related-meta{display:flex;flex-direction:column;gap:6px;min-width:0}
+.jbg-related-title-text{font-weight:600;line-height:1.35}
+.jbg-related-sub{font-size:12px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jbg-related .dot{margin:0 6px;color:#9ca3af}

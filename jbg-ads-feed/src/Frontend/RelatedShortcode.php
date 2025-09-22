@@ -30,6 +30,12 @@ class RelatedShortcode {
     }
 
     public static function render($atts = []): string {
+        // ⬅️ استایل کارت‌های «مرتبط‌ها» فقط یک‌بار لود شود
+        if (!wp_style_is('jbg-related', 'enqueued')) {
+            $css = plugins_url('../../assets/css/jbg-related.css', __FILE__);
+            wp_enqueue_style('jbg-related', $css, [], '0.2.1');
+        }
+
         $a = shortcode_atts([
             'limit' => 8,
             'title' => 'ویدیوهای مرتبط',
