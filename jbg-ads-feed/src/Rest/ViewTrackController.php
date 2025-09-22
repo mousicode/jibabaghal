@@ -3,9 +3,7 @@ namespace JBG\Ads\Rest;
 
 if (!defined('ABSPATH')) exit;
 
-/**
- * جلوگیری از تعریف مجدد کلاس در صورت دوبار لود شدن فایل‌ها
- */
+// در صورت دوبار لود شدن فایل، جلوی تعریف دوباره کلاس را بگیریم
 if (class_exists(__NAMESPACE__ . '\\ViewTrackController', false)) {
     return;
 }
@@ -34,13 +32,12 @@ class ViewTrackController {
             return new \WP_Error('no_user', 'User not logged in', ['status'=>401]);
         }
 
-        // جدول لاگ وجود داشته باشد
         self::ensure_table();
 
         global $wpdb;
         $table = $wpdb->prefix.'jbg_views';
 
-        // جلوگیری از ثبت چندباره در ۲۴ ساعت
+        // عدم ثبت تکراری تعامل در ۲۴ ساعت گذشته
         $exists = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM {$table}
              WHERE ad_id=%d AND user_id=%d
@@ -52,7 +49,7 @@ class ViewTrackController {
             return new \WP_REST_Response(['ok'=>true, 'already'=>true], 200);
         }
 
-        // درج لاگ تعامل (amount=0؛ بیلینگ نیست)
+        // فقط لاگ تعامل؛ amount=0 (بیلینگ نیست)
         $ip = isset($_SERVER['REMOTE_ADDR']) ? substr(sanitize_text_field($_SERVER['REMOTE_ADDR']), 0, 45) : '';
         $ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr(sanitize_text_field($_SERVER['HTTP_USER_AGENT']), 0, 255) : '';
         $ins = $wpdb->insert($table, [
@@ -68,13 +65,10 @@ class ViewTrackController {
             return new \WP_Error('db_insert_failed', 'Insert failed: '.$wpdb->last_error, ['status'=>500]);
         }
 
-        // ⚠️ شمارنده‌ی jbg_views_count اینجا افزایش داده نمی‌شود.
-        // شمارش قابل‌پرداخت فقط در Billing انجام می‌شود. :contentReference[oaicite:6]{index=6}
-
+        // ⚠️ هیچ افزایشی روی jbg_views_count در این مسیر انجام نمی‌شود.
         return new \WP_REST_Response(['ok'=>true, 'already'=>false], 200);
     }
 
-    /** ایجاد جدول jbg_views در صورت عدم وجود */
     private static function ensure_table(): void {
         global $wpdb;
         $table  = $wpdb->prefix . 'jbg_views';
