@@ -43,13 +43,13 @@ class ListShortcode {
     public static function render($atts = []): string {
         if (!wp_style_is('jbg-list', 'enqueued')) {
             $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.6');
+            wp_enqueue_style('jbg-list', $css, [], '0.1.7');
         }
 
         $a = shortcode_atts([
             'limit'    => 12,
             'brand'    => '',
-            'category' => '',   // اسلاگ‌های jbg_cat
+            'category' => '',
             'class'    => '',
         ], $atts, 'jbg_ads');
 
@@ -57,41 +57,38 @@ class ListShortcode {
         $brand_slugs = $a['brand']    ? self::valid_slugs('jbg_brand', array_map('trim', explode(',', $a['brand']))) : [];
         $cat_slugs   = $a['category'] ? self::valid_slugs('jbg_cat',   array_map('trim', explode(',', $a['category']))) : [];
 
-        // مرحله 1: با CPV + فیلترها
-        $args_base = [
-            'post_type'      => 'jbg_ad',
-            'post_status'    => 'publish',
-            'posts_per_page' => max(1, (int)$a['limit']),
-            'no_found_rows'  => true,
-            'orderby'        => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
-            'meta_key'       => 'jbg_seq',
+        // پایهٔ مشترک کوئری
+        $base = [
+            'post_type'           => 'jbg_ad',
+            'post_status'         => 'publish',
+            'posts_per_page'      => max(1, (int)$a['limit']),
+            'no_found_rows'       => true,
+            'ignore_sticky_posts' => true,
+            'suppress_filters'    => true,   // ← مهم: خنثی کردن فیلترهای خارجی
+            'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
+            'meta_key'            => 'jbg_seq',
         ];
-        $args = $args_base;
+
+        // مرحله 1: با CPV + فیلترها
+        $args = $base;
         $args['meta_query'] = [['key'=>'jbg_cpv','compare'=>'EXISTS']];
+        if ($brand_slugs) $args['tax_query'][] = ['taxonomy'=>'jbg_brand','field'=>'slug','terms'=>$brand_slugs];
+        if ($cat_slugs)   $args['tax_query'][] = ['taxonomy'=>'jbg_cat','field'=>'slug','terms'=>$cat_slugs];
 
-        if ($brand_slugs) {
-            $args['tax_query'][] = ['taxonomy'=>'jbg_brand','field'=>'slug','terms'=>$brand_slugs];
-        }
-        if ($cat_slugs) {
-            $args['tax_query'][] = ['taxonomy'=>'jbg_cat','field'=>'slug','terms'=>$cat_slugs];
-        }
-
-        // مرحله 1
         $q = new \WP_Query($args);
 
-        // مرحله 2: اگر صفر، شرط CPV را بردار
+        // مرحله 2: بدون CPV
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);
         }
 
-        // مرحله 3: اگر هنوز صفر، تمام فیلترهای tax را هم بردار (برای اینکه صفحه خالی نماند)
+        // مرحله 3: بدون tax_query
         if (!$q->have_posts() && !empty($args['tax_query'])) {
             unset($args['tax_query']);
             $q = new \WP_Query($args);
         }
 
-        // جمع‌آوری
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
@@ -107,11 +104,9 @@ class ListShortcode {
         }
         wp_reset_postdata();
 
-        // اگر باز هم هیچ، کلاً خروجی نده (نه ظرف خالی)
         if (empty($items)) {
             if (current_user_can('manage_options')) {
-                // دیباگ فقط برای ادمین در سورس HTML
-                echo "\n<!-- jbg_ads: empty after 3-stage fallback; last args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+                echo "\n<!-- jbg_ads: empty after 3-stage fallback; final args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
             }
             return '';
         }
@@ -154,9 +149,8 @@ class ListShortcode {
         }
         echo '</div>';
 
-        // دیباگ فقط برای ادمین
         if (current_user_can('manage_options')) {
-            echo "\n<!-- jbg_ads: rendered ".count($items)." items. final args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+            echo "\n<!-- jbg_ads: rendered ".count($items)." items. -->\n";
         }
 
         return (string) ob_get_clean();

@@ -37,7 +37,7 @@ class RelatedShortcode {
 
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
 
-        // مرحله 1: با CPV + فیلتر دسته‌ی همان پست (اگر داشت)
+        // فیلتر دسته‌ی همان پست (اگر داشت)
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -50,27 +50,31 @@ class RelatedShortcode {
             }
         }
 
-        $args_base = [
-            'post_type'      => 'jbg_ad',
-            'post_status'    => 'publish',
-            'posts_per_page' => max(1, (int)$a['limit']),
-            'no_found_rows'  => true,
-            'post__not_in'   => $current_id ? [$current_id] : [],
-            'orderby'        => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
-            'meta_key'       => 'jbg_seq',
+        $base = [
+            'post_type'           => 'jbg_ad',
+            'post_status'         => 'publish',
+            'posts_per_page'      => max(1, (int)$a['limit']),
+            'no_found_rows'       => true,
+            'ignore_sticky_posts' => true,
+            'suppress_filters'    => true,  // ← مهم
+            'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
+            'meta_key'            => 'jbg_seq',
+            'post__not_in'        => $current_id ? [$current_id] : [],
         ];
-        $args = $args_base;
+
+        // 1) با CPV + tax
+        $args = $base;
         if ($tax_query) $args['tax_query'] = $tax_query;
         $args['meta_query'] = [['key'=>'jbg_cpv','compare'=>'EXISTS']];
-
-        // 1) با CPV
         $q = new \WP_Query($args);
+
         // 2) بدون CPV
         if (!$q->have_posts()) {
             unset($args['meta_query']);
             $q = new \WP_Query($args);
         }
-        // 3) بدون tax_query (اگر هنوز صفر)
+
+        // 3) بدون tax
         if (!$q->have_posts() && !empty($args['tax_query'])) {
             unset($args['tax_query']);
             $q = new \WP_Query($args);
@@ -91,10 +95,9 @@ class RelatedShortcode {
         }
         wp_reset_postdata();
 
-        // اگر چیزی نداریم، کلاً خروجی نده (نه ظرف خالی)
         if (empty($items)) {
             if (current_user_can('manage_options')) {
-                echo "\n<!-- jbg_related: empty after fallback; last args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+                echo "\n<!-- jbg_related: empty after fallback; final args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
             }
             return '';
         }
@@ -139,7 +142,7 @@ class RelatedShortcode {
         echo '</div>';
 
         if (current_user_can('manage_options')) {
-            echo "\n<!-- jbg_related: rendered ".count($items)." items. final args:\n" . esc_html(print_r($args, true)) . "\n-->\n";
+            echo "\n<!-- jbg_related: rendered ".count($items)." items. -->\n";
         }
 
         return (string) ob_get_clean();
