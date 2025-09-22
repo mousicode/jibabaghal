@@ -1,7 +1,7 @@
-/* لایه‌بندی دو ستونه */
-.jbg-ad-layout{
+/* Two-column layout: sidebar on the LEFT, main on the RIGHT (RTL-friendly) */
+.jbg-two-col{
   display:grid;
-  grid-template-columns: 320px 1fr; /* سایدبار چپ، محتوا راست */
+  grid-template-columns: 320px 1fr; /* left: sidebar, right: main */
   grid-template-areas: "sidebar main";
   gap: 28px;
   align-items: start;
@@ -10,82 +10,39 @@
   padding: 0 16px;
 }
 
-/* اجباری: سایدبار سمت چپ */
-.jbg-ad-sidebar{
+/* Sidebar (left) */
+.jbg-two-col__sidebar{
   grid-area: sidebar;
 }
-.jbg-ad-main{
-  grid-area: main;
-}
-
-/* عنوان سایدبار */
-.jbg-ad-sidebar__title{
+.jbg-two-col__title{
   margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 16px; font-weight: 700;
+}
+.jbg-two-col__related{ display:block; }
+
+/* Main (right) – keep all player markup intact */
+.jbg-two-col__main{
+  grid-area: main;
+  min-width: 0; /* avoid overflow with iframes/players */
 }
 
-/* رپر پلیر برای حفظ نسبت تصویر 16:9 */
-.jbg-player-wrap{
-  position: relative;
-  width: 100%;
+/* Make sure embedded players/iframes scale to container width */
+.jbg-two-col__main iframe,
+.jbg-two-col__main video,
+.jbg-two-col__main .plyr,
+.jbg-two-col__main .plyr__video-embed{
   max-width: 100%;
-  aspect-ratio: 16/9;           /* مدرن؛ اگر ساپورت نشد، fallback پایین */
-  background: #000;
-}
-.jbg-player-wrap iframe,
-.jbg-player-wrap video{
-  position: absolute;
-  inset: 0;
   width: 100%;
-  height: 100%;
-  object-fit: cover;            /* تا فضای قاب رو پر کنه */
+  height: auto;
 }
 
-/* fallback برای مرورگرهای بدون aspect-ratio */
-@supports not (aspect-ratio: 16/9){
-  .jbg-player-wrap{ padding-top:56.25%; }
-  .jbg-player-wrap iframe,
-  .jbg-player-wrap video{ position:absolute; top:0; left:0; width:100%; height:100%; }
-}
-
-/* پیام راهنما و دکمه بعدی */
-.jbg-quiz-hint{
-  margin: 18px 0 8px;
-  padding: 10px 12px;
-  background:#f6f7fb;
-  border-radius:8px;
-  font-size:14px;
-  line-height:1.7;
-}
-.jbg-next{ margin: 12px 0 0; }
-.jbg-next__btn{
-  display:inline-block;
-  padding:10px 16px;
-  border-radius:10px;
-  background:#cfd6ff;
-  color:#1a1e2e;
-  text-decoration:none;
-  opacity:.6;
-  cursor:not-allowed;
-  transition: opacity .2s ease, transform .1s ease;
-}
-.jbg-next__btn.is-unlocked{
-  background:#4c6fff;
-  color:#fff;
-  opacity:1;
-  cursor:pointer;
-}
-.jbg-next__btn.is-unlocked:hover{ transform: translateY(-1px); }
-
-/* واکنش‌گرا: در عرض‌های کوچک، سایدبار بره زیر */
+/* Responsive: stack on small screens */
 @media (max-width: 1024px){
-  .jbg-ad-layout{
+  .jbg-two-col{
     grid-template-columns: 1fr;
     grid-template-areas:
       "main"
       "sidebar";
-    gap: 20px;
     max-width: 900px;
   }
 }
