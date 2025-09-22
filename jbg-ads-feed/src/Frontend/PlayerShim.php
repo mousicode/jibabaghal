@@ -5,33 +5,31 @@ if (!defined('ABSPATH')) exit;
 if (!class_exists(__NAMESPACE__ . '\\PlayerShim')):
 
 /**
- * PlayerShim:
- * اگر خروجی سینگل jbg_ad پلیر ندارد، یک پلیر استاندارد را فقط برای «پست اصلیِ همان صفحه» تزریق می‌کند.
- * - سازگار با Elementor (both the_content & elementor/frontend/the_content)
- * - جلوگیری از تزریق داخل هدر/فوتر Elementor با چک کردن نوع/ID پست جاری
- * - گارد تک‌بار برای جلوگیری از تزریق چندباره
+ * PlayerShim
+ * پلیر را فقط داخل محتوای «لوپ اصلی» همان پست jbg_ad تزریق می‌کند؛
+ * هیچ تزریقی داخل هدر/فوتر Elementor یا سایر کانتکست‌ها انجام نمی‌شود.
  */
 class PlayerShim {
 
     public static function register(): void {
-        // با اولویت بالا تا مطمئن باشیم نسخه نهایی محتوا را می‌بینیم
+        // فقط the_content (دیگر elementor/frontend/the_content را دستکاری نمی‌کنیم)
         add_filter('the_content', [self::class, 'inject'], 999);
-        add_filter('elementor/frontend/the_content', [self::class, 'inject'], 999);
     }
 
     public static function inject($content) {
-        // فقط روی سینگل آگهی
+        // فقط سینگل jbg_ad
         if (!is_singular('jbg_ad')) return $content;
+
+        // فقط داخل لوپ اصلیِ کوئری اصلی (تا در هدر/فوتر/ویجت‌ها اجرا نشود)
+        if (!in_the_loop() || !is_main_query()) return $content;
 
         global $post;
         $main_id = (int) get_queried_object_id();
-
-        // ⚠️ مهم: فقط اگر «پست در حال فیلتر» خودش jbg_ad اصلی همین صفحه است، اجازه بده
         if (!$post || $post->post_type !== 'jbg_ad' || (int)$post->ID !== $main_id) {
-            return $content; // از تزریق در هدر/فوتر/قالب‌های elementor_library جلوگیری می‌کند
+            return $content;
         }
 
-        // گارد تک‌بار: اگر قبلاً برای این پست تزریق شده، دیگر تکرار نکن
+        // گارد تک‌بار
         static $done = [];
         if (isset($done[$main_id])) return $content;
 
@@ -69,22 +67,21 @@ class PlayerShim {
           '<!-- jbg-player: injected for post '.$main_id.' -->';
 
         $done[$main_id] = true;
+
+        // پلیر را ابتدای بدنهٔ پست قرار می‌دهیم (داخل body و قبل از related)
         return $html . "\n" . $content;
     }
 
-    /** منبع ویدیو را از متای درست، ضمیمه یا اولین URL داخل محتوا پیدا می‌کند */
+    /** استخراج آدرس ویدیو از متا / ضمیمه / URL داخل محتوا */
     private static function resolve_video_src(int $post_id, string $content): string {
-        // 1) کلید اصلی رایج
         $m = (string) get_post_meta($post_id, 'jbg_video_src', true);
         if (is_string($m) && trim($m) !== '') return trim($m);
 
-        // 2) سایر کلیدهای احتمالی
         foreach (['jbg_player','jbg_video_url','_jbg_video_url','video_url','embed_html'] as $k) {
             $v = get_post_meta($post_id, $k, true);
             if (is_string($v) && trim($v) !== '') return trim($v);
         }
 
-        // 3) اولین ضمیمه ویدیویی متصل به همین پست
         $att = get_children([
             'post_parent'   => $post_id,
             'post_type'     => 'attachment',
@@ -99,7 +96,6 @@ class PlayerShim {
             if ($url) return $url;
         }
 
-        // 4) اولین URL داخل محتوا (fallback برای oEmbed/MP4)
         if (preg_match('~https?://[^\s"<]+~i', $content, $m)) return $m[0];
 
         return '';
