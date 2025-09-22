@@ -4,26 +4,23 @@ namespace JBG\Quiz\Frontend;
 class Renderer {
 
     public static function bootstrap(): void {
-        if (is_singular('jbg_ad')) {
-            add_action('wp_enqueue_scripts', [self::class, 'enqueue_assets']);
-            add_shortcode('jbg_quiz', [self::class, 'render_shortcode']);
-        }
+        // شورت‌کد همیشه ثبت شود
+        add_shortcode('jbg_quiz', [self::class, 'render_shortcode']);
+        // اسکریپت/استایل فقط در صفحه تکی ویدیو
+        add_action('wp_enqueue_scripts', [self::class, 'enqueue_assets']);
     }
 
     public static function enqueue_assets(): void {
-        wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL . 'assets/css/jbg-quiz.css', [], '0.1.3');
-        wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL . 'assets/js/jbg-quiz.js', [], '0.1.3', true);
+        if (!is_singular('jbg_ad')) return;
 
-        $nextHref  = '';
-        $nextTitle = '';
-        $curId     = (int) get_queried_object_id();
+        wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL.'assets/css/jbg-quiz.css', [], '0.1.4');
+        wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL.'assets/js/jbg-quiz.js', [], '0.1.4', true);
 
+        // لینک ویدئوی بعدی طبق رتبه‌بندی CPV/BR/Boost
+        $nextHref = ''; $nextTitle = ''; $curId = (int) get_queried_object_id();
         if ($curId > 0 && class_exists('\\JBG\\Ads\\Progress\\Access')) {
             $nextId = \JBG\Ads\Progress\Access::next_ad_id($curId);
-            if ($nextId) {
-                $nextHref  = get_permalink($nextId);
-                $nextTitle = get_the_title($nextId);
-            }
+            if ($nextId) { $nextHref = get_permalink($nextId); $nextTitle = get_the_title($nextId); }
         }
 
         wp_localize_script('jbg-quiz', 'JBG_QUIZ', [
@@ -36,5 +33,31 @@ class Renderer {
         ]);
     }
 
-    /* ... بقیه بدون تغییر ... */
+    public static function render_shortcode($atts = []) {
+        $id = get_the_ID();
+        $q  = (string) get_post_meta($id, 'jbg_quiz_q',  true);
+        $a1 = (string) get_post_meta($id, 'jbg_quiz_a1', true);
+        $a2 = (string) get_post_meta($id, 'jbg_quiz_a2', true);
+        $a3 = (string) get_post_meta($id, 'jbg_quiz_a3', true);
+        $a4 = (string) get_post_meta($id, 'jbg_quiz_a4', true);
+        if (!$q || !$a1 || !$a2 || !$a3 || !$a4) return '';
+
+        $h  = '<div id="jbg-quiz" class="jbg-quiz" data-ad="'.esc_attr($id).'" style="display:none">';
+        $h .= '  <div class="jbg-quiz-card">';
+        $h .= '    <h3 class="jbg-quiz-title">'.esc_html__('Quiz','jbg-quiz').'</h3>';
+        $h .= '    <p class="jbg-quiz-q">'.wp_kses_post($q).'</p>';
+        $h .= '    <form id="jbg-quiz-form">';
+        $h .=        self::radio('a1',$a1,1).self::radio('a2',$a2,2).self::radio('a3',$a3,3).self::radio('a4',$a4,4);
+        $h .= '      <button type="submit" class="jbg-quiz-btn">'.esc_html__('Submit','jbg-quiz').'</button>';
+        $h .= '    </form>';
+        $h .= '    <div id="jbg-quiz-result" class="jbg-quiz-result"></div>';
+        $h .= '    <div id="jbg-next-wrap" style="margin-top:10px"><a id="jbg-next-btn" class="jbg-btn" style="display:none"></a></div>';
+        $h .= '  </div></div>';
+        return $h;
+    }
+
+    private static function radio(string $name,string $label,int $val):string{
+        $id='jbg-quiz-'.sanitize_html_class($name);
+        return '<label class="jbg-quiz-opt"><input type="radio" id="'.esc_attr($id).'" name="jbg_answer" value="'.esc_attr($val).'"> '.esc_html($label).'</label>';
+    }
 }

@@ -127,14 +127,12 @@ class ListShortcode {
         }
 
         // مرتب‌سازی نهایی با seq
-        usort($items, function($a, $b){
-            if ($a['seq'] !== $b['seq']) return ($a['seq'] <=> $b['seq']);
-            if ($a['cpv'] === $b['cpv']) {
-                if ($a['br'] === $b['br']) return ($b['boost'] <=> $a['boost']);
-                return ($b['br'] <=> $a['br']);
-            }
-            return ($b['cpv'] <=> $a['cpv']);
-        });
+        usort($items, function($a,$b){
+    if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
+    if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
+    return ($b['boost'] <=> $a['boost']);
+});
+
 
         $user_id = get_current_user_id();
 
