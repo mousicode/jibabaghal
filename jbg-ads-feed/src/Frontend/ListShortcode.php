@@ -43,7 +43,7 @@ class ListShortcode {
     public static function render($atts = []): string {
         if (!wp_style_is('jbg-list', 'enqueued')) {
             $css = plugins_url('../../assets/css/jbg-list.css', __FILE__);
-            wp_enqueue_style('jbg-list', $css, [], '0.1.7');
+            wp_enqueue_style('jbg-list', $css, [], '0.1.8');
         }
 
         $a = shortcode_atts([
@@ -64,10 +64,14 @@ class ListShortcode {
             'posts_per_page'      => max(1, (int)$a['limit']),
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
-            'suppress_filters'    => true,   // ← مهم: خنثی کردن فیلترهای خارجی
+            'suppress_filters'    => true,  // فیلترهای خارجی روی SQL را خنثی کن
             'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
             'meta_key'            => 'jbg_seq',
         ];
+        // سازگاری با چندزبانه‌ها: همهٔ زبان‌ها را بگیر
+        if (defined('ICL_SITEPRESS_VERSION') || function_exists('pll_current_language')) {
+            $base['lang'] = 'all';
+        }
 
         // مرحله 1: با CPV + فیلترها
         $args = $base;

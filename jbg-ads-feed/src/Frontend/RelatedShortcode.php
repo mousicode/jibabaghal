@@ -56,11 +56,14 @@ class RelatedShortcode {
             'posts_per_page'      => max(1, (int)$a['limit']),
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
-            'suppress_filters'    => true,  // ← مهم
+            'suppress_filters'    => true,
             'orderby'             => ['meta_value_num' => 'ASC', 'date' => 'ASC'],
             'meta_key'            => 'jbg_seq',
             'post__not_in'        => $current_id ? [$current_id] : [],
         ];
+        if (defined('ICL_SITEPRESS_VERSION') || function_exists('pll_current_language')) {
+            $base['lang'] = 'all';
+        }
 
         // 1) با CPV + tax
         $args = $base;
