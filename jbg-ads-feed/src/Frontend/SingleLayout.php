@@ -62,24 +62,3 @@ class SingleLayout {
         return $html;
     }
 }
-
-
-// ...
-if ($is_open) {
-    $quiz_html = do_shortcode('[jbg_quiz]');
-    if (!empty(trim($quiz_html))) {
-        $html .= '<div class="jbg-section">'.$quiz_html.'</div>';
-    }
-    $rel = do_shortcode('[jbg_related limit="10"]');
-    if (!empty(trim($rel))) {
-        $html .= '<div class="jbg-section">'.$rel.'</div>';
-    }
-} else {
-    // پیام قفل
-    // ...
-    $rel = do_shortcode('[jbg_related limit="10"]');
-    if (!empty(trim($rel))) {
-        $html .= '<div class="jbg-section">'.$rel.'</div>';
-    }
-}
-// ...
