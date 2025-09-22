@@ -31,11 +31,19 @@
       v.addEventListener('timeupdate', function() {
         if (v.currentTime > maxWatched) maxWatched = v.currentTime;
       });
-      v.addEventListener('seeking', function(e) {
+      function restrictSeek() {
         // اگر کاربر جلوتر از maxWatched برود، برگردان به maxWatched
-        if (v.currentTime > maxWatched + 0.5) {
+        if (v.currentTime > maxWatched + 0.01) {
           v.currentTime = maxWatched;
         }
+      }
+      v.addEventListener('seeking', restrictSeek);
+      v.addEventListener('seeked', restrictSeek);
+      v.addEventListener('mousedown', function(e) {
+        setTimeout(restrictSeek, 10);
+      });
+      v.addEventListener('keydown', function(e) {
+        setTimeout(restrictSeek, 10);
       });
     }
   });
