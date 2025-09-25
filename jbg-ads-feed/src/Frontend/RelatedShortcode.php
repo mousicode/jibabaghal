@@ -15,7 +15,7 @@ class RelatedShortcode {
         elseif ($n >= 1000000){ $num=$n/1000000;    $u=' میلیون'; }
         elseif ($n >= 1000)   { $num=$n/1000;       $u=' هزار'; }
         else return number_format_i18n($n);
-        $s = number_format_i18n($n >= 1000 ? $num : $n, $n >= 1000 ? 1 : 0);
+        $s = number_format_i18n($num ?? $n, ($n >= 1000 ? 1 : 0));
         $s = preg_replace('/([0-9۰-۹]+)[\.\,٫]0$/u', '$1', $s);
         return ($n >= 1000 ? $s.$u : $s);
     }
@@ -124,7 +124,7 @@ class RelatedShortcode {
               .jbg-related {direction:rtl}
               .jbg-related-title {font-weight:700;margin:10px 6px}
               .jbg-related-list {display:flex;flex-direction:column;gap:10px}
-              .jbg-related-item {display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+              .jbg-related-item {display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px; position:relative}
               .jbg-related-thumb{flex:0 0 72px;height:48px;background:#f3f4f6;background-size:cover;background-position:center;border-radius:8px}
               .jbg-related-meta{display:flex;flex-direction:column}
               .jbg-related-sub{color:#6b7280;font-size:12px;margin-top:2px}
@@ -139,12 +139,23 @@ class RelatedShortcode {
               .jbg-related a:hover,
               .jbg-related a:focus {
                 text-decoration: none !important;
+                text-decoration-line: none !important;
                 border: 0 !important;
                 border-bottom: 0 !important;
                 box-shadow: none !important;
                 background-image: none !important;
                 text-decoration-color: transparent !important;
               }
+              /* بعضی تم‌ها با pseudo-element خط می‌کشند */
+              .jbg-related a::after,
+              .jbg-related a::before {
+                display: none !important;
+                content: none !important;
+                box-shadow: none !important;
+                background: none !important;
+                border: 0 !important;
+              }
+              /* خود متن‌ها هم اگر ارث بگیرند، صفرشان کن */
               .jbg-related .jbg-related-title-text,
               .jbg-related .jbg-related-sub,
               .jbg-related .jbg-rel-rewatch,
@@ -171,10 +182,15 @@ class RelatedShortcode {
             $open    = Access::is_unlocked($user_id, (int)$it['ID']);
             $watched = $user_id && ($it['seq'] < $unlockedMax); // قبلاً کامل دیده + آزمون پاس
 
-            $href     = $open ? esc_url($it['link']) : '#';
-            $lockAttr = $open ? '' : ' style="opacity:.6;pointer-events:none"';
+            // استایل inline برای حذف هر نوع underline از خود <a>
+            $baseInline = 'text-decoration:none;border:0;box-shadow:none;background-image:none';
+            $styleAttr  = $open
+                ? ' style="'.$baseInline.'"'
+                : ' style="'.$baseInline.';opacity:.6;pointer-events:none"';
 
-            echo '<a class="jbg-related-item'.($open?'':' is-locked').'" href="'.$href.'"'.$lockAttr.'>';
+            $href = $open ? esc_url($it['link']) : '#';
+
+            echo '<a class="jbg-related-item'.($open?'':' is-locked').'" href="'.$href.'"'.$styleAttr.'>';
             echo   '<span class="jbg-related-thumb"'.($it['thumb']?' style="background-image:url(\''.esc_url($it['thumb']).'\')"':'').'></span>';
             echo   '<span class="jbg-related-meta">';
             echo     '<span class="jbg-related-title-text">';
