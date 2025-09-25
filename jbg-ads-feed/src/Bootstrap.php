@@ -8,8 +8,11 @@ use JBG\Ads\Taxonomy\Category;
 use JBG\Ads\PostType\Ad;
 use JBG\Ads\Admin\MetaBox;
 use JBG\Ads\Admin\Columns;
-// Progress (قطره‌ای)
-use JBG\Ads\Progress\Unlock;
+
+// NEW
+use JBG\Ads\Admin\PointsMetaBox;
+use JBG\Ads\Frontend\PointsShortcode;
+use JBG\Ads\Progress\Points;
 
 class Bootstrap {
     public static function init(): void {
@@ -23,6 +26,17 @@ class Bootstrap {
         add_action('add_meta_boxes', [MetaBox::class, 'register']);
         add_action('save_post_jbg_ad', [MetaBox::class, 'save'], 10, 2);
 
+        // NEW: Points meta box (independent, no conflict)
+        add_action('init', function () {
+            $file = JBG_ADS_DIR . 'src/Admin/PointsMetaBox.php';
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Admin\\PointsMetaBox')) {
+                    \JBG\Ads\Admin\PointsMetaBox::register();
+                }
+            }
+        });
+
         // Admin columns
         if (is_admin()) {
             add_filter('manage_jbg_ad_posts_columns', [Columns::class, 'columns']);
@@ -34,50 +48,91 @@ class Bootstrap {
         // Shortcode: list
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/ListShortcode.php';
-            if (file_exists($file)) { require_once $file; \JBG\Ads\Frontend\ListShortcode::register(); }
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\ListShortcode')) {
+                    \JBG\Ads\Frontend\ListShortcode::register();
+                }
+            }
         });
 
         // Shortcode: related
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/RelatedShortcode.php';
-            if (file_exists($file)) { require_once $file; \JBG\Ads\Frontend\RelatedShortcode::register(); }
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\RelatedShortcode')) {
+                    \JBG\Ads\Frontend\RelatedShortcode::register();
+                }
+            }
         });
 
-        // Single layout (Player → Quiz → Related)
+        // NEW: Shortcode: points
+        add_action('init', function () {
+            $file = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\PointsShortcode')) {
+                    \JBG\Ads\Frontend\PointsShortcode::register();
+                }
+            }
+        });
+
+        // Single two-column layout wrapper
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
-            if (file_exists($file)) { require_once $file; \JBG\Ads\Frontend\SingleLayout::register(); }
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Frontend\\SingleLayout')) {
+                    \JBG\Ads\Frontend\SingleLayout::register();
+                }
+            }
         });
 
-        // View badge (header)
+        // Single header badge
         add_action('init', function () {
             $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
-            if (file_exists($vb)) { require_once $vb; \JBG\Ads\Frontend\ViewBadge::register(); }
+            if (file_exists($vb)) {
+                require_once $vb;
+                if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
+                    \JBG\Ads\Frontend\ViewBadge::register();
+                }
+            }
         });
 
-        // Progress/Gating (قطره‌ای)
+        // NEW: Points engine
         add_action('init', function () {
-            $access = JBG_ADS_DIR . 'src/Progress/Access.php';
-            if (file_exists($access)) require_once $access;
-
-            $unlock = JBG_ADS_DIR . 'src/Progress/Unlock.php';
-            if (file_exists($unlock)) {
-                require_once $unlock;
-                if (class_exists('\\JBG\\Ads\\Progress\\Unlock')) Unlock::bootstrap();
+            $file = JBG_ADS_DIR . 'src/Progress/Points.php';
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Progress\\Points')) {
+                    \JBG\Ads\Progress\Points::bootstrap();
+                }
             }
         });
 
         // REST endpoints
         add_action('rest_api_init', function () {
             $feed = JBG_ADS_DIR . 'src/Rest/FeedController.php';
-            if (file_exists($feed)) { require_once $feed; \JBG\Ads\Rest\FeedController::register_routes(); }
+            if (file_exists($feed)) {
+                require_once $feed;
+                if (class_exists('\\JBG\\Ads\\Rest\\FeedController')) {
+                    \JBG\Ads\Rest\FeedController::register_routes();
+                }
+            }
 
-            // اگر ViewController حذف شده، این بخش خودبه‌خود نادیده گرفته می‌شود
             $view = JBG_ADS_DIR . 'src/Rest/ViewController.php';
-            if (file_exists($view)) { require_once $view; \JBG\Ads\Rest\ViewController::register_routes(); }
+            if (file_exists($view)) {
+                require_once $view;
+                if (class_exists('\\JBG\\Ads\\Rest\\ViewController')) {
+                    \JBG\Ads\Rest\ViewController::register_routes();
+                }
+            }
 
             $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
-            if (file_exists($viewTrack)) { require_once $viewTrack; }
+            if (file_exists($viewTrack)) {
+                require_once $viewTrack;
+            }
             if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
                 \JBG\Ads\Rest\ViewTrackController::register_routes();
             }
