@@ -194,7 +194,7 @@ class RelatedShortcode {
             echo   '<span class="jbg-related-thumb"'.($it['thumb']?' style="background-image:url(\''.esc_url($it['thumb']).'\')"':'').'></span>';
             echo   '<span class="jbg-related-meta">';
             echo     '<span class="jbg-related-title-text">';
-            if ($watched) echo '<span class="jbg-badge-watched">دیده‌شده</span>';
+            if ($watched) echo '<span class="jbg-badge-watched">دیده شده</span>';
             echo       esc_html($it['title']);
             echo     '</span>';
             echo     '<span class="jbg-related-sub">';
