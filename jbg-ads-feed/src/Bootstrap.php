@@ -96,13 +96,24 @@ class Bootstrap {
             }
         });
 
-        // --- مهم: Progress/Unlock را بوت‌استرپ کن تا متای jbg_unlocked_max_seq درست به‌روزرسانی شود
+        // --- مهم 1: بوت Unlock (اگر موجود است)
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Progress/Unlock.php';
             if (file_exists($file)) {
                 require_once $file;
                 if (class_exists('\\JBG\\Ads\\Progress\\Unlock')) {
                     \JBG\Ads\Progress\Unlock::bootstrap();
+                }
+            }
+        });
+
+        // --- مهم 2: بوت Access (گیت/قفل مرحله‌ای و سینگچر محتوا)
+        add_action('init', function () {
+            $file = JBG_ADS_DIR . 'src/Progress/Access.php';
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Progress\\Access')) {
+                    \JBG\Ads\Progress\Access::bootstrap();
                 }
             }
         });
