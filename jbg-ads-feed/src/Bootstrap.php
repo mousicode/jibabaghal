@@ -21,7 +21,7 @@ class Bootstrap {
         add_action('add_meta_boxes', [MetaBox::class, 'register']);
         add_action('save_post_jbg_ad', [MetaBox::class, 'save'], 10, 2);
 
-        // --- NEW: Points meta box (ثبت روی هوک صحیح)
+        // --- Points meta box (در صورت وجود فایل/کلاس)
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Admin/PointsMetaBox.php';
             if (file_exists($file)) {
@@ -63,7 +63,7 @@ class Bootstrap {
             }
         });
 
-        // --- NEW: Shortcode: points
+        // Shortcode: points
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
             if (file_exists($file)) {
@@ -74,7 +74,7 @@ class Bootstrap {
             }
         });
 
-        // Single two-column layout wrapper
+        // Single layout
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
             if (file_exists($file)) {
@@ -85,7 +85,7 @@ class Bootstrap {
             }
         });
 
-        // Single header badge
+        // ViewBadge
         add_action('init', function () {
             $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
             if (file_exists($vb)) {
@@ -96,7 +96,18 @@ class Bootstrap {
             }
         });
 
-        // --- NEW: Points engine
+        // --- مهم: Progress/Unlock را بوت‌استرپ کن تا متای jbg_unlocked_max_seq درست به‌روزرسانی شود
+        add_action('init', function () {
+            $file = JBG_ADS_DIR . 'src/Progress/Unlock.php';
+            if (file_exists($file)) {
+                require_once $file;
+                if (class_exists('\\JBG\\Ads\\Progress\\Unlock')) {
+                    \JBG\Ads\Progress\Unlock::bootstrap();
+                }
+            }
+        });
+
+        // --- Points engine (در صورت وجود)
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Progress/Points.php';
             if (file_exists($file)) {
