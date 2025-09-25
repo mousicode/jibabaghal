@@ -30,12 +30,6 @@ class RelatedShortcode {
     }
 
     public static function render($atts = []): string {
-        // ⬅️ استایل کارت‌های «مرتبط‌ها» فقط یک‌بار لود شود
-        if (!wp_style_is('jbg-related', 'enqueued')) {
-            $css = plugins_url('../../assets/css/jbg-related.css', __FILE__);
-            wp_enqueue_style('jbg-related', $css, [], '0.2.1');
-        }
-
         $a = shortcode_atts([
             'limit' => 8,
             'title' => 'ویدیوهای مرتبط',
@@ -63,12 +57,12 @@ class RelatedShortcode {
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
             'suppress_filters'    => true,
-            'orderby'             => ['menu_order' => 'ASC', 'date' => 'ASC', 'ID' => 'ASC'],
+            'orderby'             => ['date' => 'ASC', 'ID' => 'ASC'],
             'post__not_in'        => $current_id ? [$current_id] : [],
             'lang'                => 'all',
         ];
 
-        // 1) با CPV + tax
+        // 1) ترجیحاً در همان دسته و با داشتن CPV
         $args = $base;
         if ($tax_query) $args['tax_query'] = $tax_query;
         $args['meta_query'] = [['key'=>'jbg_cpv','compare'=>'EXISTS']];
@@ -96,73 +90,92 @@ class RelatedShortcode {
         $items = [];
         foreach ($q->posts as $p) {
             $items[] = [
-                'ID'    => $p->ID,
+                'ID'    => (int) $p->ID,
                 'title' => get_the_title($p),
                 'link'  => get_permalink($p),
                 'thumb' => get_the_post_thumbnail_url($p->ID, 'medium') ?: '',
                 'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
                 'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
                 'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
-                'seq'   => Access::seq($p->ID),
+                'seq'   => Access::seq((int)$p->ID),
             ];
         }
         wp_reset_postdata();
 
         if (empty($items)) {
-            if (current_user_can('manage_options')) {
-                global $wpdb; $db_count = (int)$wpdb->get_var(
-                    $wpdb->prepare("SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish'", 'jbg_ad')
-                );
-                $sql = isset($q) && isset($q->request) ? $q->request : '(no-sql)';
-                echo "\n<!-- jbg_related: EMPTY after 4-stage fallback.\n"
-                   . "db_count(publish jbg_ad)={$db_count}\n"
-                   . "final args:\n".esc_html(print_r($args, true))."\n"
-                   . "sql:\n".esc_html($sql)."\n-->\n";
-            }
             return '';
         }
 
-        // مرتب‌سازی نهایی با seq
-      usort($items, function($a,$b){
-    if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
-    if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
-    return ($b['boost'] <=> $a['boost']);
-});
+        // مرتب‌سازی نهایی: CPV ↓ → BR ↓ → Boost ↓
+        usort($items, function($a,$b){
+            if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
+            if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
+            return ($b['boost'] <=> $a['boost']);
+        });
 
-
-        $user_id = get_current_user_id();
+        $user_id     = get_current_user_id();
+        $unlockedMax = $user_id ? Access::unlocked_max($user_id) : 1;
 
         ob_start();
+
+        // CSS اضافه برای «دیده‌شده» و «مشاهده مجدد»
+        static $css_once = false;
+        if (!$css_once) {
+            $css_once = true;
+            echo '<style id="jbg-related-watched-css">
+              .jbg-related {direction:rtl}
+              .jbg-related-title {font-weight:700;margin:10px 6px}
+              .jbg-related-list {display:flex;flex-direction:column;gap:10px}
+              .jbg-related-item {display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+              .jbg-related-thumb{flex:0 0 72px;height:48px;background:#f3f4f6;background-size:cover;background-position:center;border-radius:8px}
+              .jbg-related-meta{display:flex;flex-direction:column}
+              .jbg-related-sub{color:#6b7280;font-size:12px;margin-top:2px}
+              .jbg-related-item.is-locked{opacity:.55;pointer-events:none}
+              .jbg-badge-watched{background:#DCFCE7;color:#166534;border-radius:9999px;padding:2px 8px;font-size:11px;margin-left:6px}
+              .jbg-rel-actions{margin-top:6px}
+              .jbg-rel-rewatch{display:inline-block;border:1px solid #e5e7eb;border-radius:10px;padding:4px 10px;font-size:12px}
+            </style>';
+        }
+
         echo '<div class="jbg-related">';
         echo '<div class="jbg-related-title">'.esc_html($a['title']).'</div>';
         echo '<div class="jbg-related-list">';
+
         foreach ($items as $it) {
             $views  = Helpers::views_count((int)$it['ID']);
             $viewsF = self::compact_num($views) . ' بازدید';
             $when   = self::relative_time((int)$it['ID']);
             $brand  = self::brand_name((int)$it['ID']);
+
             $open   = Access::is_unlocked($user_id, (int)$it['ID']);
+            $watched = $user_id && ($it['seq'] < $unlockedMax); // قبلاً کامل دیده و آزمون را پاس کرده
 
             $href = $open ? esc_url($it['link']) : '#';
-            $lock = $open ? '' : ' style="opacity:.6;pointer-events:none"';
+            $lockAttr = $open ? '' : ' style="opacity:.6;pointer-events:none"';
 
-            echo '<a class="jbg-related-item" href="'.$href.'"'.$lock.'>';
+            echo '<a class="jbg-related-item'.($open?'':' is-locked').'" href="'.$href.'"'.$lockAttr.'>';
             echo   '<span class="jbg-related-thumb"'.($it['thumb']?' style="background-image:url(\''.esc_url($it['thumb']).'\')"':'').'></span>';
             echo   '<span class="jbg-related-meta">';
-            echo     '<span class="jbg-related-title-text">'.esc_html($it['title']).'</span>';
+            echo     '<span class="jbg-related-title-text">';
+            if ($watched) echo '<span class="jbg-badge-watched">دیده‌شده</span>';
+            echo       esc_html($it['title']);
+            echo     '</span>';
             echo     '<span class="jbg-related-sub">';
             if ($brand) echo '<span class="brand">'.esc_html($brand).'</span><span class="dot">•</span>';
             echo       '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
             echo     '</span>';
-            echo   '</span>';
+
+            if ($watched) {
+                // دکمه‌ی مشاهده مجدد (داخل همان لینک، فقط استایل دکمه دارد)
+                echo   '<span class="jbg-rel-actions"><span class="jbg-rel-rewatch">مشاهده مجدد</span></span>';
+            }
+
+            echo   '</span>'; // meta
             echo '</a>';
         }
-        echo '</div>';
-        echo '</div>';
 
-        if (current_user_can('manage_options')) {
-            echo "\n<!-- jbg_related: rendered ".count($items)." items. -->\n";
-        }
+        echo '</div>';
+        echo '</div>';
 
         return (string) ob_get_clean();
     }
