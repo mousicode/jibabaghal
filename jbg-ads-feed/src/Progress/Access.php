@@ -18,7 +18,7 @@ class Access {
             ]);
             $count = is_array($posts) ? count($posts) : 0;
             if (!empty($posts)) {
-                $p   = get_post($posts[0]);
+                $p = get_post($posts[0]);
                 $last = $p ? (string) strtotime($p->post_modified_gmt ?: $p->post_date_gmt) : '0';
             }
             $sig = md5($count . ':' . $last);
@@ -54,6 +54,7 @@ class Access {
             ];
         }
 
+        // ترتیب: CPV↓ → BR↓ → Boost↓
         usort($items, function($a,$b){
             if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
             if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
@@ -66,9 +67,10 @@ class Access {
         return $map;
     }
 
+    /** شمارهٔ مرحلهٔ آگهی. اگر در ترتیب فعلی وجود ندارد، 0 برگردد. */
     public static function seq(int $ad_id): int {
         $map = self::seq_map();
-        return isset($map[$ad_id]) ? (int) $map[$ad_id] : 999999;
+        return isset($map[$ad_id]) ? (int) $map[$ad_id] : 0;
     }
 
     public static function max_seq(): int {
@@ -76,16 +78,14 @@ class Access {
         return (int) max(1, count($map));
     }
 
-    /** بازسازی پیشرفت از متاهای پاس/امتیاز (اگر قبلاً ریست شده باشد) */
+    /** بازسازی پیشرفت از متاهای پاس‌شده (فقط آگهی‌های موجود در ترتیب فعلی لحاظ می‌شوند) */
     private static function reconstruct_progress_from_passed(int $user_id): int {
         if ($user_id <= 0) return 1;
-        $passed_ids = [];
 
-        // لیست صریح
+        $passed_ids = [];
         $list = get_user_meta($user_id, 'jbg_quiz_passed_ids', true);
         if (is_array($list)) $passed_ids = array_map('intval', $list);
 
-        // اسکن keyها (jbg_quiz_passed_{id} / jbg_points_awarded_{id})
         $all = get_user_meta($user_id);
         foreach ($all as $k => $_) {
             if (preg_match('/^jbg_(?:quiz_passed|points_awarded)_(\d+)$/', (string)$k, $m)) {
@@ -96,15 +96,17 @@ class Access {
 
         if (empty($passed_ids)) return 1;
 
-        $max_seq = 0;
+        $max_seq_seen = 0;
         foreach ($passed_ids as $ad_id) {
             $s = self::seq((int)$ad_id);
-            if ($s > $max_seq) $max_seq = $s;
+            if ($s > 0 && $s > $max_seq_seen) $max_seq_seen = $s;
         }
-        $candidate = $max_seq + 1;
+        if ($max_seq_seen <= 0) return 1;
+
+        $candidate = $max_seq_seen + 1;
         $cap = self::max_seq();
         if ($candidate > $cap) $candidate = $cap;
-        if ($candidate < 1) $candidate = 1;
+        if ($candidate < 1)    $candidate = 1;
 
         return (int) $candidate;
     }
@@ -119,7 +121,7 @@ class Access {
         $usr_sig = (string) get_user_meta($user_id, 'jbg_progress_sig', true);
 
         if ($usr_sig !== $cur_sig) {
-            // ✅ پیشرفت را از متاهای پاس‌شده بازسازی کن؛ RESET نداریم
+            // امضا عوض شده: پیشرفت را بازسازی کن، ریست نکن
             $rebuilt = self::reconstruct_progress_from_passed($user_id);
             if ($rebuilt > $user_max) $user_max = $rebuilt;
 
@@ -129,6 +131,7 @@ class Access {
             update_user_meta($user_id, 'jbg_unlocked_max_seq', $user_max);
             update_user_meta($user_id, 'jbg_progress_sig',     $cur_sig);
         } else {
+            // حتی با امضای ثابت هم ممکن است max تغییر کرده باشد
             $max_now = self::max_seq();
             if ($user_max > $max_now) {
                 $user_max = $max_now;
@@ -141,15 +144,16 @@ class Access {
 
     public static function is_unlocked(int $user_id, int $ad_id): bool {
         $allow = ($user_id > 0) ? self::unlocked_max($user_id) : 1;
-        return (self::seq($ad_id) <= $allow);
+        return (self::seq($ad_id) > 0) && (self::seq($ad_id) <= $allow);
     }
 
     public static function next_ad_id(int $current_id): int {
         $map  = self::seq_map();
         $seq  = self::seq($current_id);
+        if ($seq <= 0) return 0;
         $next = $seq + 1;
         if ($next > count($map)) return 0;
-        $flip = array_flip($map);
+        $flip = array_flip($map); // seq => id
         return isset($flip[$next]) ? (int) $flip[$next] : 0;
     }
 
