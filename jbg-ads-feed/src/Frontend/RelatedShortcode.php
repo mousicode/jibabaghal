@@ -122,19 +122,28 @@ class RelatedShortcode {
         static $css_once = false;
         if (!$css_once) {
             $css_once = true;
-            echo '<style id="jbg-related-watched-css">
-              .jbg-related {direction:rtl}
-              .jbg-related-title {font-weight:700;margin:10px 6px}
-              .jbg-related-list {display:flex;flex-direction:column;gap:10px}
-              .jbg-related-item {display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
-              .jbg-related-thumb{flex:0 0 72px;height:48px;background:#f3f4f6;background-size:cover;background-position:center;border-radius:8px}
-              .jbg-related-meta{display:flex;flex-direction:column}
-              .jbg-related-sub{color:#6b7280;font-size:12px;margin-top:2px}
-              .jbg-related-item.is-locked{opacity:.55;pointer-events:none}
-              .jbg-badge-watched{background:#DCFCE7;color:#166534;border-radius:9999px;padding:2px 8px;font-size:11px;margin-left:6px}
-              .jbg-rel-actions{margin-top:6px}
-              .jbg-rel-rewatch{display:inline-block;border:1px solid #e5e7eb;border-radius:10px;padding:4px 10px;font-size:12px}
-            </style>';
+           echo '<style id="jbg-related-watched-css">
+            .jbg-related {direction:rtl}
+            .jbg-related-title {font-weight:700;margin:10px 6px}
+            .jbg-related-list {display:flex;flex-direction:column;gap:10px}
+            .jbg-related-item {display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+            .jbg-related-thumb{flex:0 0 72px;height:48px;background:#f3f4f6;background-size:cover;background-position:center;border-radius:8px}
+            .jbg-related-meta{display:flex;flex-direction:column}
+            .jbg-related-sub{color:#6b7280;font-size:12px;margin-top:2px}
+            .jbg-related-item.is-locked{opacity:.55;pointer-events:none}
+            .jbg-badge-watched{background:#DCFCE7;color:#166534;border-radius:9999px;padding:2px 8px;font-size:11px;margin-left:6px}
+            .jbg-rel-actions{margin-top:6px}
+            .jbg-rel-rewatch{display:inline-block;border:1px solid #e5e7eb;border-radius:10px;padding:4px 10px;font-size:12px}
+
+            /* ⬇️ لینک‌ها بدون زیرخط در همهٔ حالت‌ها */
+            .jbg-related a,
+            .jbg-related a:visited,
+            .jbg-related a:hover,
+            .jbg-related a:focus {
+                text-decoration: none !important;
+            }
+        </style>';
+
         }
 
         echo '<div class="jbg-related">';
