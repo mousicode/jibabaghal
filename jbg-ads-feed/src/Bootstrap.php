@@ -9,11 +9,6 @@ use JBG\Ads\PostType\Ad;
 use JBG\Ads\Admin\MetaBox;
 use JBG\Ads\Admin\Columns;
 
-// NEW
-use JBG\Ads\Admin\PointsMetaBox;
-use JBG\Ads\Frontend\PointsShortcode;
-use JBG\Ads\Progress\Points;
-
 class Bootstrap {
     public static function init(): void {
 
@@ -22,17 +17,18 @@ class Bootstrap {
         add_action('init', [Category::class, 'register'], 6);
         add_action('init', [Ad::class, 'register'], 7);
 
-        // Metaboxes
+        // Metaboxes اصلی
         add_action('add_meta_boxes', [MetaBox::class, 'register']);
         add_action('save_post_jbg_ad', [MetaBox::class, 'save'], 10, 2);
 
-        // NEW: Points meta box (independent, no conflict)
+        // --- NEW: Points meta box (ثبت روی هوک صحیح)
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Admin/PointsMetaBox.php';
             if (file_exists($file)) {
                 require_once $file;
                 if (class_exists('\\JBG\\Ads\\Admin\\PointsMetaBox')) {
-                    \JBG\Ads\Admin\PointsMetaBox::register();
+                    add_action('add_meta_boxes', ['\\JBG\\Ads\\Admin\\PointsMetaBox', 'register']);
+                    add_action('save_post_jbg_ad', ['\\JBG\\Ads\\Admin\\PointsMetaBox', 'save'], 10, 2);
                 }
             }
         });
@@ -67,7 +63,7 @@ class Bootstrap {
             }
         });
 
-        // NEW: Shortcode: points
+        // --- NEW: Shortcode: points
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
             if (file_exists($file)) {
@@ -100,7 +96,7 @@ class Bootstrap {
             }
         });
 
-        // NEW: Points engine
+        // --- NEW: Points engine
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Progress/Points.php';
             if (file_exists($file)) {
