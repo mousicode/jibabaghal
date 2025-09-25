@@ -15,9 +15,9 @@ class RelatedShortcode {
         elseif ($n >= 1000000){ $num=$n/1000000;    $u=' میلیون'; }
         elseif ($n >= 1000)   { $num=$n/1000;       $u=' هزار'; }
         else return number_format_i18n($n);
-        $s = number_format_i18n($num,1);
+        $s = number_format_i18n($n >= 1000 ? $num : $n, $n >= 1000 ? 1 : 0);
         $s = preg_replace('/([0-9۰-۹]+)[\.\,٫]0$/u', '$1', $s);
-        return $s.$u;
+        return ($n >= 1000 ? $s.$u : $s);
     }
 
     private static function relative_time(int $post_id): string {
@@ -37,7 +37,7 @@ class RelatedShortcode {
 
         $current_id = is_singular('jbg_ad') ? get_the_ID() : 0;
 
-        // فیلتر دسته‌ی همان پست (اگر داشت)
+        // فیلترِ هم‌دسته
         $tax_query = [];
         if ($current_id) {
             $terms = wp_get_post_terms($current_id, 'jbg_cat', ['fields'=>'ids']);
@@ -62,7 +62,7 @@ class RelatedShortcode {
             'lang'                => 'all',
         ];
 
-        // 1) ترجیحاً در همان دسته و با داشتن CPV
+        // 1) در همان دسته + داشتن CPV
         $args = $base;
         if ($tax_query) $args['tax_query'] = $tax_query;
         $args['meta_query'] = [['key'=>'jbg_cpv','compare'=>'EXISTS']];
@@ -80,7 +80,7 @@ class RelatedShortcode {
             $q = new \WP_Query($args);
         }
 
-        // 4) اجازهٔ فیلترها در صورت نیاز
+        // 4) اجازهٔ فیلترهای چندزبانه در صورت نیاز
         if (!$q->have_posts()) {
             $args4 = $args; $args4['suppress_filters'] = false;
             $q = new \WP_Query($args4);
@@ -102,9 +102,7 @@ class RelatedShortcode {
         }
         wp_reset_postdata();
 
-        if (empty($items)) {
-            return '';
-        }
+        if (empty($items)) return '';
 
         // مرتب‌سازی نهایی: CPV ↓ → BR ↓ → Boost ↓
         usort($items, function($a,$b){
@@ -118,32 +116,46 @@ class RelatedShortcode {
 
         ob_start();
 
-        // CSS اضافه برای «دیده‌شده» و «مشاهده مجدد»
+        // CSS
         static $css_once = false;
         if (!$css_once) {
             $css_once = true;
-           echo '<style id="jbg-related-watched-css">
-            .jbg-related {direction:rtl}
-            .jbg-related-title {font-weight:700;margin:10px 6px}
-            .jbg-related-list {display:flex;flex-direction:column;gap:10px}
-            .jbg-related-item {display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
-            .jbg-related-thumb{flex:0 0 72px;height:48px;background:#f3f4f6;background-size:cover;background-position:center;border-radius:8px}
-            .jbg-related-meta{display:flex;flex-direction:column}
-            .jbg-related-sub{color:#6b7280;font-size:12px;margin-top:2px}
-            .jbg-related-item.is-locked{opacity:.55;pointer-events:none}
-            .jbg-badge-watched{background:#DCFCE7;color:#166534;border-radius:9999px;padding:2px 8px;font-size:11px;margin-left:6px}
-            .jbg-rel-actions{margin-top:6px}
-            .jbg-rel-rewatch{display:inline-block;border:1px solid #e5e7eb;border-radius:10px;padding:4px 10px;font-size:12px}
+            echo '<style id="jbg-related-watched-css">
+              .jbg-related {direction:rtl}
+              .jbg-related-title {font-weight:700;margin:10px 6px}
+              .jbg-related-list {display:flex;flex-direction:column;gap:10px}
+              .jbg-related-item {display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+              .jbg-related-thumb{flex:0 0 72px;height:48px;background:#f3f4f6;background-size:cover;background-position:center;border-radius:8px}
+              .jbg-related-meta{display:flex;flex-direction:column}
+              .jbg-related-sub{color:#6b7280;font-size:12px;margin-top:2px}
+              .jbg-related-item.is-locked{opacity:.55;pointer-events:none}
+              .jbg-badge-watched{background:#DCFCE7;color:#166534;border-radius:9999px;padding:2px 8px;font-size:11px;margin-left:6px}
+              .jbg-rel-actions{margin-top:6px}
+              .jbg-rel-rewatch{display:inline-block;border:1px solid #e5e7eb;border-radius:10px;padding:4px 10px;font-size:12px}
 
-            /* ⬇️ لینک‌ها بدون زیرخط در همهٔ حالت‌ها */
-            .jbg-related a,
-            .jbg-related a:visited,
-            .jbg-related a:hover,
-            .jbg-related a:focus {
+              /* لینک‌ها بدون هر نوع زیرخط/افکت تم */
+              .jbg-related a,
+              .jbg-related a:visited,
+              .jbg-related a:hover,
+              .jbg-related a:focus {
                 text-decoration: none !important;
-            }
-        </style>';
-
+                border: 0 !important;
+                border-bottom: 0 !important;
+                box-shadow: none !important;
+                background-image: none !important;
+                text-decoration-color: transparent !important;
+              }
+              .jbg-related .jbg-related-title-text,
+              .jbg-related .jbg-related-sub,
+              .jbg-related .jbg-rel-rewatch,
+              .jbg-related .brand {
+                text-decoration: none !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                background-image: none !important;
+                text-decoration-color: transparent !important;
+              }
+            </style>';
         }
 
         echo '<div class="jbg-related">';
@@ -156,10 +168,10 @@ class RelatedShortcode {
             $when   = self::relative_time((int)$it['ID']);
             $brand  = self::brand_name((int)$it['ID']);
 
-            $open   = Access::is_unlocked($user_id, (int)$it['ID']);
-            $watched = $user_id && ($it['seq'] < $unlockedMax); // قبلاً کامل دیده و آزمون را پاس کرده
+            $open    = Access::is_unlocked($user_id, (int)$it['ID']);
+            $watched = $user_id && ($it['seq'] < $unlockedMax); // قبلاً کامل دیده + آزمون پاس
 
-            $href = $open ? esc_url($it['link']) : '#';
+            $href     = $open ? esc_url($it['link']) : '#';
             $lockAttr = $open ? '' : ' style="opacity:.6;pointer-events:none"';
 
             echo '<a class="jbg-related-item'.($open?'':' is-locked').'" href="'.$href.'"'.$lockAttr.'>';
@@ -175,7 +187,7 @@ class RelatedShortcode {
             echo     '</span>';
 
             if ($watched) {
-                // دکمه‌ی مشاهده مجدد (داخل همان لینک، فقط استایل دکمه دارد)
+                // دکمه‌ی «مشاهده مجدد»
                 echo   '<span class="jbg-rel-actions"><span class="jbg-rel-rewatch">مشاهده مجدد</span></span>';
             }
 
