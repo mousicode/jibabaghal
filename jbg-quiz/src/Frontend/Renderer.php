@@ -4,31 +4,34 @@ namespace JBG\Quiz\Frontend;
 class Renderer {
 
     public static function bootstrap(): void {
-        // شورت‌کد همیشه ثبت شود
         add_shortcode('jbg_quiz', [self::class, 'render_shortcode']);
-        // اسکریپت/استایل فقط در صفحه تکی ویدیو
         add_action('wp_enqueue_scripts', [self::class, 'enqueue_assets']);
     }
 
     public static function enqueue_assets(): void {
         if (!is_singular('jbg_ad')) return;
 
-        wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL.'assets/css/jbg-quiz.css', [], '0.1.4');
-        wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL.'assets/js/jbg-quiz.js', [], '0.1.4', true);
+        wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL.'assets/css/jbg-quiz.css', [], '0.1.5');
+        wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL.'assets/js/jbg-quiz.js', [], '0.1.5', true);
 
-        $nextHref=''; $nextTitle=''; $curId=(int)get_queried_object_id();
+        $curId = (int) get_queried_object_id();
+        $nextHref=''; $nextTitle='';
         if ($curId>0 && class_exists('\\JBG\\Ads\\Progress\\Access')) {
             $nextId=\JBG\Ads\Progress\Access::next_ad_id($curId);
             if ($nextId) { $nextHref=get_permalink($nextId); $nextTitle=get_the_title($nextId); }
         }
 
+        // ← امتیاز همین ویدیو
+        $points = (int) get_post_meta($curId, 'jbg_points', true);
+
         wp_localize_script('jbg-quiz', 'JBG_QUIZ', [
             'rest'      => rest_url('jbg/v1/quiz/submit'),
             'restView'  => rest_url('jbg/v1/view/confirm'),
             'nonce'     => wp_create_nonce('wp_rest'),
-            'adId'      => get_the_ID(),
+            'adId'      => $curId,
             'nextHref'  => $nextHref,
             'nextTitle' => $nextTitle,
+            'points'    => $points, // ✅ برای پیام بعد از قبولی
         ]);
     }
 
@@ -49,7 +52,7 @@ class Renderer {
         $h .=        self::radio('a1',$a1,1).self::radio('a2',$a2,2).self::radio('a3',$a3,3).self::radio('a4',$a4,4);
         $h .= '      <button type="submit" class="jbg-quiz-btn">'.esc_html__('Submit','jbg-quiz').'</button>';
         $h .= '    </form>';
-        $h .= '    <div id="jbg-quiz-result" class="jbg-quiz-result"></div>';
+        $h .= '    <div id="jbg-quiz-result" class="jbg-quiz-result" style="margin-top:8px"></div>';
         $h .= '    <div id="jbg-next-wrap" style="margin-top:10px"><a id="jbg-next-btn" class="jbg-btn" style="display:none"></a></div>';
         $h .= '  </div></div>';
         return $h;
