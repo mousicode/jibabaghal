@@ -2,8 +2,12 @@
 namespace JBG\Ads\Progress;
 if (!defined('ABSPATH')) exit;
 
+/**
+ * مدیریت ترتیب، قفل/بازشدن مراحل، و بازسازی پیشرفت کاربر
+ */
 class Access {
 
+    /** امضای محتوایی (برای بازسازی پیشرفت در صورت تغییر لیست/ترتیب) */
     public static function content_sig(): string {
         $sig = get_option('jbg_ads_progress_sig', '');
         if (!$sig) {
@@ -27,11 +31,13 @@ class Access {
         return (string) $sig;
     }
 
+    /** تغییر امضا و پاک کردن کش ترتیب */
     public static function bump_progress_sig(): void {
         update_option('jbg_ads_progress_sig', md5((string) time()), false);
         delete_transient('jbg_seq_map');
     }
 
+    /** نقشهٔ ترتیب: ad_id => seq (مرتب‌سازی: CPV↓ → BR↓ → Boost↓) */
     public static function seq_map(): array {
         $map = get_transient('jbg_seq_map');
         if (is_array($map) && !empty($map)) return $map;
@@ -54,7 +60,6 @@ class Access {
             ];
         }
 
-        // ترتیب: CPV↓ → BR↓ → Boost↓
         usort($items, function($a,$b){
             if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
             if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
@@ -73,9 +78,19 @@ class Access {
         return isset($map[$ad_id]) ? (int) $map[$ad_id] : 0;
     }
 
+    /** بیشینهٔ مرحله (تعداد مراحل فعلی) */
     public static function max_seq(): int {
         $map = self::seq_map();
         return (int) max(1, count($map));
+    }
+
+    /** آیا کاربر این آگهی را پاس کرده است؟ */
+    private static function has_passed(int $user_id, int $ad_id): bool {
+        if ($user_id <= 0 || $ad_id <= 0) return false;
+        if (get_user_meta($user_id, 'jbg_quiz_passed_' . $ad_id, true)) return true;
+        $list = get_user_meta($user_id, 'jbg_quiz_passed_ids', true);
+        if (is_array($list) && in_array($ad_id, array_map('intval', $list), true)) return true;
+        return false;
     }
 
     /** بازسازی پیشرفت از متاهای پاس‌شده (فقط آگهی‌های موجود در ترتیب فعلی لحاظ می‌شوند) */
@@ -110,6 +125,7 @@ class Access {
         return (int) $candidate;
     }
 
+    /** آخرین مرحلهٔ بازِ کاربر (با بازسازی خودکار در صورت تغییر محتوا) */
     public static function unlocked_max(int $user_id): int {
         if ($user_id <= 0) return 1;
 
@@ -138,11 +154,38 @@ class Access {
         return $user_max;
     }
 
+    /**
+     * گیت قفل:
+     * 1) seq باید <= unlocked_max باشد
+     * 2) اگر محتوا «بعد از» آخرین پیشرفت کاربر منتشر شده و هنوز پاس نشده → قفل
+     */
     public static function is_unlocked(int $user_id, int $ad_id): bool {
+        $seq = self::seq($ad_id);
+        if ($seq <= 0) return false; // خارج از ترتیب
+
         $allow = ($user_id > 0) ? self::unlocked_max($user_id) : 1;
-        return (self::seq($ad_id) > 0) && (self::seq($ad_id) <= $allow);
+        if ($seq > $allow) return false;
+
+        // قفلِ محتوای تازه نسبت به مهر پیشرفت کاربر
+        if ($user_id > 0) {
+            $mark = (int) get_user_meta($user_id, 'jbg_progress_mark', true);
+            if ($mark > 0) {
+                // زمان انتشار/ویرایش (GMT)
+                $ad_ts = (int) get_post_time('U', true, $ad_id);
+                if ($ad_ts <= 0) {
+                    $p = get_post($ad_id);
+                    if ($p) $ad_ts = (int) strtotime($p->post_modified_gmt ?: $p->post_date_gmt);
+                }
+                if ($ad_ts > $mark && !self::has_passed($user_id, $ad_id)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
+    /** ID ویدئوی بعدی نسبت به فعلی (در ترتیب) */
     public static function next_ad_id(int $current_id): int {
         $map  = self::seq_map();
         $seq  = self::seq($current_id);
@@ -153,6 +196,7 @@ class Access {
         return isset($flip[$next]) ? (int) $flip[$next] : 0;
     }
 
+    /** ارتقای مرحله پس از پاس‌شدن آزمون/بیلینگ و ثبت مهر پیشرفت */
     public static function promote_after_pass(int $user_id, int $ad_id): void {
         if ($user_id <= 0 || $ad_id <= 0) return;
 
@@ -164,11 +208,19 @@ class Access {
             if ($new > $max) $new = $max;
             update_user_meta($user_id, 'jbg_unlocked_max_seq', $new);
         }
+
+        // مهر زمانی آخرین پیشرفت (برای قفل محتواهای تازه)
+        update_user_meta($user_id, 'jbg_progress_mark', time());
+        // امضای محتوایی فعلی
         update_user_meta($user_id, 'jbg_progress_sig', self::content_sig());
     }
 
+    /** هوک‌ها: تغییر محتوا، پاس آزمون، بیلینگ */
     public static function bootstrap(): void {
-        add_action('save_post_jbg_ad', function(){ self::bump_progress_sig(); }, 999);
+        add_action('save_post_jbg_ad', function(){
+            self::bump_progress_sig();
+        }, 999);
+
         add_action('deleted_post', function($post_id){
             if (get_post_type($post_id) === 'jbg_ad') self::bump_progress_sig();
         }, 10, 1);
