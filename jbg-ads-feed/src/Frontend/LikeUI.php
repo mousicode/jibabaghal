@@ -6,45 +6,111 @@ class LikeUI {
 
     public static function register(): void {
         add_action('wp_enqueue_scripts', [self::class, 'enqueue']);
-        add_filter('the_title', [self::class, 'inject_into_title'], 10, 2);
+        // قلب کنار عنوان فقط در صفحهٔ تکی jbg_ad
+        add_filter('the_title', [self::class, 'inject_inline_into_single_title'], 20, 2);
     }
 
     public static function enqueue(): void {
-        if (!is_singular('jbg_ad')) return;
+        // فقط وقتی لازم است اسکریپت بارگذاری شود:
+        $need   = false;
+        $cur_id = 0;
 
-        wp_enqueue_style('jbg-like', JBG_ADS_URL.'assets/css/jbg-like.css', [], '0.1.0');
-        wp_enqueue_script('jbg-like', JBG_ADS_URL.'assets/js/jbg-like.js', [], '0.1.0', true);
+        if (is_singular('jbg_ad')) {
+            $need   = true;
+            $cur_id = (int) get_queried_object_id();
+        } else {
+            $post = get_post();
+            if ($post && has_shortcode((string)$post->post_content, 'jbg_ads')) {
+                $need = true;
+            }
+        }
+        if (!$need) return;
 
-        $ad_id = (int) get_queried_object_id();
-        $liked = is_user_logged_in() ? (bool) get_user_meta(get_current_user_id(), 'jbg_liked_'.$ad_id, true) : false;
-        $count = (int) get_post_meta($ad_id, 'jbg_like_count', true);
+        // CSS/JS
+        wp_enqueue_style(
+            'jbg-like',
+            JBG_ADS_URL . 'assets/css/jbg-like.css',
+            [],
+            '0.1.2'
+        );
+        wp_enqueue_script(
+            'jbg-like',
+            JBG_ADS_URL . 'assets/js/jbg-like.js',
+            [],
+            '0.1.6',
+            true
+        );
+
+        // داده‌های اولیه برای JS
+        $liked_ids = [];
+        if (is_user_logged_in()) {
+            $u = get_current_user_id();
+            $liked_ids = (array) get_user_meta($u, 'jbg_liked_ids', true);
+            $liked_ids = array_map('intval', $liked_ids);
+        }
+
+        $cur_count = $cur_id ? (int) get_post_meta($cur_id, 'jbg_like_count', true) : 0;
 
         wp_localize_script('jbg-like', 'JBG_LIKE', [
-            'rest'   => [
-                'toggle' => rest_url('jbg/v1/like/toggle'),
-                'status' => rest_url('jbg/v1/like/status'),
-            ],
-            'nonce'  => wp_create_nonce('wp_rest'),
-            'adId'   => $ad_id,
-            'liked'  => $liked ? 1 : 0,
-            'count'  => $count,
-            'logged' => is_user_logged_in() ? 1 : 0,
+            'rest'         => rest_url('jbg/v1/like'),
+            'nonce'        => wp_create_nonce('wp_rest'),
+            'liked'        => $liked_ids,
+            'currentId'    => $cur_id,
+            'currentCount' => $cur_count,
         ]);
+
+        // CSS کوچک inline برای حالت عنوان
+        $inline = '
+        .jbg-like-inline{display:inline-flex;gap:6px;align-items:center;margin-inline-start:8px;vertical-align:middle}
+        .jbg-like-inline .jbg-like-btn{appearance:none;border:1px solid #e5e7eb;border-radius:9999px;background:#fff;padding:2px 8px;line-height:1.2;font-size:13px;cursor:pointer}
+        .jbg-like-inline .jbg-like-btn.is-on{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
+        .jbg-like-inline .jbg-like-count{font-size:12px;color:#6b7280}
+        ';
+        wp_add_inline_style('jbg-like', $inline);
     }
 
-    /** فقط در صفحهٔ تکی jbg_ad: قلب را کنار عنوان تزریق می‌کنیم */
-    public static function inject_into_title($title, $post_id) {
-        if (!is_singular('jbg_ad') || (int)get_queried_object_id() !== (int)$post_id) return $title;
+    /** تزریق قلب کنار عنوان صفحهٔ تکی (فقط سمت سرور، JS وظیفهٔ کلیک را هندل می‌کند) */
+    public static function inject_inline_into_single_title($title, $post_id) {
+        if (is_admin()) return $title;
+        if (get_post_type($post_id) !== 'jbg_ad') return $title;
+        if (!is_singular('jbg_ad')) return $title;
 
+        // فقط برای کوئری اصلی/لوپ اصلی
+        if (!in_the_loop() || !is_main_query()) return $title;
+
+        $anchor = self::inline_anchor((int)$post_id);
+        return $title . $anchor;
+    }
+
+    /** مارک‌آپ قلب+شمارنده کنار عنوان */
+    public static function inline_anchor(int $post_id): string {
         $count = (int) get_post_meta($post_id, 'jbg_like_count', true);
-        $html  = '<span id="jbg-like-inline" class="jbg-like-inline" data-ad="'.esc_attr($post_id).'">'
-               . '  <button type="button" class="jbg-like-btn" aria-label="Like">'
-               . '    <svg class="heart" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 21s-6.7-4.35-9.33-7C.5 11.82.5 8.5 2.67 6.33a4.67 4.67 0 016.6 0L12 9.05l2.73-2.72a4.67 4.67 0 016.6 0C23.5 8.5 23.5 11.82 21.33 14c-2.63 2.65-9.33 7-9.33 7z"/></svg>'
-               . '  </button>'
-               . '  <span class="jbg-like-count">'.esc_html(number_format_i18n($count)).'</span>'
-               . '</span>';
+        $is_on = false;
+        if (is_user_logged_in()) {
+            $u = get_current_user_id();
+            $liked = (array) get_user_meta($u, 'jbg_liked_ids', true);
+            $is_on = in_array($post_id, array_map('intval', $liked), true);
+        }
+        $on = $is_on ? ' is-on' : '';
+        return '<span class="jbg-like-inline" data-jbg-like-id="'.esc_attr($post_id).'">'
+             .    '<button type="button" class="jbg-like-btn'.$on.'" aria-label="پسندیدن">❤</button>'
+             .    '<span class="jbg-like-count">'.esc_html($count).'</span>'
+             . '</span>';
+    }
 
-        // کنار عنوان قرار بگیرد
-        return $title . ' ' . $html;
+    /** اگر خواستی در کارت‌ها هم استفاده کنی (مثلاً داخل ListShortcode) */
+    public static function small_anchor(int $post_id, string $class = 'jbg-like-inline'): string {
+        $count = (int) get_post_meta($post_id, 'jbg_like_count', true);
+        $is_on = false;
+        if (is_user_logged_in()) {
+            $u = get_current_user_id();
+            $liked = (array) get_user_meta($u, 'jbg_liked_ids', true);
+            $is_on = in_array($post_id, array_map('intval', $liked), true);
+        }
+        $on = $is_on ? ' is-on' : '';
+        return '<span class="'.esc_attr($class).'" data-jbg-like-id="'.esc_attr($post_id).'">'
+             .    '<button type="button" class="jbg-like-btn'.$on.'" aria-label="پسندیدن">❤</button>'
+             .    '<span class="jbg-like-count">'.esc_html($count).'</span>'
+             . '</span>';
     }
 }
