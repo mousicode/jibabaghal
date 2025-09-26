@@ -28,15 +28,14 @@ spl_autoload_register(function($class){
 /** پس از بارگذاری همه‌ی افزونه‌ها اجرا می‌شود */
 add_action('plugins_loaded', function () {
 
-    // اگر به JBG Core وابسته‌ایم، این‌جا چک شود
+    // اگر JBG Core فعال نیست، فقط "اخطار" بده ولی مانع اجرا نشو
     if (!defined('JBG_CORE_VERSION')) {
         add_action('admin_notices', function(){
-            echo '<div class="notice notice-error"><p><strong>JBG Ads &amp; Feed</strong> به <strong>JBG Core</strong> نیاز دارد. لطفاً Core را فعال کنید.</p></div>';
+            echo '<div class="notice notice-warning"><p><strong>JBG Ads &amp; Feed:</strong> بهتره افزونه <strong>JBG Core</strong> هم فعال باشه، ولی بدونش هم اجرا می‌شیم.</p></div>';
         });
-        return;
     }
 
-    // اطمینان از لودشدن Bootstrap قبل از استفاده
+    // اطمینان از لود شدن Bootstrap قبل از استفاده
     $bootstrap_file = JBG_ADS_DIR . 'src/Bootstrap.php';
     if (is_file($bootstrap_file)) {
         require_once $bootstrap_file;
@@ -56,20 +55,7 @@ add_action('plugins_loaded', function () {
 
 /** Activation */
 register_activation_hook(__FILE__, function () {
-    // نیازمندی: JBG Core
-    if (!function_exists('is_plugin_active')) {
-        require_once ABSPATH . 'wp-admin/includes/plugin.php';
-    }
-    if (!is_plugin_active('jbg-core/jbg-core.php')) {
-        deactivate_plugins(plugin_basename(__FILE__));
-        wp_die(
-            'JBG Ads &amp; Feed به <strong>JBG Core</strong> نیاز دارد. ابتدا Core را فعال کنید.',
-            'Dependency missing',
-            ['back_link' => true]
-        );
-    }
-
-    // بوت‌استرپ را قبل از صدا زدن متد activate لود کن
+    // برای اطمینان، Bootstrap را لود کن
     $bootstrap_file = JBG_ADS_DIR . 'src/Bootstrap.php';
     if (is_file($bootstrap_file)) require_once $bootstrap_file;
 
