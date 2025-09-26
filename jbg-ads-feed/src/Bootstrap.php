@@ -27,7 +27,6 @@ class Bootstrap {
 
         /* -----------------------------------------------------------------
          * Metabox امتیاز (در صورت وجود فایل/کلاس)
-         * - روی هوک add_meta_boxes بسته می‌شود تا خطای add_meta_box() رخ ندهد
          * ----------------------------------------------------------------- */
         add_action('init', function () {
             $file = JBG_ADS_DIR . 'src/Admin/PointsMetaBox.php';
@@ -106,11 +105,19 @@ class Bootstrap {
             }
         });
 
+        // ← NEW: دارایی‌های فرانت‌اند لایک (اسکریپت + localize) — فقط اگر فایلش موجود باشد
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Frontend/LikeAssets.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Frontend\\LikeAssets')) {
+                    \JBG\Ads\Frontend\LikeAssets::register();
+                }
+            }
+        });
+
         /* -----------------------------------------------------------------
          * Progress / Gating / Points
-         *  - Access: قفل‌گذاری قطره‌ای (فقط نوبت بعدی یا موارد پاس‌شده)
-         *  - Unlock (در صورت وجود، برای سازگاری قدیمی)
-         *  - Points: امتیازدهی بعد از پاس آزمون
          * ----------------------------------------------------------------- */
         add_action('init', function () {
             // Legacy unlock (در صورت وجود)
@@ -139,7 +146,7 @@ class Bootstrap {
                     \JBG\Ads\Progress\Points::bootstrap();
                 }
             }
-        }, 9); // بعد از ثبت CPT/Tax ولی قبل از بیشتر شورت‌کدها
+        }, 9); // بعد از ثبت CPT/Tax ولی پیش از بیشتر شورت‌کدها
 
         /* -----------------------------------------------------------------
          * REST endpoints
@@ -161,13 +168,21 @@ class Bootstrap {
                 }
             }
 
-            // ViewTrackController (require_once + class_exists برای جلوگیری از دوباره‌تعریف‌شدن)
             $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
             if (file_exists($viewTrack)) {
                 require_once $viewTrack;
             }
             if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
                 \JBG\Ads\Rest\ViewTrackController::register_routes();
+            }
+
+            // ← NEW: مسیرهای REST لایک‌ها (در صورت وجود فایل)
+            $like = JBG_ADS_DIR . 'src/Rest/LikeController.php';
+            if (file_exists($like)) {
+                require_once $like;
+            }
+            if (class_exists('\\JBG\\Ads\\Rest\\LikeController')) {
+                \JBG\Ads\Rest\LikeController::register_routes();
             }
         });
     }

@@ -43,7 +43,7 @@ class ListShortcode {
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
             'fields'              => 'all',
-            // عمداً orderby/ meta_key نمی‌گذاریم؛ بعداً در PHP مرتب می‌کنیم
+            // مرتب‌سازی را در PHP انجام می‌دهیم
         ];
 
         // فیلترهای اختیاری
@@ -62,11 +62,11 @@ class ListShortcode {
             ];
         }
 
-        // 1) سریع‌ترین حالت: فیلترها خاموش + lang=all
+        // 1) فیلترها خاموش + lang=all
         $args1 = $base + ['suppress_filters' => true,  'lang' => 'all'];
         $q = new \WP_Query($args1);
 
-        // 2) اگر خالی بود: فیلترها روشن (برای WPML/Polylang)
+        // 2) اگر خالی بود: فیلترها روشن
         if (!$q->have_posts()) {
             $args2 = $base + ['suppress_filters' => false, 'lang' => 'all'];
             $q = new \WP_Query($args2);
@@ -75,7 +75,7 @@ class ListShortcode {
             }
         }
 
-        // 3) اگر هنوز هیچ: ساده‌ترین حالت بدون lang
+        // 3) اگر هنوز خالی: بدون lang
         if (!$q->have_posts()) {
             $args3 = $base;
             unset($args3['lang']);
@@ -88,7 +88,6 @@ class ListShortcode {
         $posts = $q->posts ?: [];
         wp_reset_postdata();
 
-        // خروجی برای دیباگ مدیر
         if (empty($posts) && current_user_can('manage_options')) {
             echo "\n<!-- jbg_ads: EMPTY after multi-fallback; final args:\n"
                . esc_html(print_r($base,true)) . "\n-->\n";
@@ -108,7 +107,7 @@ class ListShortcode {
         $posts = self::fetch_posts($a);
         if (empty($posts)) return '';
 
-        // آماده‌سازی آیتم‌ها + مرتب‌سازی نهایی طبق CPV↓/BR↓/Boost↓
+        // آماده‌سازی + مرتب‌سازی طبق CPV↓/BR↓/Boost↓
         $items = [];
         foreach ($posts as $p) {
             $items[] = [
@@ -119,6 +118,7 @@ class ListShortcode {
                 'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
                 'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
                 'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
+                'likes' => (int) get_post_meta($p->ID, 'jbg_like_count', true), // ← تعداد لایک
                 'seq'   => Access::seq((int)$p->ID),
             ];
         }
@@ -131,7 +131,7 @@ class ListShortcode {
 
         $user_id = get_current_user_id();
 
-        // CSS سبک (بدون زیرخط + استایل کارت/قفل/دکمه)
+        // CSS سبک
         static $css_once = false;
         ob_start();
         if (!$css_once) {
@@ -141,7 +141,10 @@ class ListShortcode {
                 .jbg-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
                 .jbg-card-thumb{background:#f3f4f6;height:150px;background-size:cover;background-position:center}
                 .jbg-card-body{padding:12px 14px}
-                .jbg-card-title{font-weight:700;margin:0 0 4px 0}
+                .jbg-card-title{font-weight:700;margin:0}
+                .jbg-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+                .jbg-like-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6b7280}
+                .jbg-like-pill svg{fill:#ef4444}
                 .jbg-card-sub{color:#6b7280;font-size:12px;margin-bottom:10px}
                 .jbg-badges{display:flex;gap:6px;align-items:center;margin-bottom:6px}
                 .jbg-badge{border-radius:9999px;padding:2px 8px;font-size:11px;border:1px solid #e5e7eb;background:#f9fafb}
@@ -172,6 +175,8 @@ class ListShortcode {
             echo '<div class="jbg-card-thumb"'.$thumbStyle.'></div>';
 
             echo '<div class="jbg-card-body">';
+
+            // Badges
             echo   '<div class="jbg-badges">';
             if ($watched) {
                 echo '<span class="jbg-badge watched">دیده‌شده</span>';
@@ -180,14 +185,24 @@ class ListShortcode {
             }
             echo   '</div>';
 
-            echo   '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
+            // Title + Likes
+            echo   '<div class="jbg-card-top">';
+            echo     '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
+            echo     '<div class="jbg-like-pill" title="لایک">';
+            echo       '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 21s-6.7-4.35-9.33-7C.5 11.82.5 8.5 2.67 6.33a4.67 4.67 0 016.6 0L12 9.05l2.73-2.72a4.67 4.67 0 016.6 0C23.5 8.5 23.5 11.82 21.33 14c-2.63 2.65-9.33 7-9.33 7z"/></svg>';
+            echo       '<span>'.esc_html(number_format_i18n((int)$it['likes'])).'</span>';
+            echo     '</div>';
+            echo   '</div>';
 
+            // Meta line
             echo   '<div class="jbg-card-sub">';
             if ($brand) echo '<span>'.esc_html($brand).'</span><span> • </span>';
             echo       '<span>'.esc_html($when).'</span><span> • </span><span>'.esc_html($viewsF).'</span>';
             echo   '</div>';
+
             echo '</div>'; // body
 
+            // Button
             echo '<div class="jbg-card-actions">';
             if ($open) {
                 echo '<a class="jbg-btn" href="'.esc_url($it['link']).'">مشاهده</a>';
