@@ -67,7 +67,7 @@ class Access {
         return $map;
     }
 
-    /** شمارهٔ مرحلهٔ آگهی. اگر در ترتیب فعلی وجود ندارد، 0 برگردد. */
+    /** شمارهٔ مرحلهٔ آگهی. اگر در ترتیب فعلی وجود ندارد، 0 برمی‌گردد. */
     public static function seq(int $ad_id): int {
         $map = self::seq_map();
         return isset($map[$ad_id]) ? (int) $map[$ad_id] : 0;
@@ -93,7 +93,6 @@ class Access {
             }
         }
         $passed_ids = array_values(array_unique(array_filter($passed_ids)));
-
         if (empty($passed_ids)) return 1;
 
         $max_seq_seen = 0;
@@ -121,7 +120,6 @@ class Access {
         $usr_sig = (string) get_user_meta($user_id, 'jbg_progress_sig', true);
 
         if ($usr_sig !== $cur_sig) {
-            // امضا عوض شده: پیشرفت را بازسازی کن، ریست نکن
             $rebuilt = self::reconstruct_progress_from_passed($user_id);
             if ($rebuilt > $user_max) $user_max = $rebuilt;
 
@@ -131,14 +129,12 @@ class Access {
             update_user_meta($user_id, 'jbg_unlocked_max_seq', $user_max);
             update_user_meta($user_id, 'jbg_progress_sig',     $cur_sig);
         } else {
-            // حتی با امضای ثابت هم ممکن است max تغییر کرده باشد
             $max_now = self::max_seq();
             if ($user_max > $max_now) {
                 $user_max = $max_now;
                 update_user_meta($user_id, 'jbg_unlocked_max_seq', $user_max);
             }
         }
-
         return $user_max;
     }
 
