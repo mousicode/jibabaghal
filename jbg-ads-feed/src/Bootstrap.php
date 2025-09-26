@@ -1,170 +1,217 @@
 <?php
-namespace JBG\Ads;
-
+namespace JBG\Ads\Progress;
 if (!defined('ABSPATH')) exit;
 
-use JBG\Ads\Taxonomy\Brand;
-use JBG\Ads\Taxonomy\Category;
-use JBG\Ads\PostType\Ad;
-use JBG\Ads\Admin\MetaBox;
-use JBG\Ads\Admin\Columns;
+class Access {
 
-class Bootstrap {
-    public static function init(): void {
-
-        // Taxonomies + CPT
-        add_action('init', [Brand::class, 'register'], 5);
-        add_action('init', [Category::class, 'register'], 6);
-        add_action('init', [Ad::class, 'register'], 7);
-
-        // Metaboxes اصلی
-        add_action('add_meta_boxes', [MetaBox::class, 'register']);
-        add_action('save_post_jbg_ad', [MetaBox::class, 'save'], 10, 2);
-
-        // --- Points meta box (در صورت وجود فایل/کلاس)
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Admin/PointsMetaBox.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Admin\\PointsMetaBox')) {
-                    add_action('add_meta_boxes', ['\\JBG\\Ads\\Admin\\PointsMetaBox', 'register']);
-                    add_action('save_post_jbg_ad', ['\\JBG\\Ads\\Admin\\PointsMetaBox', 'save'], 10, 2);
-                }
+    public static function content_sig(): string {
+        $sig = get_option('jbg_ads_progress_sig', '');
+        if (!$sig) {
+            $count = 0; $last = '0';
+            $posts = get_posts([
+                'post_type'      => 'jbg_ad',
+                'post_status'    => 'publish',
+                'fields'         => 'ids',
+                'posts_per_page' => 50,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            ]);
+            $count = is_array($posts) ? count($posts) : 0;
+            if (!empty($posts)) {
+                $p = get_post($posts[0]);
+                $last = $p ? (string) strtotime($p->post_modified_gmt ?: $p->post_date_gmt) : '0';
             }
-        });
+            $sig = md5($count . ':' . $last);
+            update_option('jbg_ads_progress_sig', $sig, false);
+        }
+        return (string) $sig;
+    }
 
-        // Admin columns
-        if (is_admin()) {
-            add_filter('manage_jbg_ad_posts_columns', [Columns::class, 'columns']);
-            add_action('manage_jbg_ad_posts_custom_column', [Columns::class, 'render'], 10, 2);
-            add_filter('manage_edit-jbg_ad_sortable_columns', [Columns::class, 'sortable']);
-            add_action('pre_get_posts', [Columns::class, 'handle_sorting']);
+    public static function bump_progress_sig(): void {
+        update_option('jbg_ads_progress_sig', md5((string) time()), false);
+        delete_transient('jbg_seq_map');
+    }
+
+    public static function seq_map(): array {
+        $map = get_transient('jbg_seq_map');
+        if (is_array($map) && !empty($map)) return $map;
+
+        $ids = get_posts([
+            'post_type'       => 'jbg_ad',
+            'post_status'     => 'publish',
+            'fields'          => 'ids',
+            'posts_per_page'  => -1,
+            'suppress_filters'=> true,
+        ]);
+
+        $items = [];
+        foreach ($ids as $id) {
+            $items[] = [
+                'id'    => (int) $id,
+                'cpv'   => (int) get_post_meta($id, 'jbg_cpv', true),
+                'br'    => (int) get_post_meta($id, 'jbg_budget_remaining', true),
+                'boost' => (int) get_post_meta($id, 'jbg_priority_boost', true),
+            ];
         }
 
-        // Shortcode: list
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/ListShortcode.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\ListShortcode')) {
-                    \JBG\Ads\Frontend\ListShortcode::register();
-                }
-            }
+        // ترتیب: CPV↓ → BR↓ → Boost↓
+        usort($items, function($a,$b){
+            if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
+            if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
+            return ($b['boost'] <=> $a['boost']);
         });
 
-        // Shortcode: related
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/RelatedShortcode.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\RelatedShortcode')) {
-                    \JBG\Ads\Frontend\RelatedShortcode::register();
-                }
-            }
-        });
-
-        // Shortcode: points
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\PointsShortcode')) {
-                    \JBG\Ads\Frontend\PointsShortcode::register();
-                }
-            }
-        });
-
-        // Single layout
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Frontend\\SingleLayout')) {
-                    \JBG\Ads\Frontend\SingleLayout::register();
-                }
-            }
-        });
-
-        // ViewBadge
-        add_action('init', function () {
-            $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
-            if (file_exists($vb)) {
-                require_once $vb;
-                if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
-                    \JBG\Ads\Frontend\ViewBadge::register();
-                }
-            }
-        });
-
-        // --- مهم 1: بوت Unlock (اگر موجود است)
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Progress/Unlock.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Progress\\Unlock')) {
-                    \JBG\Ads\Progress\Unlock::bootstrap();
-                }
-            }
-        });
-
-        // --- مهم 2: بوت Access (گیت/قفل مرحله‌ای و سینگچر محتوا)
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Progress/Access.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Progress\\Access')) {
-                    \JBG\Ads\Progress\Access::bootstrap();
-                }
-            }
-        });
-
-        // --- Points engine (در صورت وجود)
-        add_action('init', function () {
-            $file = JBG_ADS_DIR . 'src/Progress/Points.php';
-            if (file_exists($file)) {
-                require_once $file;
-                if (class_exists('\\JBG\\Ads\\Progress\\Points')) {
-                    \JBG\Ads\Progress\Points::bootstrap();
-                }
-            }
-        });
-
-        // REST endpoints
-        add_action('rest_api_init', function () {
-            $feed = JBG_ADS_DIR . 'src/Rest/FeedController.php';
-            if (file_exists($feed)) {
-                require_once $feed;
-                if (class_exists('\\JBG\\Ads\\Rest\\FeedController')) {
-                    \JBG\Ads\Rest\FeedController::register_routes();
-                }
-            }
-
-            $view = JBG_ADS_DIR . 'src/Rest/ViewController.php';
-            if (file_exists($view)) {
-                require_once $view;
-                if (class_exists('\\JBG\\Ads\\Rest\\ViewController')) {
-                    \JBG\Ads\Rest\ViewController::register_routes();
-                }
-            }
-
-            $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
-            if (file_exists($viewTrack)) {
-                require_once $viewTrack;
-            }
-            if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
-                \JBG\Ads\Rest\ViewTrackController::register_routes();
-            }
-        });
+        $map = []; $seq = 1;
+        foreach ($items as $it) $map[(int)$it['id']] = $seq++;
+        set_transient('jbg_seq_map', $map, 60);
+        return $map;
     }
 
-    public static function activate(): void {
-        Brand::register();
-        Category::register();
-        Ad::register();
-        flush_rewrite_rules(false);
+    public static function seq(int $ad_id): int {
+        $map = self::seq_map();
+        return isset($map[$ad_id]) ? (int) $map[$ad_id] : 0;
     }
 
-    public static function deactivate(): void {
-        flush_rewrite_rules(false);
+    public static function max_seq(): int {
+        $map = self::seq_map();
+        return (int) max(1, count($map));
+    }
+
+    /** آیا کاربر این آگهی را پاس کرده است؟ (بر اساس متاهای ذخیره‌شده) */
+    public static function has_passed(int $user_id, int $ad_id): bool {
+        if ($user_id <= 0 || $ad_id <= 0) return false;
+        if (get_user_meta($user_id, 'jbg_quiz_passed_' . $ad_id, true)) return true;
+        $list = get_user_meta($user_id, 'jbg_quiz_passed_ids', true);
+        if (is_array($list) && in_array($ad_id, array_map('intval', $list), true)) return true;
+        return false;
+    }
+
+    /** از لیست پاس‌شده‌ها، «مرحله‌ی بعدیِ نوبت کاربر» را حساب می‌کند */
+    private static function reconstruct_progress_from_passed(int $user_id): int {
+        if ($user_id <= 0) return 1;
+
+        $passed_ids = [];
+        $list = get_user_meta($user_id, 'jbg_quiz_passed_ids', true);
+        if (is_array($list)) $passed_ids = array_map('intval', $list);
+
+        $all = get_user_meta($user_id);
+        foreach ($all as $k => $_) {
+            if (preg_match('/^jbg_(?:quiz_passed|points_awarded)_(\d+)$/', (string)$k, $m)) {
+                $passed_ids[] = (int) $m[1];
+            }
+        }
+        $passed_ids = array_values(array_unique(array_filter($passed_ids)));
+        if (empty($passed_ids)) return 1;
+
+        $max_seq_seen = 0;
+        foreach ($passed_ids as $pid) {
+            $s = self::seq((int)$pid);
+            if ($s > 0 && $s > $max_seq_seen) $max_seq_seen = $s;
+        }
+        if ($max_seq_seen <= 0) return 1;
+
+        $candidate = $max_seq_seen + 1;
+        $cap = self::max_seq();
+        if ($candidate > $cap) $candidate = $cap;
+        if ($candidate < 1)    $candidate = 1;
+
+        return (int) $candidate;
+    }
+
+    /** مرحله‌ی باز فعلیِ کاربر (با سازوکار امضا/بازسازی) */
+    public static function unlocked_max(int $user_id): int {
+        if ($user_id <= 0) return 1;
+
+        $user_max = (int) get_user_meta($user_id, 'jbg_unlocked_max_seq', true);
+        if ($user_max < 1) $user_max = 1;
+
+        $cur_sig = self::content_sig();
+        $usr_sig = (string) get_user_meta($user_id, 'jbg_progress_sig', true);
+
+        if ($usr_sig !== $cur_sig) {
+            // با تغییر محتوا، از پاس‌شده‌ها بازسازی کن (reset نکن)
+            $rebuilt = self::reconstruct_progress_from_passed($user_id);
+            if ($rebuilt > $user_max) $user_max = $rebuilt;
+
+            $max_now = self::max_seq();
+            if ($user_max > $max_now) $user_max = $max_now;
+
+            update_user_meta($user_id, 'jbg_unlocked_max_seq', $user_max);
+            update_user_meta($user_id, 'jbg_progress_sig',     $cur_sig);
+        } else {
+            // به‌روزکردن در صورت کاهش/افزایش تعداد
+            $max_now = self::max_seq();
+            if ($user_max > $max_now) {
+                $user_max = $max_now;
+                update_user_meta($user_id, 'jbg_unlocked_max_seq', $user_max);
+            }
+        }
+
+        return $user_max;
+    }
+
+    /**
+     * گیت نهایی:
+     *  - اگر قبلاً پاس شده → باز
+     *  - در غیر این صورت فقط «ویدیوی بعدی نوبت کاربر» باز است
+     *  - مهم: دیگر «seq ≤ مرحله‌ی باز» کافی نیست (برای جلوگیری از باز شدن ویدیوی تازه با CPV بالاتر)
+     */
+    public static function is_unlocked(int $user_id, int $ad_id): bool {
+        $seq = self::seq($ad_id);
+        if ($seq <= 0) return false;              // خارج از ترتیب
+
+        if ($user_id <= 0) {
+            // مهمان‌ها فقط مرحله ۱ را می‌بینند
+            return ($seq === 1);
+        }
+
+        if (self::has_passed($user_id, $ad_id)) {
+            return true;                           // قبلاً پاس شده
+        }
+
+        $expected_next = self::reconstruct_progress_from_passed($user_id);
+        return ($seq === $expected_next);          // فقط مرحله‌ی بعدی
+    }
+
+    public static function next_ad_id(int $current_id): int {
+        $map  = self::seq_map();
+        $seq  = self::seq($current_id);
+        if ($seq <= 0) return 0;
+        $next = $seq + 1;
+        if ($next > count($map)) return 0;
+        $flip = array_flip($map);
+        return isset($flip[$next]) ? (int) $flip[$next] : 0;
+    }
+
+    public static function promote_after_pass(int $user_id, int $ad_id): void {
+        if ($user_id <= 0 || $ad_id <= 0) return;
+
+        $cur  = self::unlocked_max($user_id);
+        $seq  = self::seq($ad_id);
+        if ($seq >= $cur) {
+            $new = $seq + 1;
+            $max = self::max_seq();
+            if ($new > $max) $new = $max;
+            update_user_meta($user_id, 'jbg_unlocked_max_seq', $new);
+        }
+
+        // ثبت امضا برای سازگاری با تغییرات لیست
+        update_user_meta($user_id, 'jbg_progress_sig', self::content_sig());
+    }
+
+    public static function bootstrap(): void {
+        add_action('save_post_jbg_ad', function(){ self::bump_progress_sig(); }, 999);
+        add_action('deleted_post', function($post_id){
+            if (get_post_type($post_id) === 'jbg_ad') self::bump_progress_sig();
+        }, 10, 1);
+
+        // بعد از پاس آزمون/بیلینگ نوبت بعدی را باز کن
+        add_action('jbg_quiz_passed', function($user_id, $ad_id){
+            self::promote_after_pass((int)$user_id, (int)$ad_id);
+        }, 10, 2);
+
+        add_action('jbg_billed', function($user_id, $ad_id){
+            self::promote_after_pass((int)$user_id, (int)$ad_id);
+        }, 10, 2);
     }
 }
