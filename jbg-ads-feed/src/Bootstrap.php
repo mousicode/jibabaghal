@@ -105,11 +105,19 @@ class Bootstrap {
             }
         });
 
-        // ← NEW: دارایی‌های فرانت‌اند لایک (اسکریپت + localize) — فقط اگر فایلش موجود باشد
+        // UI/Assets لایک — ترجیح با LikeUI (تزریق کنار عنوان)؛ اگر نبود، fallback به LikeAssets
         add_action('init', function () {
-            $f = JBG_ADS_DIR . 'src/Frontend/LikeAssets.php';
-            if (file_exists($f)) {
-                require_once $f;
+            $ui = JBG_ADS_DIR . 'src/Frontend/LikeUI.php';
+            if (file_exists($ui)) {
+                require_once $ui;
+                if (class_exists('\\JBG\\Ads\\Frontend\\LikeUI')) {
+                    \JBG\Ads\Frontend\LikeUI::register();
+                    return;
+                }
+            }
+            $assets = JBG_ADS_DIR . 'src/Frontend/LikeAssets.php';
+            if (file_exists($assets)) {
+                require_once $assets;
                 if (class_exists('\\JBG\\Ads\\Frontend\\LikeAssets')) {
                     \JBG\Ads\Frontend\LikeAssets::register();
                 }
@@ -176,7 +184,7 @@ class Bootstrap {
                 \JBG\Ads\Rest\ViewTrackController::register_routes();
             }
 
-            // ← NEW: مسیرهای REST لایک‌ها (در صورت وجود فایل)
+            // مسیرهای REST لایک‌ها (در صورت وجود فایل)
             $like = JBG_ADS_DIR . 'src/Rest/LikeController.php';
             if (file_exists($like)) {
                 require_once $like;
