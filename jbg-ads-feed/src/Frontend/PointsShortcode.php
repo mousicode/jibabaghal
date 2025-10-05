@@ -20,7 +20,7 @@ class PointsShortcode {
         $post = get_post();
         if (!$post || stripos((string)$post->post_content, '[jbg_points') === false) return;
 
-        wp_register_script('jbg-points-redeem', '', [], '1.0.1', true);
+        wp_register_script('jbg-points-redeem', '', [], '1.1.0', true);
         $nonce = wp_create_nonce('wp_rest');
         $redeem_url = esc_url_raw(rest_url('jbg/v1/points/redeem'));
 
@@ -41,13 +41,15 @@ class PointsShortcode {
       var box = document.querySelector(".jbg-pts-redeem-result");
       if(!box) return;
       if(d && d.ok){
-        box.innerHTML = '<div class="ok">کد شما: <strong>'+d.code+'</strong> ('+d.percent+'%)</div>';
+        var amt = (typeof d.amount==='number') ? d.amount : 0;
+        box.innerHTML = '<div class="ok">کد شما: <strong>'+d.code+
+                        '</strong> (مبلغ: <strong>'+ new Intl.NumberFormat().format(amt) +' تومان</strong>)</div>';
         var total = document.querySelector(".jbg-points-total");
         if(total && typeof d.total!=='undefined') total.textContent = new Intl.NumberFormat().format(d.total);
         var tbody = document.querySelector(".jbg-coupons tbody");
         if(tbody){
           var tr=document.createElement("tr");
-          tr.innerHTML = '<td>'+d.code+'</td><td>'+d.percent+'%</td><td>'+d.expiry+'</td>';
+          tr.innerHTML = '<td>'+d.code+'</td><td>'+ new Intl.NumberFormat().format(amt) +' تومان</td><td>'+d.expiry+'</td>';
           tbody.insertBefore(tr, tbody.firstChild);
         }
       } else {
@@ -80,20 +82,26 @@ JS;
         $limit = max(1, (int)$a['limit']);
         $log   = array_slice(array_reverse($log), 0, $limit);
 
-        // تنظیمات تبدیل امتیاز→تخفیف (اگر صفحه تنظیمات نصب شده باشد)
+        // تنظیمات تبدیل امتیاز→مبلغ (اگر صفحه تنظیمات نصب شده باشد)
         $cfg = class_exists('\\JBG\\Ads\\Admin\\PointsDiscountSettings')
             ? PointsDiscountSettings::get()
             : [
-                'points_per_unit' => 1000,
-                'percent_per_unit'=> 10,
-                'max_percent'     => 50,
+                'points_per_unit' => 1000,     // هر ۱۰۰۰ امتیاز
+                'toman_per_unit'  => 100000,   // = ۱۰۰٬۰۰۰ تومان
+                'max_toman'       => 5000000,  // سقف هر کد
                 'min_points'      => 1000,
                 'expiry_days'     => 7,
             ];
 
-        // محاسبه درصد قابل‌دریافت بر اساس مجموع امتیاز فعلی
-        $units   = intdiv(max(0,$total), max(1,$cfg['points_per_unit']));
-        $can_pct = min($units * (int)$cfg['percent_per_unit'], (int)$cfg['max_percent']);
+        $ppu = max(1, (int)$cfg['points_per_unit']);
+        $tpu = max(0, (int)$cfg['toman_per_unit']);
+        $max = max(0, (int)$cfg['max_toman']);
+        $min = max(0, (int)$cfg['min_points']);
+
+        // محاسبه مقدار قابل تبدیل بر اساس مجموع امتیاز فعلی
+        $units    = intdiv(max(0,$total), $ppu);
+        $can_amt  = $units * $tpu;
+        if ($max > 0) $can_amt = min($can_amt, $max);
 
         // خواندن لیست کدهای قبلی (ایمن در برابر دادهٔ غیرآرایه)
         $coupons_meta = get_user_meta($uid, 'jbg_coupons', true);
@@ -129,17 +137,19 @@ JS;
         echo '      <div>'. esc_html__('Total Points:', 'jbg-ads') .' <span class="jbg-points-total">'. esc_html(number_format_i18n($total)) .'</span></div>';
         echo '  </div>';
 
-        // کارت تبدیل به کد تخفیف
+        // کارت تبدیل به کد تخفیف (مبتنی بر تومان)
         echo '  <div class="jbg-points-card">';
         echo '      <div class="jbg-points-title">'. esc_html__('تبدیل امتیاز به کد تخفیف', 'jbg-ads') .'</div>';
         echo '      <div class="jbg-pts-row">';
-        echo '          <span class="jbg-pts-badge">'. sprintf('هر %s امتیاز = %s%%', number_format_i18n($cfg['points_per_unit']), (int)$cfg['percent_per_unit']) .'</span>';
-        echo '          <span class="jbg-pts-badge">'. sprintf('سقف هر کد: %s%%', (int)$cfg['max_percent']) .'</span>';
-        echo '          <span class="jbg-pts-badge">'. sprintf('حداقل امتیاز: %s', number_format_i18n($cfg['min_points'])) .'</span>';
+        echo '          <span class="jbg-pts-badge">'. sprintf('هر %s امتیاز = %s تومان', number_format_i18n($ppu), number_format_i18n($tpu)) .'</span>';
+        if ($max > 0) {
+            echo '      <span class="jbg-pts-badge">'. sprintf('سقف هر کد: %s تومان', number_format_i18n($max)) .'</span>';
+        }
+        echo '          <span class="jbg-pts-badge">'. sprintf('حداقل امتیاز: %s', number_format_i18n($min)) .'</span>';
         echo '      </div>';
 
-        if ($can_pct > 0 && $total >= (int)$cfg['min_points']) {
-            echo '  <p style="margin:10px 0">در حال حاضر می‌توانید تا <strong>'. esc_html($can_pct) .'%</strong> کد تخفیف دریافت کنید.</p>';
+        if ($units > 0 && $total >= $min && $tpu > 0) {
+            echo '  <p style="margin:10px 0">در حال حاضر می‌توانید کدی به ارزش <strong>'. esc_html(number_format_i18n($can_amt)) .' تومان</strong> دریافت کنید.</p>';
             echo '  <button type="button" class="jbg-pts-redeem-btn">'. esc_html__('دریافت کد تخفیف', 'jbg-ads') .'</button>';
             echo '  <div class="jbg-pts-redeem-result"></div>';
         } else {
@@ -150,25 +160,25 @@ JS;
         // کارت «کدهای دریافت‌شده»
         echo '  <div class="jbg-points-card jbg-coupons">';
         echo '      <div class="jbg-points-title">'. esc_html__('کدهای دریافت‌شده', 'jbg-ads') .'</div>';
-        echo '      <table class="jbg-points-table"><thead><tr><th>کد</th><th>درصد</th><th>انقضا</th></tr></thead><tbody>';
+        echo '      <table class="jbg-points-table"><thead><tr><th>کد</th><th>مبلغ</th><th>انقضا</th></tr></thead><tbody>';
 
         if (!empty($coupons)) {
             // فقط آیتم‌های آرایه‌ای را رندر کن
-            $coupons = array_values(array_filter($coupons, 'is_array'));
-            if (empty($coupons)) {
+            $rows = array_values(array_filter($coupons, 'is_array'));
+            if (empty($rows)) {
                 echo '<tr><td colspan="3">'. esc_html__('کدی ثبت نشده است.', 'jbg-ads') .'</td></tr>';
             } else {
                 // جدیدها اول
-                $coupons = array_reverse($coupons);
-                foreach ($coupons as $c) {
-                    $code    = isset($c['code'])    ? (string)$c['code']    : '';
-                    $percent = isset($c['percent']) ? (int)$c['percent']    : 0;
-                    $expiry  = isset($c['expiry'])  ? (string)$c['expiry']  : '';
-                    if ($code === '' && $percent === 0 && $expiry === '') continue;
+                $rows = array_reverse($rows);
+                foreach ($rows as $c) {
+                    $code   = isset($c['code'])   ? (string)$c['code']   : '';
+                    $amount = isset($c['amount']) ? (int)$c['amount']    : 0;
+                    $expiry = isset($c['expiry']) ? (string)$c['expiry'] : '';
+                    if ($code === '' && $amount === 0 && $expiry === '') continue;
 
                     echo '<tr>'
                        . '<td>'. esc_html($code) .'</td>'
-                       . '<td>'. esc_html($percent) .'%</td>'
+                       . '<td>'. esc_html(number_format_i18n($amount)) .' تومان</td>'
                        . '<td>'. esc_html($expiry) .'</td>'
                        . '</tr>';
                 }
