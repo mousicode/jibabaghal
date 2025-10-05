@@ -13,7 +13,6 @@ class Points {
 
         $pts = (int) get_post_meta($ad_id, 'jbg_points', true);
         if ($pts <= 0) {
-            // هیچ امتیازی تعریف نشده؛ فقط پرچم پاس را ثبت کنیم (برای سازگاری)
             update_user_meta($user_id, 'jbg_points_awarded_' . $ad_id, time());
             return;
         }
@@ -26,7 +25,7 @@ class Points {
         // پرچم award برای این آگهی
         update_user_meta($user_id, 'jbg_points_awarded_' . $ad_id, time());
 
-        // لاگ آخرین امتیازها (برای نمایش تاریخچه)
+        // لاگ
         $log = get_user_meta($user_id, 'jbg_points_log', true);
         if (!is_array($log)) $log = [];
         $log[] = [
@@ -34,20 +33,18 @@ class Points {
             'title'   => (string) get_the_title($ad_id),
             'points'  => (int) $pts,
             'time'    => time(),
+            'type'    => 'award',
         ];
-        // اندازه لاگ را معقول نگه داریم (مثلاً آخرین 100)
         if (count($log) > 100) $log = array_slice($log, -100);
         update_user_meta($user_id, 'jbg_points_log', $log);
     }
 
     /** هوک‌های لازم */
     public static function bootstrap(): void {
-        // وقتی کاربر کوییز را درست زد:
         add_action('jbg_quiz_passed', function($user_id, $ad_id){
             self::award_if_first_time((int)$user_id, (int)$ad_id);
         }, 10, 2);
 
-        // اگر جای دیگری (بیلینگ) هم پاس تلقی می‌شود:
         add_action('jbg_billed', function($user_id, $ad_id){
             self::award_if_first_time((int)$user_id, (int)$ad_id);
         }, 10, 2);
@@ -60,5 +57,34 @@ class Points {
     public static function log(int $user_id): array {
         $log = get_user_meta($user_id, 'jbg_points_log', true);
         return is_array($log) ? $log : [];
+    }
+
+    /**
+     * کسر امتیاز (برای تبدیل به کوپن و …)
+     * - از منفی شدن موجودی جلوگیری می‌کند
+     * - لاگِ «redeem» ثبت می‌کند
+     */
+    public static function deduct(int $user_id, int $points, string $reason = 'redeem', array $extra = []): bool {
+        $points = max(0, (int) $points);
+        if ($user_id <= 0 || $points <= 0) return false;
+
+        $total = (int) get_user_meta($user_id, 'jbg_points_total', true);
+        if ($total < $points) return false; // کافی نیست
+
+        $total -= $points;
+        update_user_meta($user_id, 'jbg_points_total', $total);
+
+        $log = get_user_meta($user_id, 'jbg_points_log', true);
+        if (!is_array($log)) $log = [];
+        $log[] = array_merge([
+            'ad_id'  => 0,
+            'title'  => $reason,
+            'points' => -1 * $points,
+            'time'   => time(),
+            'type'   => 'redeem',
+        ], $extra);
+        if (count($log) > 100) $log = array_slice($log, -100);
+        update_user_meta($user_id, 'jbg_points_log', $log);
+        return true;
     }
 }

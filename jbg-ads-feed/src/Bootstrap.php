@@ -40,16 +40,6 @@ class Bootstrap {
         });
 
         /* -----------------------------------------------------------------
-         * Admin columns
-         * ----------------------------------------------------------------- */
-        if (is_admin()) {
-            add_filter('manage_jbg_ad_posts_columns', [Columns::class, 'columns']);
-            add_action('manage_jbg_ad_posts_custom_column', [Columns::class, 'render'], 10, 2);
-            add_filter('manage_edit-jbg_ad_sortable_columns', [Columns::class, 'sortable']);
-            add_action('pre_get_posts', [Columns::class, 'handle_sorting']);
-        }
-
-        /* -----------------------------------------------------------------
          * Shortcodes / Frontend
          * ----------------------------------------------------------------- */
         add_action('init', function () {
@@ -72,7 +62,7 @@ class Bootstrap {
             }
         });
 
-        // نمایش امتیاز کاربر (اختیاری؛ در صورت وجود فایل)
+        // نمایش امتیاز کاربر (در صورت وجود)
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
             if (file_exists($f)) {
@@ -157,6 +147,19 @@ class Bootstrap {
         }, 9); // بعد از ثبت CPT/Tax ولی پیش از بیشتر شورت‌کدها
 
         /* -----------------------------------------------------------------
+         * تنظیمات «تبدیل امتیاز → تخفیف» (اختیاری)
+         * ----------------------------------------------------------------- */
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Admin/PointsDiscountSettings.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Admin\\PointsDiscountSettings')) {
+                    \JBG\Ads\Admin\PointsDiscountSettings::register();
+                }
+            }
+        });
+
+        /* -----------------------------------------------------------------
          * REST endpoints
          * ----------------------------------------------------------------- */
         add_action('rest_api_init', function () {
@@ -184,13 +187,22 @@ class Bootstrap {
                 \JBG\Ads\Rest\ViewTrackController::register_routes();
             }
 
-            // مسیرهای REST لایک‌ها (در صورت وجود فایل)
+            // REST لایک‌ها (در صورت وجود فایل)
             $like = JBG_ADS_DIR . 'src/Rest/LikeController.php';
             if (file_exists($like)) {
                 require_once $like;
             }
             if (class_exists('\\JBG\\Ads\\Rest\\LikeController')) {
                 \JBG\Ads\Rest\LikeController::register_routes();
+            }
+
+            // NEW: REST «تبدیل امتیاز به کد تخفیف» (اختیاری)
+            $redeem = JBG_ADS_DIR . 'src/Rest/PointsRedeemController.php';
+            if (file_exists($redeem)) {
+                require_once $redeem;
+                if (class_exists('\\JBG\\Ads\\Rest\\PointsRedeemController')) {
+                    \JBG\Ads\Rest\PointsRedeemController::register_routes();
+                }
             }
         });
     }
