@@ -1,6 +1,8 @@
-.jbg-like-inline{display:inline-flex;align-items:center;gap:6px;margin-inline-start:8px}
-.jbg-like-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #e5e7eb;background:#fff;border-radius:9999px;padding:4px;cursor:pointer}
-.jbg-like-btn .heart{fill:#e5e7eb;transition:fill .15s ease}
-.jbg-like-inline.is-liked .heart{fill:#ef4444}
-.jbg-like-count{font-size:12px;color:#374151}
-.jbg-like-btn[disabled]{opacity:.5;cursor:not-allowed}
+.jbg-react-inline{display:inline-flex;align-items:center;gap:8px;margin-inline-start:8px}
+.jbg-react-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;border-radius:9999px;padding:4px 8px;cursor:pointer}
+.jbg-react-btn .icon{display:block}
+.jbg-react-btn[aria-pressed="true"]{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.12)}
+.jbg-react-btn.up[aria-pressed="true"] .icon path{fill:#16a34a}
+.jbg-react-btn.down[aria-pressed="true"] .icon path{fill:#ef4444}
+.jbg-react-btn[disabled]{opacity:.5;cursor:not-allowed}
+.cnt{font-size:12px;color:#374151}

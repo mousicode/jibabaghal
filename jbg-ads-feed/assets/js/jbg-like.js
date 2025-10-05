@@ -1,64 +1,60 @@
-(function () {
-  function ready(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
+(function(){
+  function ready(fn){ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',fn);} else {fn();} }
 
-  ready(function () {
-    if (typeof JBG_LIKE === 'undefined') return;
+  function clamp(n){ n = parseInt(n,10); return isNaN(n)?0:Math.max(0,n); }
 
-    // پیدا کردن عنوان
-    var target = null;
-    (JBG_LIKE.selectors || []).some(function (sel) {
-      var el = document.querySelector(sel);
-      if (el) { target = el; return true; }
-      return false;
-    });
-    if (!target) return;
+  ready(function(){
+    var root = document.getElementById('jbg-react-inline');
+    if (!root || typeof JBG_REACT === 'undefined') return;
 
-    // ساخت UI
-    var wrap = document.createElement('span');
-    wrap.className = 'jbg-like-inline';
-    wrap.setAttribute('data-jbg-like-id', String(JBG_LIKE.adId));
+    var up   = root.querySelector('.jbg-react-btn.up');
+    var down = root.querySelector('.jbg-react-btn.down');
+    var likeCntEl    = root.querySelector('.cnt.like');
+    var dislikeCntEl = root.querySelector('.cnt.dislike');
 
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'jbg-like-btn';
-    btn.setAttribute('aria-label', 'پسندیدن');
+    var reaction     = (JBG_REACT.reaction || 'none');
+    var likeCount    = clamp(JBG_REACT.likeCount);
+    var dislikeCount = clamp(JBG_REACT.dislikeCount);
 
-    var icon = document.createElement('span');
-    icon.className = 'jbg-like-icon';
-    icon.textContent = '❤';
-
-    var cnt = document.createElement('span');
-    cnt.className = 'jbg-like-count';
-    cnt.textContent = String(JBG_LIKE.count || 0);
-
-    btn.appendChild(icon);
-    wrap.appendChild(btn);
-    wrap.appendChild(cnt);
-
-    // اضافه کنار عنوان
-    target.appendChild(wrap);
-
-    function setState(liked, count){
-      if (liked) btn.classList.add('is-on'); else btn.classList.remove('is-on');
-      cnt.textContent = String(count || 0);
+    function sync(){
+      likeCntEl.textContent    = String(likeCount);
+      dislikeCntEl.textContent = String(dislikeCount);
+      up.setAttribute('aria-pressed', reaction==='like' ? 'true':'false');
+      down.setAttribute('aria-pressed', reaction==='dislike' ? 'true':'false');
+      if (!JBG_REACT.logged){
+        up.disabled = true; down.disabled = true;
+        root.title = 'برای رأی دادن وارد شوید';
+      }
     }
-    setState(!!JBG_LIKE.liked, JBG_LIKE.count || 0);
+    sync();
 
-    // کلیک = فراخوانی REST
-    btn.addEventListener('click', function(){
-      fetch(JBG_LIKE.rest, {
+    function send(reactionVal){
+      if (!JBG_REACT.logged) return;
+      var body = { ad_id: JBG_REACT.adId, reaction: reactionVal };
+      fetch(JBG_REACT.rest, {
         method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-WP-Nonce': JBG_REACT.nonce || '' },
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': JBG_LIKE.nonce || '' },
-        body: JSON.stringify({ ad_id: JBG_LIKE.adId })
+        body: JSON.stringify(body)
       })
       .then(function(r){ return r.json().catch(function(){ return {}; }); })
       .then(function(res){
-        if (res && typeof res.count !== 'undefined') {
-          setState(!!res.liked, parseInt(res.count, 10) || 0);
-        }
+        if (!res || !res.ok) return;
+        reaction     = res.reaction || 'none';
+        likeCount    = clamp(res.likeCount);
+        dislikeCount = clamp(res.dislikeCount);
+        sync();
       })
-      .catch(function(){ /* silence */ });
+      .catch(function(){ /* silent */ });
+    }
+
+    up  .addEventListener('click', function(){
+      var target = (reaction === 'like') ? 'none' : 'like';
+      send(target);
+    });
+    down.addEventListener('click', function(){
+      var target = (reaction === 'dislike') ? 'none' : 'dislike';
+      send(target);
     });
   });
 })();

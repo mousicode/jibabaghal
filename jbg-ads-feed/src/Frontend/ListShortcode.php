@@ -1,5 +1,6 @@
 <?php
 namespace JBG\Ads\Frontend;
+
 if (!defined('ABSPATH')) exit;
 
 use JBG\Ads\Progress\Access;
@@ -111,15 +112,16 @@ class ListShortcode {
         $items = [];
         foreach ($posts as $p) {
             $items[] = [
-                'ID'    => (int) $p->ID,
-                'title' => get_the_title($p),
-                'link'  => get_permalink($p),
-                'thumb' => get_the_post_thumbnail_url($p->ID, 'medium') ?: '',
-                'cpv'   => (int) get_post_meta($p->ID, 'jbg_cpv', true),
-                'br'    => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
-                'boost' => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
-                'likes' => (int) get_post_meta($p->ID, 'jbg_like_count', true), // ← تعداد لایک
-                'seq'   => Access::seq((int)$p->ID),
+                'ID'        => (int) $p->ID,
+                'title'     => get_the_title($p),
+                'link'      => get_permalink($p),
+                'thumb'     => get_the_post_thumbnail_url($p->ID, 'medium') ?: '',
+                'cpv'       => (int) get_post_meta($p->ID, 'jbg_cpv', true),
+                'br'        => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
+                'boost'     => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
+                'likes'     => (int) get_post_meta($p->ID, 'jbg_like_count', true),      // ← لایک
+                'dislikes'  => (int) get_post_meta($p->ID, 'jbg_dislike_count', true),   // ← دیس‌لایک (جدید)
+                'seq'       => Access::seq((int)$p->ID),
             ];
         }
 
@@ -131,7 +133,7 @@ class ListShortcode {
 
         $user_id = get_current_user_id();
 
-        // CSS سبک
+        // CSS سبک (مثل نسخهٔ فعلی)
         static $css_once = false;
         ob_start();
         if (!$css_once) {
@@ -143,8 +145,8 @@ class ListShortcode {
                 .jbg-card-body{padding:12px 14px}
                 .jbg-card-title{font-weight:700;margin:0}
                 .jbg-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-                .jbg-like-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6b7280}
-                .jbg-like-pill svg{fill:#ef4444}
+                .jbg-react-pill{display:inline-flex;align-items:center;gap:10px;font-size:12px;color:#6b7280}
+                .jbg-react-pill svg{display:block}
                 .jbg-card-sub{color:#6b7280;font-size:12px;margin-bottom:10px}
                 .jbg-badges{display:flex;gap:6px;align-items:center;margin-bottom:6px}
                 .jbg-badge{border-radius:9999px;padding:2px 8px;font-size:11px;border:1px solid #e5e7eb;background:#f9fafb}
@@ -164,6 +166,7 @@ class ListShortcode {
             $open   = Access::is_unlocked($user_id, $id);
             $watched= ($user_id>0) ? Access::has_passed($user_id,$id) : false;
 
+            // شمارش بازدید از Helper فعلی پروژه
             $views  = Helpers::views_count($id);
             $viewsF = self::compact_num((int)$views).' بازدید';
             $when   = self::relative_time($id);
@@ -185,12 +188,21 @@ class ListShortcode {
             }
             echo   '</div>';
 
-            // Title + Likes
+            // Title + Like/Dislike pill (نمایشی فقط)
             echo   '<div class="jbg-card-top">';
             echo     '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
-            echo     '<div class="jbg-like-pill" title="لایک">';
-            echo       '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 21s-6.7-4.35-9.33-7C.5 11.82.5 8.5 2.67 6.33a4.67 4.67 0 016.6 0L12 9.05l2.73-2.72a4.67 4.67 0 016.6 0C23.5 8.5 23.5 11.82 21.33 14c-2.63 2.65-9.33 7-9.33 7z"/></svg>';
-            echo       '<span>'.esc_html(number_format_i18n((int)$it['likes'])).'</span>';
+            echo     '<div class="jbg-react-pill" title="بازخورد">';
+            // like
+            echo       '<span class="like" style="display:inline-flex;align-items:center;gap:6px">';
+            echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M2 21h4V9H2v12zM22 9c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13 0 6.59 6.41C6.21 6.78 6 7.3 6 7.83V19c0 1.1.9 2 2 2h9c.82 0 1.54-.5 1.84-1.22l3-7c.11-.23.16-.48.16-.74V9z"/></svg>';
+            echo         '<span>'.esc_html(number_format_i18n((int)$it['likes'])).'</span>';
+            echo       '</span>';
+            echo       '<span>•</span>';
+            // dislike
+            echo       '<span class="dislike" style="display:inline-flex;align-items:center;gap:6px">';
+            echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M22 3h-4v12h4V3zM2 15c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L11 24l6.41-6.41c.38-.37.59-.89.59-1.42V5c0-1.1-.9-2-2-2H7c-.82 0-1.54.5-1.84 1.22l-3 7c-.11.23-.16.48-.16.74V15z"/></svg>';
+            echo         '<span>'.esc_html(number_format_i18n((int)$it['dislikes'])).'</span>';
+            echo       '</span>';
             echo     '</div>';
             echo   '</div>';
 
@@ -207,15 +219,15 @@ class ListShortcode {
             if ($open) {
                 echo '<a class="jbg-btn" href="'.esc_url($it['link']).'">مشاهده</a>';
             } else {
-                echo '<a class="jbg-btn" href="#" onclick="return false;" aria-disabled="true" tabindex="-1" style="pointer-events:none;opacity:.55">مشاهده</a>';
+                echo '<a class="jbg-btn" href="'.esc_url($it['link']).'" aria-disabled="true">مشاهده</a>';
             }
             echo '</div>';
 
             echo '</div>'; // card
         }
 
-        echo '</div>';
+        echo '</div>'; // grid
 
-        return (string) ob_get_clean();
+        return ob_get_clean();
     }
 }
