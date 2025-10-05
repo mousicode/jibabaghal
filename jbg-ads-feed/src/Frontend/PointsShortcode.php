@@ -20,7 +20,7 @@ class PointsShortcode {
         $post = get_post();
         if (!$post || stripos((string)$post->post_content, '[jbg_points') === false) return;
 
-        wp_register_script('jbg-points-redeem', '', [], '1.1.0', true);
+        wp_register_script('jbg-points-redeem', '', [], '1.2.0', true);
         $nonce = wp_create_nonce('wp_rest');
         $redeem_url = esc_url_raw(rest_url('jbg/v1/points/redeem'));
 
@@ -82,26 +82,23 @@ JS;
         $limit = max(1, (int)$a['limit']);
         $log   = array_slice(array_reverse($log), 0, $limit);
 
-        // تنظیمات تبدیل امتیاز→مبلغ (اگر صفحه تنظیمات نصب شده باشد)
+        // تنظیمات تبدیل امتیاز→مبلغ
         $cfg = class_exists('\\JBG\\Ads\\Admin\\PointsDiscountSettings')
             ? PointsDiscountSettings::get()
             : [
                 'points_per_unit' => 1000,     // هر ۱۰۰۰ امتیاز
                 'toman_per_unit'  => 100000,   // = ۱۰۰٬۰۰۰ تومان
-                'max_toman'       => 5000000,  // سقف هر کد
                 'min_points'      => 1000,
                 'expiry_days'     => 7,
             ];
 
-        $ppu = max(1, (int)$cfg['points_per_unit']);
-        $tpu = max(0, (int)$cfg['toman_per_unit']);
-        $max = max(0, (int)$cfg['max_toman']);
-        $min = max(0, (int)$cfg['min_points']);
+        $ppu = max(1,   (int)($cfg['points_per_unit'] ?? 1000));
+        $tpu = max(0,   (int)($cfg['toman_per_unit']  ?? 100000));
+        $min = max(0,   (int)($cfg['min_points']      ?? 1000));
 
         // محاسبه مقدار قابل تبدیل بر اساس مجموع امتیاز فعلی
         $units    = intdiv(max(0,$total), $ppu);
         $can_amt  = $units * $tpu;
-        if ($max > 0) $can_amt = min($can_amt, $max);
 
         // خواندن لیست کدهای قبلی (ایمن در برابر دادهٔ غیرآرایه)
         $coupons_meta = get_user_meta($uid, 'jbg_coupons', true);
@@ -142,9 +139,6 @@ JS;
         echo '      <div class="jbg-points-title">'. esc_html__('تبدیل امتیاز به کد تخفیف', 'jbg-ads') .'</div>';
         echo '      <div class="jbg-pts-row">';
         echo '          <span class="jbg-pts-badge">'. sprintf('هر %s امتیاز = %s تومان', number_format_i18n($ppu), number_format_i18n($tpu)) .'</span>';
-        if ($max > 0) {
-            echo '      <span class="jbg-pts-badge">'. sprintf('سقف هر کد: %s تومان', number_format_i18n($max)) .'</span>';
-        }
         echo '          <span class="jbg-pts-badge">'. sprintf('حداقل امتیاز: %s', number_format_i18n($min)) .'</span>';
         echo '      </div>';
 
@@ -213,7 +207,7 @@ JS;
 
                 echo '<tr>';
                 echo '<td>'. $tlink .'</td>';
-                echo '<td><span class="jbg-points-badge">'. esc_html(number_format_i18n($pts)) .'</span></td>';
+                echo '<td><span class="jbg-pts-badge">'. esc_html(number_format_i18n($pts)) .'</span></td>';
                 echo '<td>'. esc_html( date_i18n(get_option('date_format').' '.get_option('time_format'), $time) ) .'</td>';
                 echo '</tr>';
             }
