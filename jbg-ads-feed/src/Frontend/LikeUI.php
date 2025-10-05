@@ -2,82 +2,130 @@
 namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
+/**
+ * UI لایک: لود CSS/JS + تزریق (فقط یک‌بار و فقط در عنوان نمای تکی) + مارک‌آپ کوچک
+ * - سازگار با ساختار فعلی JBG_LIKE (adId/count/liked/rest/selectors)
+ * - جلوگیری از تزریق در breadcrumb/SEO title/ویجت‌ها با چک in_the_loop/is_main_query و remove_filter
+ */
 class LikeUI {
 
     public static function register(): void {
         add_action('wp_enqueue_scripts', [self::class, 'enqueue']);
-        // تزریق inline کنار عنوان، فقط در صفحهٔ تکی jbg_ad
-        add_filter('the_title', [self::class, 'inject_inline_into_single_title'], 20, 2);
+        // فقط اگر قالب از the_title برای عنوان اصلی استفاده کند، کنار عنوان تزریق می‌کنیم
+        add_filter('the_title', [self::class, 'inject_inline_title'], 20, 2);
     }
 
     public static function enqueue(): void {
-        // فقط وقتی لازم است
-        $need   = false;
-        $cur_id = 0;
+        // فقط در صفحهٔ تکی آگهی
+        if (!is_singular('jbg_ad')) return;
 
-        if (is_singular('jbg_ad')) {
-            $need   = true;
-            $cur_id = (int) get_queried_object_id();
-        } else {
-            $post = get_post();
-            if ($post && has_shortcode((string)$post->post_content, 'jbg_ads')) {
-                // برای صفحهٔ لیست فقط CSS کافی است
-                wp_enqueue_style('jbg-like', JBG_ADS_URL.'assets/css/jbg-like.css', [], '0.2.0');
-                return;
-            }
-        }
-        if (!$need) return;
+        // استایل/اسکریپت
+        wp_enqueue_style('jbg-like', JBG_ADS_URL . 'assets/css/jbg-like.css', [], '0.1.0');
+        // توجه: نسخه را مطابق ریپو نگه می‌داریم تا کش به‌هم نخورد
+        wp_enqueue_script('jbg-like', JBG_ADS_URL . 'assets/js/jbg-like.js', [], '0.1.3', true);
 
-        // CSS/JS
-        wp_enqueue_style('jbg-like', JBG_ADS_URL.'assets/css/jbg-like.css', [], '0.2.0');
-        wp_enqueue_script('jbg-like', JBG_ADS_URL.'assets/js/jbg-like.js', [], '0.2.0', true);
+        $post_id = (int) get_queried_object_id();
+        // شمارش لایک فعلی
+        // توجه: در برخی کمیت‌ها کلید jbg_like_count است؛ اگر جایی jbg_likes_count بود، بنا بر ریپو شمارندهٔ اصلی jbg_like_count در مارک‌آپ استفاده می‌شود.
+        $count   = (int) get_post_meta($post_id, 'jbg_like_count', true);
 
-        // دادهٔ اولیه
-        $likeCount    = (int) get_post_meta($cur_id, 'jbg_like_count', true);
-        $dislikeCount = (int) get_post_meta($cur_id, 'jbg_dislike_count', true);
-
-        $reaction = 'none';
+        // آیا کاربر فعلی قبلاً لایک کرده؟
+        $liked = false;
         if (is_user_logged_in()) {
-            $u = get_current_user_id();
-            $reactions = get_user_meta($u, 'jbg_reactions', true);
-            if (is_array($reactions) && isset($reactions[$cur_id])) {
-                $reaction = ($reactions[$cur_id] === 'dislike') ? 'dislike' : 'like';
-            } else {
-                // سازگاری: اگر در liked_ids بود
-                $liked_ids = (array) get_user_meta($u, 'jbg_liked_ids', true);
-                $liked_ids = array_map('intval', $liked_ids);
-                if (in_array($cur_id, $liked_ids, true)) $reaction = 'like';
+            // پیاده‌سازی فعلی شما: نگه‌داری وضعیت کاربر با کلید per-ad یا آرایه liked_ids (سازگار با هر دو)
+            $liked = (bool) get_user_meta(get_current_user_id(), 'jbg_liked_' . $post_id, true);
+            if (!$liked) {
+                $liked_ids = (array) get_user_meta(get_current_user_id(), 'jbg_liked_ids', true);
+                $liked = in_array($post_id, array_map('intval', $liked_ids), true);
             }
+        } else {
+            // fallback مهمان‌ها: کوکی ساده
+            $cookie_key = 'jbg_liked_' . $post_id;
+            if (!empty($_COOKIE[$cookie_key]) && $_COOKIE[$cookie_key] === '1') $liked = true;
         }
 
-        wp_localize_script('jbg-like', 'JBG_REACT', [
-            'rest'         => rest_url('jbg/v1/reaction'),
-            'nonce'        => wp_create_nonce('wp_rest'),
-            'adId'         => $cur_id,
-            'logged'       => is_user_logged_in(),
-            'reaction'     => $reaction,
-            'likeCount'    => $likeCount,
-            'dislikeCount' => $dislikeCount,
+        // سلکتورهای محتمل عنوان (طبق نسخهٔ فعلی ریپو)
+        $selectors = [
+            '.single-jbg_ad .entry-title',
+            '.single-jbg_ad h1.entry-title',
+            '.single-jbg_ad h1[itemprop="headline"]',
+            '.single-jbg_ad h1',
+            'h1.entry-title'
+        ];
+
+        // داده برای JS (سازگار با ریپو)
+        wp_localize_script('jbg-like', 'JBG_LIKE', [
+            'adId'      => $post_id,
+            'count'     => $count,
+            'liked'     => $liked ? 1 : 0,
+            // مسیر REST فعلی شما (toggle)
+            'rest'      => rest_url('jbg/v1/like'),
+            'nonce'     => wp_create_nonce('wp_rest'),
+            'selectors' => $selectors,
         ]);
+
+        // کمی CSS inline برای حالت کنار عنوان (بدون تغییر ساختار اصلی)
+        $inline = '
+        .jbg-like-inline{display:inline-flex;gap:6px;align-items:center;margin-inline-start:8px;vertical-align:middle}
+        .jbg-like-inline .jbg-like-btn{appearance:none;border:1px solid #e5e7eb;border-radius:9999px;background:#fff;padding:2px 8px;line-height:1.2;font-size:13px;cursor:pointer}
+        .jbg-like-inline .jbg-like-btn.is-on{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
+        .jbg-like-inline .jbg-like-count{font-size:12px;color:#6b7280}
+        ';
+        wp_add_inline_style('jbg-like', $inline);
     }
 
-    // کنار عنوان همان صفحهٔ تکی
-    public static function inject_inline_into_single_title($title, $post_id) {
+    /** تزریق کنار عنوان با فیلتر (فقط یک‌بار، فقط در لوپ اصلیِ کوئری اصلیِ نمای تکی) */
+    public static function inject_inline_title($title, $post_id) {
+        // جلوگیری از تزریق در ادمین/پست‌تایپ دیگر/نمای غیرتکی
+        if (is_admin()) return $title;
+        if (get_post_type($post_id) !== 'jbg_ad') return $title;
         if (!is_singular('jbg_ad')) return $title;
-        if ((int)$post_id !== (int)get_queried_object_id()) return $title;
 
-        $ui =
-          '<span id="jbg-react-inline" class="jbg-react-inline" dir="ltr" aria-label="React">'.
-            '<button type="button" class="jbg-react-btn up"    aria-pressed="false" title="پسندیدم">'.
-              '<svg viewBox="0 0 24 24" width="16" height="16" class="icon"><path d="M2 21h4V9H2v12zM22 9c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13 0 6.59 6.41C6.21 6.78 6 7.3 6 7.83V19c0 1.1.9 2 2 2h9c.82 0 1.54-.5 1.84-1.22l3-7c.11-.23.16-.48.16-.74V9z"/></svg>'.
-              '<span class="cnt like">0</span>'.
-            '</button>'.
-            '<button type="button" class="jbg-react-btn down"  aria-pressed="false" title="نپسندیدم">'.
-              '<svg viewBox="0 0 24 24" width="16" height="16" class="icon"><path d="M22 3h-4v12h4V3zM2 15c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L11 24l6.41-6.41c.38-.37.59-.89.59-1.42V5c0-1.1-.9-2-2-2H7c-.82 0-1.54.5-1.84 1.22l-3 7c-.11.23-.16.48-.16.74V15z"/></svg>'.
-              '<span class="cnt dislike">0</span>'.
-            '</button>'.
-          '</span>';
+        // فقط برای لوپ اصلیِ کوئری اصلی (تا روی breadcrumb/SEO/ویجت‌ها تاثیر نگذارد)
+        if (!in_the_loop() || !is_main_query()) return $title;
 
-        return $title . ' ' . $ui;
+        // فقط همان پست جاری
+        if ((int) get_queried_object_id() !== (int) $post_id) return $title;
+
+        // یک‌بار مصرف: بعد از تزریق، فیلتر را برمی‌داریم تا دوباره در کانتکست دیگری اعمال نشود
+        remove_filter('the_title', [self::class, 'inject_inline_title'], 20);
+
+        // مارک‌آپ قلب + شمارنده (سازگار با پیاده‌سازی فعلی)
+        $anchor = self::inline_anchor((int)$post_id);
+
+        // عنوان + UI کنار هم
+        return $title . $anchor;
+    }
+
+    /** مارک‌آپ کوچک کنار عنوان/کارت (سازگار با داده‌های فعلی) */
+    public static function inline_anchor(int $post_id): string {
+        $count = (int) get_post_meta($post_id, 'jbg_like_count', true);
+
+        $is_on = false;
+        if (is_user_logged_in()) {
+            $u = get_current_user_id();
+            $liked = (array) get_user_meta($u, 'jbg_liked_ids', true);
+            $is_on = in_array($post_id, array_map('intval', $liked), true);
+
+            // اگر مدل per-ad نیز استفاده شده باشد، آن را هم لحاظ می‌کنیم
+            if (!$is_on) {
+                $is_on = (bool) get_user_meta($u, 'jbg_liked_' . $post_id, true);
+            }
+        } else {
+            $cookie_key = 'jbg_liked_' . $post_id;
+            if (!empty($_COOKIE[$cookie_key]) && $_COOKIE[$cookie_key] === '1') $is_on = true;
+        }
+
+        $on = $is_on ? ' is-on' : '';
+
+        return '<span class="jbg-like-inline" data-jbg-like-id="'.esc_attr($post_id).'">'
+             .    '<button type="button" class="jbg-like-btn'.$on.'" aria-label="پسندیدن">❤</button>'
+             .    '<span class="jbg-like-count">'.esc_html($count).'</span>'
+             . '</span>';
+    }
+
+    /** نسخهٔ کوچک برای استفاده در کارت‌ها (در حال حاضر همان مارک‌آپ اصلی را برمی‌گرداند) */
+    public static function small_anchor(int $post_id, string $class = 'jbg-like-inline'): string {
+        return self::inline_anchor($post_id);
     }
 }
