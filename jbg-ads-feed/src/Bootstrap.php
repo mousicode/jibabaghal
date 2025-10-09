@@ -183,6 +183,41 @@ class Bootstrap {
         });
 
         /* -----------------------------------------------------------------
+         * WALLET: سرویس، شورت‌کد و REST + اتصال به رخداد بیلینگ
+         * ----------------------------------------------------------------- */
+        // لود سرویس و شورت‌کد
+        add_action('init', function () {
+            // سرویس کیف‌پول
+            $w = JBG_ADS_DIR . 'src/Wallet/Wallet.php';
+            if (file_exists($w)) {
+                require_once $w;
+                if (class_exists('\\JBG\\Ads\\Wallet\\Wallet')) {
+                    // اتصال به رخداد بیلینگ برای کسر بودجه اسپانسر
+                    add_action('jbg_billed', ['\\JBG\\Ads\\Wallet\\Wallet', 'deduct_on_billed'], 10, 2);
+                }
+            }
+            // شورت‌کد کیف‌پول
+            $sc = JBG_ADS_DIR . 'src/Frontend/WalletShortcode.php';
+            if (file_exists($sc)) {
+                require_once $sc;
+                if (class_exists('\\JBG\\Ads\\Frontend\\WalletShortcode')) {
+                    \JBG\Ads\Frontend\WalletShortcode::register();
+                }
+            }
+        });
+
+        // REST کیف‌پول
+        add_action('rest_api_init', function () {
+            $rc = JBG_ADS_DIR . 'src/Rest/WalletController.php';
+            if (file_exists($rc)) {
+                require_once $rc;
+                if (class_exists('\\JBG\\Ads\\Rest\\WalletController')) {
+                    \JBG\Ads\Rest\WalletController::register_routes();
+                }
+            }
+        });
+
+        /* -----------------------------------------------------------------
          * REST endpoints
          * ----------------------------------------------------------------- */
         add_action('rest_api_init', function () {
