@@ -218,6 +218,19 @@ class Bootstrap {
         });
 
         /* -----------------------------------------------------------------
+         * UI Assets: یکسان‌سازی عرض محتوا با هدر/فوتر (1312px)
+         * ----------------------------------------------------------------- */
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Frontend/UIAssets.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Frontend\\UIAssets')) {
+                    \JBG\Ads\Frontend\UIAssets::register();
+                }
+            }
+        });
+
+        /* -----------------------------------------------------------------
          * REST endpoints
          * ----------------------------------------------------------------- */
         add_action('rest_api_init', function () {
