@@ -276,6 +276,11 @@ class Bootstrap {
                 }
             }
         });
+
+        /* -----------------------------------------------------------------
+         * چاپ CSS شرطی برای هم‌عرض شدن محتوا با هدر/فوتر
+         * ----------------------------------------------------------------- */
+        add_action('wp_head', [self::class, 'print_content_width_css'], 99);
     }
 
     public static function activate(): void {
@@ -287,5 +292,58 @@ class Bootstrap {
 
     public static function deactivate(): void {
         flush_rewrite_rules(false);
+    }
+
+    /**
+     * CSS شرطی: فقط روی صفحات سینگل آگهی یا صفحاتی که شورت‌کدهای ما در محتوا دارند اعمال می‌شود.
+     * باعث می‌شود کانتینرهای افزونه و کانتینر المنتور تا 1312px هم‌عرض هدر/فوتر شوند.
+     */
+    public static function print_content_width_css(): void {
+        $print = false;
+
+        if (function_exists('is_singular') && is_singular('jbg_ad')) {
+            $print = true;
+        } else {
+            $post = get_post();
+            if ($post) {
+                $c = (string) $post->post_content;
+                if (
+                    stripos($c, '[jbg_list') !== false ||
+                    stripos($c, '[jbg_related') !== false ||
+                    stripos($c, '[jbg_points') !== false ||
+                    stripos($c, '[jbg_wallet') !== false ||
+                    stripos($c, '[jbg_sponsor_report') !== false
+                ) {
+                    $print = true;
+                }
+            }
+        }
+
+        if (!$print) return;
+        ?>
+        <style id="jbg-content-width">
+          :root { --jbg-content-width: 1312px; }
+
+          /* ظرف‌های اصلی پلاگین */
+          .jbg-grid,
+          .jbg-related-grid,
+          .jbg-points-wrap,
+          .jbg-wallet,
+          .jbg-sponsor-report,
+          .jbg-ad-layout {
+            max-width: var(--jbg-content-width);
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 16px;
+            padding-right: 16px;
+            box-sizing: border-box;
+          }
+
+          /* صفحهٔ تکی آگهی: کانتینر المنتور/هلو را هم هم‌عرض کن */
+          .single-jbg_ad .elementor-section .elementor-container {
+            max-width: var(--jbg-content-width) !important;
+          }
+        </style>
+        <?php
     }
 }
