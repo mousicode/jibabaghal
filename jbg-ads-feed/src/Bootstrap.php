@@ -73,6 +73,17 @@ class Bootstrap {
             }
         });
 
+        // NEW: گزارش اسپانسر
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Frontend/SponsorReportShortcode.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Frontend\\SponsorReportShortcode')) {
+                    \JBG\Ads\Frontend\SponsorReportShortcode::register();
+                }
+            }
+        });
+
         // صفحهٔ تکی ویدیو (گارد + چینش بخش‌ها)
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
@@ -147,14 +158,26 @@ class Bootstrap {
         }, 9); // بعد از ثبت CPT/Tax ولی پیش از بیشتر شورت‌کدها
 
         /* -----------------------------------------------------------------
-         * تنظیمات «تبدیل امتیاز → تخفیف» (اختیاری)
+         * Admin Settings
          * ----------------------------------------------------------------- */
+        // تنظیمات «تبدیل امتیاز → مبلغ»
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Admin/PointsDiscountSettings.php';
             if (file_exists($f)) {
                 require_once $f;
                 if (class_exists('\\JBG\\Ads\\Admin\\PointsDiscountSettings')) {
                     \JBG\Ads\Admin\PointsDiscountSettings::register();
+                }
+            }
+        });
+
+        // NEW: انتساب برند به کاربر اسپانسر (در صفحهٔ پروفایل کاربر)
+        add_action('admin_init', function () {
+            $f = JBG_ADS_DIR . 'src/Admin/SponsorBrandAccess.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Admin\\SponsorBrandAccess')) {
+                    \JBG\Ads\Admin\SponsorBrandAccess::register();
                 }
             }
         });
@@ -196,7 +219,7 @@ class Bootstrap {
                 \JBG\Ads\Rest\LikeController::register_routes();
             }
 
-            // NEW: REST «تبدیل امتیاز به کد تخفیف» (اختیاری)
+            // REST «تبدیل امتیاز به کد تخفیف» (مبلغ ثابت)
             $redeem = JBG_ADS_DIR . 'src/Rest/PointsRedeemController.php';
             if (file_exists($redeem)) {
                 require_once $redeem;
