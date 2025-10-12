@@ -101,6 +101,7 @@ CSS;
 
     public static function render($atts = []): string {
         if (!is_user_logged_in()) {
+            // حتی در حالت مهمان هم رَپر را نگذاریم تا فقط وقتی شورت‌کد رندر کامل دارد، عرض تغییر کند.
             return '<div class="jbg-points-card">برای مشاهدهٔ امتیازها وارد شوید.</div>';
         }
 
@@ -124,6 +125,18 @@ CSS;
         $can_amt = $units * $tpu;
 
         ob_start();
+
+        // --- CSS و رَپر full-bleed/کانتینر فقط یک‌بار در صفحه ---
+        static $fw_once = false;
+        if (!$fw_once) {
+            $fw_once = true;
+            echo '<style id="jbg-points-fw">
+              .jbg-full-bleed{position:relative;left:50%;right:50%;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);width:100vw}
+              .jbg-container{max-width:1312px;margin:0 auto;padding-left:16px;padding-right:16px;box-sizing:border-box}
+            </style>';
+        }
+        echo '<div class="jbg-full-bleed"><div class="jbg-container">';
+
         echo '<div class="jbg-points-wrap" style="direction:rtl">';
         echo '  <div class="jbg-points-card">';
         echo '      <div class="jbg-points-title">'. esc_html($a['title']) .'</div>';
@@ -186,7 +199,11 @@ CSS;
         }
         echo '  </div>';
 
-        echo '</div>';
+        echo '</div>'; // .jbg-points-wrap
+
+        // بستن رَپر کانتینر/فول-بِلید
+        echo '</div></div>'; // .jbg-container .jbg-full-bleed
+
         return (string) ob_get_clean();
     }
 }
