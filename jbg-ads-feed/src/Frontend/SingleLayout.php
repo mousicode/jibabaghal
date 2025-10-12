@@ -32,20 +32,35 @@ class SingleLayout {
         $is_open = Access::is_unlocked($user_id, $ad_id);
         $points  = (int) get_post_meta($ad_id, 'jbg_points', true); // ← امتیاز تعریف‌شده برای این ویدیو
 
-        // استایل‌ها (نشان امتیاز اضافه شد)
+        // استایل‌ها (افزوده شد: full-bleed + کانتینر 1312px + override المنتور)
         $style = '<style id="jbg-single-stack-css">
+          :root{ --jbg-content-width:1312px; --jbg-content-pad:16px; }
+
+          /* ــ full-bleed wrapper + container ــ */
+          .jbg-full-bleed{position:relative;left:50%;right:50%;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);width:100vw}
+          .jbg-container{max-width:var(--jbg-content-width);margin:0 auto;padding-left:var(--jbg-content-pad);padding-right:var(--jbg-content-pad);box-sizing:border-box}
+
+          /* هم‌عرض کردن ظرف المنتور در صفحهٔ تکی آگهی */
+          .single-jbg_ad .elementor-section.elementor-section-boxed > .elementor-container{
+            max-width:var(--jbg-content-width) !important;
+          }
+
           .single-jbg_ad .jbg-main-stack{display:block;direction:rtl;}
           .single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
+
           .jbg-locked{background:#fff;border:1px dashed #9ca3af;border-radius:12px;padding:18px;margin-top:16px;color:#374151}
           .jbg-locked .title{font-weight:800;margin-bottom:8px}
           .jbg-locked .note{font-size:13px;color:#6b7280}
+
           /* نشان امتیاز کنار عنوان */
           .jbg-points-badge{display:inline-flex;align-items:center;gap:6px;margin-inline-start:8px;
             padding:2px 8px;border-radius:9999px;background:#EEF2FF;color:#3730A3;font-weight:700;font-size:12px;border:1px solid #E0E7FF}
           .jbg-points-badge .pt-val{font-weight:800}
         </style>';
 
-        $html = '<div class="jbg-main-stack">';
+        // شروع رَپر عرض استاندارد
+        $html  = '<div class="jbg-full-bleed"><div class="jbg-container">';
+        $html .= '<div class="jbg-main-stack">';
 
         if ($is_open) {
             // محتوای اصلی (پلیر/هدر)
@@ -85,7 +100,9 @@ class SingleLayout {
             if (trim($rel_html)!=='') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
         }
 
-        $html .= '</div>';
+        $html .= '</div>'; // .jbg-main-stack
+        $html .= '</div></div>'; // .jbg-container .jbg-full-bleed
+
         static $once=false; if(!$once){ $html=$style.$html; $once=true; }
         return $html;
     }
