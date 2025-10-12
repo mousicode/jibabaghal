@@ -210,20 +210,6 @@ class Bootstrap {
                 }
             }
         });
-
-        /* -----------------------------------------------------------------
-         * ✅ UI: همسان‌سازی عرض محتوای شورت‌کدها و صفحهٔ تکی با هدر/فوتر (1312px)
-         * فقط UIAssets را لود می‌کنیم تا تداخل نشود.
-         * ----------------------------------------------------------------- */
-        add_action('init', function () {
-            $f = JBG_ADS_DIR . 'src/Frontend/UIAssets.php';
-            if (file_exists($f)) {
-                require_once $f;
-                if (class_exists('\\JBG\\Ads\\Frontend\\UIAssets')) {
-                    \JBG\Ads\Frontend\UIAssets::register();
-                }
-            }
-        });
     }
 
     public static function activate(): void {
