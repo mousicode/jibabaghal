@@ -3,73 +3,65 @@ namespace JBG\Ads\Frontend;
 
 if (!defined('ABSPATH')) exit;
 
-class UIAssets
-{
-    public static function register(): void
-    {
-        add_action('wp_enqueue_scripts', [self::class, 'enqueue'], 20);
+/**
+ * همسان‌سازی عرض محتوا با هدر/فوتر (1312px)
+ * اجرای CSS با اولویت بالا و !important تا بر استایل قالب غالب شود.
+ */
+class UIAssets {
+
+    public static function register(): void {
+        // اولویت بالا تا بعد از استایل‌های قالب لود شود
+        add_action('wp_enqueue_scripts', [self::class, 'enqueue'], 999);
     }
 
-    public static function enqueue(): void
-    {
-        // یک هندل مجازی برای اینلاین‌کردن CSS
-        wp_register_style('jbg-ui', false, [], '1.0.0');
-        $css = self::css();
-        wp_add_inline_style('jbg-ui', $css);
-        wp_enqueue_style('jbg-ui');
-    }
+    public static function enqueue(): void {
+        $css = <<<CSS
+:root { --jbg-content-width: 1312px; --jbg-content-pad: 16px; }
 
-    private static function css(): string
-    {
-        return <<<CSS
-/* === JBG UI – unified content width ======================================= */
-:root {
-  --jbg-content-width: 1312px;   /* عرض استاندارد شما (هدر/فوتر) */
-  --jbg-content-pad: 16px;
-}
-
-/* کانتینر عمومی برای همه خروجی‌های افزونه */
-.jbg-container,
-.jbg-wallet,
+/* ظرف‌های افزونه */
+.jbg-grid,
+.jbg-related-grid,
 .jbg-points-wrap,
+.jbg-wallet,
 .jbg-sponsor-report,
-.jbg-react-inline,
-.jbg-related-wrap,
-.jbg-list-wrap,
-.jbg-single-wrap {
-  max-width: var(--jbg-content-width);
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: var(--jbg-content-pad);
-  padding-right: var(--jbg-content-pad);
-  box-sizing: border-box;
-}
-
-/* صفحهٔ تکی آگهی (post type: jbg_ad) — هم‌عرض‌سازی محتوای اصلی با هدر/فوتر */
-.single-jbg_ad .entry-content > *:not(.alignfull):not(.alignwide) {
-  max-width: var(--jbg-content-width);
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: var(--jbg-content-pad);
-  padding-right: var(--jbg-content-pad);
-  box-sizing: border-box;
-}
-
-/* اگر قالب (Hello/Elementor) کانتینر محدودتری داشته باشد، این کلاس‌ها بازهم غالب می‌شوند */
-body .elementor-section.jbg-wide,
-body .jbg-wide {
-  --container-max-width: var(--jbg-content-width);
+.jbg-ad-layout {
   max-width: var(--jbg-content-width) !important;
   margin-left: auto !important;
   margin-right: auto !important;
-  padding-left: var(--jbg-content-pad);
-  padding-right: var(--jbg-content-pad);
+  padding-left: var(--jbg-content-pad) !important;
+  padding-right: var(--jbg-content-pad) !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
 }
 
-/* جلوگیری از دوبل‌شدن پدینگ در موبایل‌ها */
+/* صفحهٔ تکی ویدیو با المنتور/Hello */
+.single-jbg_ad .elementor-section .elementor-container {
+  max-width: var(--jbg-content-width) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: var(--jbg-content-pad) !important;
+  padding-right: var(--jbg-content-pad) !important;
+  box-sizing: border-box !important;
+}
+
+/* اگر شورت‌کدها داخل ویجت المنتور باشند، این ظرف نیز هم‌عرض می‌شود */
+.elementor-widget-container .jbg-grid,
+.elementor-widget-container .jbg-related-grid,
+.elementor-widget-container .jbg-points-wrap,
+.elementor-widget-container .jbg-wallet,
+.elementor-widget-container .jbg-sponsor-report {
+  max-width: var(--jbg-content-width) !important;
+}
+
+/* جلوگیری از باریک شدن در موبایل‌ها */
 @media (max-width: 640px) {
   :root { --jbg-content-pad: 12px; }
 }
 CSS;
+
+        // هندل مجازی برای اینلاین‌کردن CSS
+        wp_register_style('jbg-ui-fix-width', false, [], '1.0.0');
+        wp_enqueue_style('jbg-ui-fix-width');
+        wp_add_inline_style('jbg-ui-fix-width', $css);
     }
 }

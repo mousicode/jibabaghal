@@ -213,21 +213,17 @@ class Bootstrap {
 
         /* -----------------------------------------------------------------
          * ✅ UI: همسان‌سازی عرض محتوای شورت‌کدها و صفحهٔ تکی با هدر/فوتر (1312px)
+         * فقط UIAssets را لود می‌کنیم تا تداخل نشود.
          * ----------------------------------------------------------------- */
         add_action('init', function () {
-            $f = JBG_ADS_DIR . 'src/Frontend/ContainerWidth.php';
+            $f = JBG_ADS_DIR . 'src/Frontend/UIAssets.php';
             if (file_exists($f)) {
                 require_once $f;
-                if (class_exists('\\JBG\\Ads\\Frontend\\ContainerWidth')) {
-                    \JBG\Ads\Frontend\ContainerWidth::register();
+                if (class_exists('\\JBG\\Ads\\Frontend\\UIAssets')) {
+                    \JBG\Ads\Frontend\UIAssets::register();
                 }
             }
         });
-
-        /* -----------------------------------------------------------------
-         * چاپ CSS شرطی برای هم‌عرض شدن محتوا با هدر/فوتر (پشتیبان قدیمی)
-         * ----------------------------------------------------------------- */
-        add_action('wp_head', [self::class, 'print_content_width_css'], 99);
     }
 
     public static function activate(): void {
@@ -239,49 +235,5 @@ class Bootstrap {
 
     public static function deactivate(): void {
         flush_rewrite_rules(false);
-    }
-
-    /** چاپ CSS شرطی (در صورت نیاز) */
-    public static function print_content_width_css(): void {
-        $print = false;
-
-        if (function_exists('is_singular') && is_singular('jbg_ad')) {
-            $print = true;
-        } else {
-            $post = get_post();
-            if ($post) {
-                $c = (string) $post->post_content;
-                if (
-                    stripos($c, '[jbg_list') !== false ||
-                    stripos($c, '[jbg_related') !== false ||
-                    stripos($c, '[jbg_points') !== false ||
-                    stripos($c, '[jbg_wallet') !== false ||
-                    stripos($c, '[jbg_sponsor_report') !== false
-                ) {
-                    $print = true;
-                }
-            }
-        }
-
-        if (!$print) return;
-        ?>
-        <style id="jbg-content-width">
-          :root { --jbg-content-width: 1312px; }
-          .jbg-grid,
-          .jbg-related-grid,
-          .jbg-points-wrap,
-          .jbg-wallet,
-          .jbg-sponsor-report,
-          .jbg-ad-layout {
-            max-width: var(--jbg-content-width);
-            margin: 0 auto;
-            padding: 0 16px;
-            box-sizing: border-box;
-          }
-          .single-jbg_ad .elementor-section .elementor-container {
-            max-width: var(--jbg-content-width) !important;
-          }
-        </style>
-        <?php
     }
 }
