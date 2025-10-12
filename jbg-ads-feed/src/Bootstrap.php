@@ -155,12 +155,11 @@ class Bootstrap {
                     \JBG\Ads\Progress\Points::bootstrap();
                 }
             }
-        }, 9); // بعد از ثبت CPT/Tax ولی پیش از بیشتر شورت‌کدها
+        }, 9);
 
         /* -----------------------------------------------------------------
          * Admin Settings
          * ----------------------------------------------------------------- */
-        // تنظیمات «تبدیل امتیاز → مبلغ»
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Admin/PointsDiscountSettings.php';
             if (file_exists($f)) {
@@ -171,7 +170,7 @@ class Bootstrap {
             }
         });
 
-        // NEW: انتساب برند به کاربر اسپانسر (در صفحهٔ پروفایل کاربر)
+        // NEW: انتساب برند به کاربر اسپانسر
         add_action('admin_init', function () {
             $f = JBG_ADS_DIR . 'src/Admin/SponsorBrandAccess.php';
             if (file_exists($f)) {
@@ -185,18 +184,14 @@ class Bootstrap {
         /* -----------------------------------------------------------------
          * WALLET: سرویس، شورت‌کد و REST + اتصال به رخداد بیلینگ
          * ----------------------------------------------------------------- */
-        // لود سرویس و شورت‌کد
         add_action('init', function () {
-            // سرویس کیف‌پول
             $w = JBG_ADS_DIR . 'src/Wallet/Wallet.php';
             if (file_exists($w)) {
                 require_once $w;
                 if (class_exists('\\JBG\\Ads\\Wallet\\Wallet')) {
-                    // اتصال به رخداد بیلینگ برای کسر بودجه اسپانسر
                     add_action('jbg_billed', ['\\JBG\\Ads\\Wallet\\Wallet', 'deduct_on_billed'], 10, 2);
                 }
             }
-            // شورت‌کد کیف‌پول
             $sc = JBG_ADS_DIR . 'src/Frontend/WalletShortcode.php';
             if (file_exists($sc)) {
                 require_once $sc;
@@ -206,7 +201,6 @@ class Bootstrap {
             }
         });
 
-        // REST کیف‌پول
         add_action('rest_api_init', function () {
             $rc = JBG_ADS_DIR . 'src/Rest/WalletController.php';
             if (file_exists($rc)) {
@@ -218,67 +212,20 @@ class Bootstrap {
         });
 
         /* -----------------------------------------------------------------
-         * UI Assets: یکسان‌سازی عرض محتوا با هدر/فوتر (1312px)
+         * ✅ UI: همسان‌سازی عرض محتوای شورت‌کدها و صفحهٔ تکی با هدر/فوتر (1312px)
          * ----------------------------------------------------------------- */
         add_action('init', function () {
-            $f = JBG_ADS_DIR . 'src/Frontend/UIAssets.php';
+            $f = JBG_ADS_DIR . 'src/Frontend/ContainerWidth.php';
             if (file_exists($f)) {
                 require_once $f;
-                if (class_exists('\\JBG\\Ads\\Frontend\\UIAssets')) {
-                    \JBG\Ads\Frontend\UIAssets::register();
+                if (class_exists('\\JBG\\Ads\\Frontend\\ContainerWidth')) {
+                    \JBG\Ads\Frontend\ContainerWidth::register();
                 }
             }
         });
 
         /* -----------------------------------------------------------------
-         * REST endpoints
-         * ----------------------------------------------------------------- */
-        add_action('rest_api_init', function () {
-            $feed = JBG_ADS_DIR . 'src/Rest/FeedController.php';
-            if (file_exists($feed)) {
-                require_once $feed;
-                if (class_exists('\\JBG\\Ads\\Rest\\FeedController')) {
-                    \JBG\Ads\Rest\FeedController::register_routes();
-                }
-            }
-
-            $view = JBG_ADS_DIR . 'src/Rest/ViewController.php';
-            if (file_exists($view)) {
-                require_once $view;
-                if (class_exists('\\JBG\\Ads\\Rest\\ViewController')) {
-                    \JBG\Ads\Rest\ViewController::register_routes();
-                }
-            }
-
-            $viewTrack = JBG_ADS_DIR . 'src/Rest/ViewTrackController.php';
-            if (file_exists($viewTrack)) {
-                require_once $viewTrack;
-            }
-            if (class_exists('\\JBG\\Ads\\Rest\\ViewTrackController')) {
-                \JBG\Ads\Rest\ViewTrackController::register_routes();
-            }
-
-            // REST لایک‌ها (در صورت وجود فایل)
-            $like = JBG_ADS_DIR . 'src/Rest/LikeController.php';
-            if (file_exists($like)) {
-                require_once $like;
-            }
-            if (class_exists('\\JBG\\Ads\\Rest\\LikeController')) {
-                \JBG\Ads\Rest\LikeController::register_routes();
-            }
-
-            // REST «تبدیل امتیاز به کد تخفیف» (مبلغ ثابت)
-            $redeem = JBG_ADS_DIR . 'src/Rest/PointsRedeemController.php';
-            if (file_exists($redeem)) {
-                require_once $redeem;
-                if (class_exists('\\JBG\\Ads\\Rest\\PointsRedeemController')) {
-                    \JBG\Ads\Rest\PointsRedeemController::register_routes();
-                }
-            }
-        });
-
-        /* -----------------------------------------------------------------
-         * چاپ CSS شرطی برای هم‌عرض شدن محتوا با هدر/فوتر
+         * چاپ CSS شرطی برای هم‌عرض شدن محتوا با هدر/فوتر (پشتیبان قدیمی)
          * ----------------------------------------------------------------- */
         add_action('wp_head', [self::class, 'print_content_width_css'], 99);
     }
@@ -294,10 +241,7 @@ class Bootstrap {
         flush_rewrite_rules(false);
     }
 
-    /**
-     * CSS شرطی: فقط روی صفحات سینگل آگهی یا صفحاتی که شورت‌کدهای ما در محتوا دارند اعمال می‌شود.
-     * باعث می‌شود کانتینرهای افزونه و کانتینر المنتور تا 1312px هم‌عرض هدر/فوتر شوند.
-     */
+    /** چاپ CSS شرطی (در صورت نیاز) */
     public static function print_content_width_css(): void {
         $print = false;
 
@@ -323,8 +267,6 @@ class Bootstrap {
         ?>
         <style id="jbg-content-width">
           :root { --jbg-content-width: 1312px; }
-
-          /* ظرف‌های اصلی پلاگین */
           .jbg-grid,
           .jbg-related-grid,
           .jbg-points-wrap,
@@ -332,14 +274,10 @@ class Bootstrap {
           .jbg-sponsor-report,
           .jbg-ad-layout {
             max-width: var(--jbg-content-width);
-            margin-left: auto;
-            margin-right: auto;
-            padding-left: 16px;
-            padding-right: 16px;
+            margin: 0 auto;
+            padding: 0 16px;
             box-sizing: border-box;
           }
-
-          /* صفحهٔ تکی آگهی: کانتینر المنتور/هلو را هم هم‌عرض کن */
           .single-jbg_ad .elementor-section .elementor-container {
             max-width: var(--jbg-content-width) !important;
           }
