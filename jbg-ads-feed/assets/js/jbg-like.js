@@ -1,110 +1,88 @@
 (function(){
-  function ready(fn){ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',fn);} else {fn();} }
-  function clamp(n){ n = parseInt(n,10); return isNaN(n)?0:Math.max(0,n); }
+  if (!window.JBG_LIKE) return;
 
-  function buildUI(state){
-    var root = document.createElement('span');
-    root.id = 'jbg-react-inline';
-    root.className = 'jbg-react-inline';
-    root.setAttribute('dir','ltr');
-    root.setAttribute('aria-label','React');
+  var REST  = JBG_LIKE.rest || {};
+  var TOGGLE_URL = REST.toggle || (JBG_LIKE.rest_base || '') + '/like/toggle';
+  var STATUS_URL = REST.status || (JBG_LIKE.rest_base || '') + '/like/status';
+  var AD_ID = parseInt(JBG_LIKE.adId || JBG_LIKE.ad_id || 0, 10) || 0;
+  var NONCE = JBG_LIKE.nonce || '';
+  var LOGGED = !!JBG_LIKE.logged;
 
-    var up = document.createElement('button');
-    up.type = 'button';
-    up.className = 'jbg-react-btn up';
-    up.title = 'پسندیدم';
-    up.setAttribute('aria-pressed','false');
-    up.innerHTML =
-      '<svg viewBox="0 0 24 24" width="16" height="16" class="icon"><path d="M2 21h4V9H2v12zM22 9c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13 0 6.59 6.41C6.21 6.78 6 7.3 6 7.83V19c0 1.1.9 2 2 2h9c.82 0 1.54-.5 1.84-1.22l3-7c.11-.23.16-.48.16-.74V9z"/></svg>' +
-      '<span class="cnt like">0</span>';
+  // عناصر UI
+  function $q(sel, ctx){ return (ctx||document).querySelector(sel); }
+  function $qa(sel, ctx){ return [].slice.call((ctx||document).querySelectorAll(sel)); }
 
-    var down = document.createElement('button');
-    down.type = 'button';
-    down.className = 'jbg-react-btn down';
-    down.title = 'نپسندیدم';
-    down.setAttribute('aria-pressed','false');
-    down.innerHTML =
-      '<svg viewBox="0 0 24 24" width="16" height="16" class="icon"><path d="M22 3h-4v12h4V3zM2 15c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L11 24l6.41-6.41c.38-.37.59-.89.59-1.42V5c0-1.1-.9-2-2-2H7c-.82 0-1.54.5-1.84 1.22l-3 7c-.11.23-.16.48-.16.74V15z"/></svg>' +
-      '<span class="cnt dislike">0</span>';
-
-    root.appendChild(up);
-    root.appendChild(down);
-
-    function sync(){
-      var r  = state.reaction || 'none';
-      var lc = clamp(state.likeCount);
-      var dc = clamp(state.dislikeCount);
-      root.querySelector('.cnt.like').textContent    = String(lc);
-      root.querySelector('.cnt.dislike').textContent = String(dc);
-      up.setAttribute('aria-pressed',   r==='like'    ? 'true':'false');
-      down.setAttribute('aria-pressed', r==='dislike' ? 'true':'false');
-
-      if (!state.logged){
-        up.disabled = true; down.disabled = true;
-        root.title = 'برای رأی دادن وارد شوید';
-      }
+  // کانتینر پیش‌فرض: کنار عنوانی که خودمان زیر پلیر گذاشته‌ایم
+  var wrap = $q('.jbg-like-ui') || (function(){
+    var h = $q('.single-jbg_ad .entry-title, .single-jbg_ad h1');
+    if (!h) return null;
+    var box = document.createElement('div');
+    box.className = 'jbg-like-ui';
+    // اگر مارک‌آپ دکمه‌ها وجود ندارد بساز:
+    if (!h.querySelector('[data-jbg-like]')) {
+      box.innerHTML =
+        '<button type="button" class="jbg-like-btn" data-jbg-like="up" aria-label="like">👍</button>' +
+        '<button type="button" class="jbg-like-btn" data-jbg-like="down" aria-label="dislike">👎</button>' +
+        '<span class="jbg-like-count" data-jbg-like-count>0</span>';
+      h.appendChild(box);
     }
+    return h.querySelector('.jbg-like-ui');
+  })();
 
-    function send(reactionVal){
-      if (!state.logged) return;
-      var body = { ad_id: state.adId, reaction: reactionVal };
-      fetch(state.rest, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'X-WP-Nonce': state.nonce || '' },
-        credentials: 'same-origin',
-        body: JSON.stringify(body)
-      })
-      .then(function(r){ return r.json().catch(function(){ return {}; }); })
-      .then(function(res){
-        if (!res || !res.ok) return;
-        state.reaction     = res.reaction || 'none';
-        state.likeCount    = clamp(res.likeCount);
-        state.dislikeCount = clamp(res.dislikeCount);
-        sync();
-      })
-      .catch(function(){ /* silent */ });
-    }
+  if (!wrap || !AD_ID) return;
 
-    up  .addEventListener('click', function(){ send(state.reaction==='like'    ? 'none'    : 'like');    });
-    down.addEventListener('click', function(){ send(state.reaction==='dislike' ? 'none'    : 'dislike'); });
+  var btnLike    = $q('[data-jbg-like="up"]', wrap);
+  var btnDislike = $q('[data-jbg-like="down"]', wrap);
+  var elCount    = $q('[data-jbg-like-count]', wrap);
 
-    // expose helpers
-    root.__sync = sync;
-    return root;
+  function setState(json){
+    if (!json) return;
+    if (typeof json.likes === 'number' && elCount) elCount.textContent = String(json.likes);
+    if (btnLike)    btnLike.classList.toggle('is-on', !!json.liked);
+    if (btnDislike) btnDislike.classList.toggle('is-on', !!json.disliked);
   }
 
-  function findTitle(){
-    var sels = (window.JBG_REACT && JBG_REACT.selectors) || [];
-    for (var i=0;i<sels.length;i++){
-      var t = document.querySelector(sels[i]);
-      if (t) return t;
-    }
-    return null;
-  }
+  // دریافت وضعیت اولیه
+  (function init(){
+    if (!STATUS_URL) return;
+    fetch(STATUS_URL + '?ad_id=' + encodeURIComponent(AD_ID), {
+      credentials: 'same-origin',
+      headers: NONCE ? {'X-WP-Nonce': NONCE} : {}
+    }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(setState).catch(function(){});
+  })();
 
-  ready(function(){
-    if (typeof JBG_REACT === 'undefined' || !JBG_REACT.adId) return;
-
-    // Avoid duplicate injection
-    if (document.getElementById('jbg-react-inline')) return;
-
-    var target = findTitle();
-    if (!target) {
-      try {
-        new MutationObserver(function(){
-          var tt = findTitle();
-          if (tt && !document.getElementById('jbg-react-inline')){
-            var ui = buildUI(JBG_REACT);
-            tt.appendChild(ui);
-            ui.__sync();
-          }
-        }).observe(document.body, {childList:true, subtree:true});
-      } catch(_) {}
+  function send(action){
+    if (!LOGGED){
+      alert('برای استفاده از لایک باید وارد سایت شوید.');
       return;
     }
+    if (!TOGGLE_URL) return;
 
-    var ui = buildUI(JBG_REACT);
-    target.appendChild(ui);
-    ui.__sync();
+    var body = new FormData();
+    body.append('ad_id', AD_ID);
+    body.append('action', action); // 'like' یا 'dislike' یا 'none'
+
+    fetch(TOGGLE_URL, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: NONCE ? {'X-WP-Nonce': NONCE} : {},
+      body: body
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(json){
+      // پاسخ مورد انتظار: {liked:bool, disliked:bool, likes:int, dislikes:int}
+      setState(json);
+    })
+    .catch(function(){ /* سکوت */ });
+  }
+
+  // بایند کلیک با delegation تا با جابه‌جایی DOM از کار نیفتد
+  wrap.addEventListener('click', function(e){
+    var b = e.target && e.target.closest('[data-jbg-like]');
+    if (!b) return;
+    var type = b.getAttribute('data-jbg-like'); // 'up' | 'down'
+    if (type === 'up')    send('like');
+    if (type === 'down')  send('dislike');
   });
 })();
