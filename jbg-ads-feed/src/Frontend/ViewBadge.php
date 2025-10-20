@@ -8,9 +8,11 @@ if (!defined('ABSPATH')) exit;
  * - مخفی‌سازی هدر قالب WoodMart فقط در single-jbg_ad
  * - نمایش عنوان + متادیتا
  * - جابه‌جایی DOM تا هدر دقیقاً «زیر پلیر» باشد
+ * - بدون تغییر در منطق بک‌اند
  */
 class ViewBadge
 {
+    /** نمایش فشرده تعداد بازدید */
     private static function compact_views(int $n): string {
         if ($n >= 1000000000) { $v=$n/1000000000; $u=' میلیارد'; }
         elseif ($n >= 1000000){ $v=$n/1000000;    $u=' میلیون'; }
@@ -20,6 +22,7 @@ class ViewBadge
         return rtrim(rtrim(number_format($v,1,'.',''), '0'), '.') . $u;
     }
 
+    /** زمان نسبی انتشار */
     private static function relative_time(int $post_id): string {
         $t = get_post_time('U', true, $post_id);
         $d = time() - (int)$t;
@@ -30,6 +33,7 @@ class ViewBadge
         return get_the_date('', $post_id);
     }
 
+    /** شمارش بازدید با fallback به جدول سفارشی درصورت نبود متا */
     private static function views_count(int $ad_id): int {
         $meta = (int) get_post_meta($ad_id, 'jbg_views_count', true);
         if ($meta > 0) return $meta;
@@ -43,10 +47,13 @@ class ViewBadge
         return $count;
     }
 
+    /** رجیستر هوک‌ها */
     public static function register(): void {
+        // اولویت 7 تا بعد از رندر پلیرهای محتوا اجرا شود
         add_filter('the_content', [self::class, 'inject'], 7);
     }
 
+    /** تزریق هدر و جابه‌جایی به زیر پلیر */
     public static function inject($content) {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
@@ -89,7 +96,7 @@ class ViewBadge
         $header .= '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
         $header .= '</div></div></div>';
 
-        // تضمین «زیر پلیر» بودن
+        // تضمین «زیر پلیر» بودن با جابه‌جایی DOM
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
@@ -102,6 +109,7 @@ class ViewBadge
         static $once=false;
         if(!$once){ $content = $style . $content; $once=true; }
 
+        // هدر + اسکریپت + محتوای اصلی
         return $header . $script . $content;
     }
 }

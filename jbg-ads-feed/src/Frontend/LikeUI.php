@@ -70,6 +70,7 @@ class LikeUI {
                 '.single-jbg_ad .entry-title',
                 '.single-jbg_ad h1.entry-title',
                 '.single-jbg_ad h1[itemprop="headline"]',
+                '.jbg-single-header .jbg-single-title',
                 '.jbg-single-header .jbg-title',
                 '.entry-title',
                 'h1[itemprop="headline"]',
