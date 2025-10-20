@@ -4,15 +4,14 @@ namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
 /**
- * ViewBadge: هدر داخلی برای صفحهٔ تک آگهی
- * - مخفی‌سازی هدر قالب WoodMart فقط در single-jbg_ad
- * - نمایش عنوان + متادیتا
- * - جابه‌جایی DOM تا هدر دقیقاً «زیر پلیر» باشد
- * - بدون تغییر در منطق بک‌اند
+ * ViewBadge: هدر داخلیِ صفحهٔ تک آگهی
+ * - عنوان و متا زیر پلیر
+ * - مخفی‌سازی هدر قالب WoodMart
+ * - افزودن کلاس .jbg-title روی <h1> تا اسکریپت لایک محل تزریق را پیدا کند
+ * - حذف صرفاً‌ِ ظاهری برچسب watched%
  */
 class ViewBadge
 {
-    /** نمایش فشرده تعداد بازدید */
     private static function compact_views(int $n): string {
         if ($n >= 1000000000) { $v=$n/1000000000; $u=' میلیارد'; }
         elseif ($n >= 1000000){ $v=$n/1000000;    $u=' میلیون'; }
@@ -22,7 +21,6 @@ class ViewBadge
         return rtrim(rtrim(number_format($v,1,'.',''), '0'), '.') . $u;
     }
 
-    /** زمان نسبی انتشار */
     private static function relative_time(int $post_id): string {
         $t = get_post_time('U', true, $post_id);
         $d = time() - (int)$t;
@@ -33,7 +31,6 @@ class ViewBadge
         return get_the_date('', $post_id);
     }
 
-    /** شمارش بازدید با fallback به جدول سفارشی درصورت نبود متا */
     private static function views_count(int $ad_id): int {
         $meta = (int) get_post_meta($ad_id, 'jbg_views_count', true);
         if ($meta > 0) return $meta;
@@ -47,13 +44,11 @@ class ViewBadge
         return $count;
     }
 
-    /** رجیستر هوک‌ها */
     public static function register(): void {
-        // اولویت 7 تا بعد از رندر پلیرهای محتوا اجرا شود
+        // بعد از تولید بدنهٔ محتوا
         add_filter('the_content', [self::class, 'inject'], 7);
     }
 
-    /** تزریق هدر و جابه‌جایی به زیر پلیر */
     public static function inject($content) {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
@@ -64,14 +59,20 @@ class ViewBadge
         $viewsF = self::compact_views($views) . ' بازدید';
         $when   = self::relative_time($id);
 
-        // --- CSS: پنهان کردن هدر WoodMart و تیترهای پیش‌فرض فقط در single-jbg_ad ---
+        // CSS فقط ظاهری
         $style = '<style id="jbg-single-header-css">
+          /* هدر پیش‌فرض WoodMart و تیترهای عمومی را در single-jbg_ad پنهان کن */
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
           .single-jbg_ad .entry-title,
           .single-jbg_ad h1.entry-title,
           .single-jbg_ad .post-title,
           .single-jbg_ad .elementor-heading-title{display:none !important;}
+
+          /* حذف صرفاً ظاهری نشانگر watched% بدون تغییر منطق بک‌اند */
+          .single-jbg_ad .jbg-watched,
+          .single-jbg_ad .jbg-watch,
+          .single-jbg_ad .watched{display:none !important;}
 
           .jbg-player-wrapper .jbg-single-header{
             width:100%;margin:10px 0 0;padding:0;box-sizing:border-box;direction:rtl;text-align:right;
@@ -88,15 +89,15 @@ class ViewBadge
           }
         </style>';
 
-        // مارک‌آپ هدر داخلی
+        // هدر داخلی: کلاس .jbg-title افزوده شد تا اسکریپت لایک آن را پیدا کند
         $header  = '<div class="jbg-single-header"><div class="jbg-headrow">';
-        $header .= '<h1 class="jbg-single-title">'.esc_html(get_the_title($id)).'</h1>';
+        $header .= '<h1 class="jbg-single-title jbg-title">'.esc_html(get_the_title($id)).'</h1>';
         $header .= '<div class="jbg-single-meta">';
         if ($brand) $header .= '<span class="brand">'.esc_html($brand).'</span><span class="dot">•</span>';
         $header .= '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
         $header .= '</div></div></div>';
 
-        // تضمین «زیر پلیر» بودن با جابه‌جایی DOM
+        // انتقال قطعی هدر به زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
@@ -109,7 +110,6 @@ class ViewBadge
         static $once=false;
         if(!$once){ $content = $style . $content; $once=true; }
 
-        // هدر + اسکریپت + محتوای اصلی
         return $header . $script . $content;
     }
 }
