@@ -62,6 +62,17 @@ class Bootstrap {
             }
         });
 
+        // NEW: Grid of latest ads (4 columns by default, newest first)
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Frontend/GridShortcode.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Frontend\\GridShortcode')) {
+                    \JBG\Ads\Frontend\GridShortcode::register();
+                }
+            }
+        });
+
         // نمایش امتیاز کاربر (در صورت وجود)
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
