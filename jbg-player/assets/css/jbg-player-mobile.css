@@ -56,3 +56,40 @@
 /* ایمنی لایه‌ها */
 .single-jbg_ad .jbg-player-wrapper .plyr__controls,
 .single-jbg_ad .jbg-player-wrapper .mejs-controls{z-index:2}
+/* --- Fix WoodMart button styles on player controls --- */
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control,
+.single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 8px !important; /* یا 50% اگر دایره می‌خواهی */
+  padding: 0 !important;
+}
+
+/* نمایش اجباری آیکن‌های SVG داخل دکمه‌ها */
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg,
+.single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid svg {
+  display: block !important;
+  opacity: 1 !important;
+  fill: currentColor !important;
+  width: 18px; height: 18px;
+}
+
+/* اندازه‌ی دکمه‌ها در موبایل */
+@media (max-width:575.98px){
+  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control{width:32px;height:32px}
+  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid{transform:translate(-50%,-50%) scale(.82)}
+}
+
+/* MediaElement.js دکمه‌ها بدون پس‌زمینه */
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* اگر تم به همه svg ها display:none می‌دهد */
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button svg{
+  display:block !important;
+}
