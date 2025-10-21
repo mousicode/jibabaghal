@@ -1,127 +1,38 @@
 /* ===== ساختار کلی ===== */
-.jbg-single-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-}
+.jbg-single-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+.jbg-single-header .row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
 
-/* ستون سمت راست: عنوان و امتیاز */
-.jbg-single-header .col-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* ستون راست: عنوان و امتیاز */
+.jbg-single-header .col-right{display:flex;align-items:center;gap:8px}
 
-/* ستون سمت چپ: لایک، دیسلایک و برند */
-.jbg-single-header .col-left {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
+/* ستون چپ: لایک/دیس‌لایک و برند */
+.jbg-single-header .col-left{display:flex;align-items:center;justify-content:flex-end;gap:10px}
 
-/* فاصله داخلی اجزا */
-.jbg-single-header .col-left > *,
-.jbg-single-header .col-right > * {
-  margin: 0 4px;
-}
+/* فاصله داخلی */
+.jbg-single-header .col-left>*,
+.jbg-single-header .col-right>*{margin:0 4px}
 
-/* ===== حالت موبایل ===== */
-@media (max-width: 768px) {
-  .jbg-single-header {
-    flex-direction: row; /* همه در یک خط */
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  /* ترکیب دو ستون در یک ردیف */
+/* ===== موبایل ===== */
+@media (max-width:768px){
+  .jbg-single-header{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between}
   .jbg-single-header .col-right,
-  .jbg-single-header .col-left {
-    flex: 1 1 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-  }
-
-  /* اجزای سمت چپ در یک خط */
-  .jbg-single-header .col-left {
-    order: 2;
-  }
-
-  /* اجزای سمت راست در یک خط */
-  .jbg-single-header .col-right {
-    order: 1;
-  }
-}
-/* ===== ساختار کلی ===== */
-.jbg-single-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-/* ستون سمت راست: عنوان و امتیاز */
-.jbg-single-header .col-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* ستون سمت چپ: لایک، دیسلایک و برند */
-.jbg-single-header .col-left {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* فاصله داخلی اجزا */
-.jbg-single-header .col-left > *,
-.jbg-single-header .col-right > * {
-  margin: 0 4px;
-}
-
-/* ===== حالت موبایل ===== */
-@media (max-width: 768px) {
-  .jbg-single-header {
-    flex-direction: row; /* همه در یک خط */
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  /* ترکیب دو ستون در یک ردیف */
-  .jbg-single-header .col-right,
-  .jbg-single-header .col-left {
-    flex: 1 1 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-  }
-
-  /* اجزای سمت چپ در یک خط */
-  .jbg-single-header .col-left {
-    order: 2;
-  }
-
-  /* اجزای سمت راست در یک خط */
-  .jbg-single-header .col-right {
-    order: 1;
-  }
-}
-@media (min-width: 769px){
-  .jbg-single-header .row{flex-wrap:nowrap}
-  .jbg-single-header .col-right{flex:0 1 auto;min-width:0}
   .jbg-single-header .col-left{
-    margin-inline-start:auto; /* در RTL هل می‌دهد سمت چپ */
+    flex:1 1 100%;
+    display:flex;align-items:center;justify-content:space-between;gap:6px
+  }
+  .jbg-single-header .col-left{order:2}
+  .jbg-single-header .col-right{order:1}
+}
+
+/* ===== دسکتاپ: چپ واقعا برود سمت چپ ===== */
+@media (min-width:769px){
+  .jbg-single-header .row{flex-wrap:nowrap}
+  .jbg-single-header .col-right{flex:0 1 auto;min-width:0;order:1}
+  .jbg-single-header .col-left{
+    order:2;
+    margin-left:auto;              /* فیزیکی */
+    margin-inline-start:auto;      /* منطقی برای RTL/LTR */
     justify-content:flex-end;
-    flex:0 0 auto;
+    flex:0 0 auto
   }
 }
