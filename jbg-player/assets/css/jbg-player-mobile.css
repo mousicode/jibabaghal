@@ -1,95 +1,173 @@
-/* فقط صفحه‌ تکی آگهی */
-.single-jbg_ad .jbg-player-wrapper{position:relative}
+/* ---------------------------
+   استایل ریسپانسیو پلیر (نهایی)
+   مخصوص صفحات jbg_ad
+--------------------------- */
 
-/* گوشه‌ها هماهنگ با وودمارت */
+.single-jbg_ad .jbg-player-wrapper {
+  position: relative;
+}
+
+/* گوشه‌های هماهنگ با وودمارت */
 .single-jbg_ad .jbg-player-wrapper video,
 .single-jbg_ad .jbg-player-wrapper .plyr__poster,
-.single-jbg_ad .jbg-player-wrapper .plyr__video-wrapper{
-  border-radius:12px;overflow:hidden
+.single-jbg_ad .jbg-player-wrapper .plyr__video-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 /* ---------- Plyr ---------- */
-@media (max-width:575.98px){
-  /* ردیف کنترل‌ها استاندارد وودمارت‌طور */
-  .single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls{
-    display:flex;align-items:center;gap:8px;padding:8px 10px
-  }
-  /* دکمه‌ها کوچک و بدون سایه */
-  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control{
-    width:32px;height:32px;border-radius:8px;box-shadow:none
-  }
-  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg{
-    width:17px;height:17px
-  }
-  /* نوار پیشرفت کشسان؛ دیگر دکمه‌ها روی آن نمی‌افتند */
-  .single-jbg_ad .jbg-player-wrapper .plyr__progress{
-    flex:1;min-width:0;height:18px;padding:0 6px
-  }
-  .single-jbg_ad .jbg-player-wrapper .plyr__progress input[type=range]{height:2px}
-
-  /* محدودکردن حجم کنترل ولوم */
-  .single-jbg_ad .jbg-player-wrapper .plyr__volume{max-width:84px}
-
-  /* دکمه پلی وسط کوچک‌تر تا تداخلی نداشته باشد */
-  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid{
-    transform:translate(-50%,-50%) scale(.82)
+@media (max-width: 575.98px) {
+  .single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 0 0 12px 12px;
   }
 
-  /* حذف پس‌زمینه‌های مزاحم */
-  .single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls::before{display:none}
+  /* دکمه‌ها */
+  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0;
+    color: #F49F1E !important;
+  }
+
+  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg {
+    width: 18px;
+    height: 18px;
+    fill: #F49F1E !important;
+    color: #F49F1E !important;
+    display: block !important;
+    opacity: 1 !important;
+  }
+
+  /* hover */
+  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control:hover svg {
+    fill: #ffb94b !important;
+    color: #ffb94b !important;
+  }
+
+  /* نوار پیشرفت */
+  .single-jbg_ad .jbg-player-wrapper .plyr__progress {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
+    padding: 0 6px;
+  }
+
+  .single-jbg_ad .jbg-player-wrapper .plyr__progress input[type=range] {
+    height: 2px;
+  }
+
+  /* رنگ اصلی نوار */
+  .single-jbg_ad .jbg-player-wrapper
+    .plyr__progress
+    input[type=range]::-webkit-slider-thumb,
+  .single-jbg_ad .jbg-player-wrapper
+    .plyr__progress
+    input[type=range]::-moz-range-thumb,
+  .single-jbg_ad .jbg-player-wrapper
+    .plyr__progress
+    .plyr__progress--played {
+    background-color: #F49F1E !important;
+  }
+
+  /* ولوم */
+  .single-jbg_ad .jbg-player-wrapper .plyr__volume {
+    max-width: 84px;
+  }
+
+  /* دکمه پلی وسط */
+  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid {
+    transform: translate(-50%, -50%) scale(0.82);
+    background: rgba(0, 0, 0, 0.5);
+    color: #F49F1E !important;
+  }
+
+  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid svg {
+    fill: #F49F1E !important;
+    color: #F49F1E !important;
+  }
 }
 
 /* ---------- MediaElement.js ---------- */
-@media (max-width:575.98px){
-  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-controls{
-    display:flex;align-items:center;gap:8px;height:42px !important;padding:6px 8px
+@media (max-width: 575.98px) {
+  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px !important;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 0 0 12px 12px;
   }
-  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail{flex:1;min-width:0;height:18px}
-  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail .mejs-time-total{
-    height:2px;margin:8px 6px
+
+  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail {
+    flex: 1;
+    min-width: 0;
+    height: 18px;
   }
-  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-button>button{
-    width:32px;height:32px;border-radius:8px
+
+  .single-jbg_ad
+    .jbg-player-wrapper
+    .mejs-container
+    .mejs-time-rail
+    .mejs-time-total {
+    height: 2px;
+    margin: 8px 6px;
+  }
+
+  .single-jbg_ad
+    .jbg-player-wrapper
+    .mejs-container
+    .mejs-button
+    > button {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: #F49F1E !important;
+  }
+
+  .single-jbg_ad
+    .jbg-player-wrapper
+    .mejs-container
+    .mejs-button
+    > button
+    svg {
+    fill: #F49F1E !important;
+    color: #F49F1E !important;
+    display: block !important;
+  }
+
+  .single-jbg_ad
+    .jbg-player-wrapper
+    .mejs-container
+    .mejs-button
+    > button:hover
+    svg {
+    fill: #ffb94b !important;
+  }
+
+  /* progress bar رنگ */
+  .single-jbg_ad
+    .jbg-player-wrapper
+    .mejs-time-rail
+    .mejs-time-current {
+    background-color: #F49F1E !important;
   }
 }
 
-/* ایمنی لایه‌ها */
+/* کنترل‌ها روی ویدیو، بدون تداخل با کلیک */
 .single-jbg_ad .jbg-player-wrapper .plyr__controls,
-.single-jbg_ad .jbg-player-wrapper .mejs-controls{z-index:2}
-/* --- Fix WoodMart button styles on player controls --- */
-.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control,
-.single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  border-radius: 8px !important; /* یا 50% اگر دایره می‌خواهی */
-  padding: 0 !important;
-}
-
-/* نمایش اجباری آیکن‌های SVG داخل دکمه‌ها */
-.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg,
-.single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid svg {
-  display: block !important;
-  opacity: 1 !important;
-  fill: currentColor !important;
-  width: 18px; height: 18px;
-}
-
-/* اندازه‌ی دکمه‌ها در موبایل */
-@media (max-width:575.98px){
-  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control{width:32px;height:32px}
-  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid{transform:translate(-50%,-50%) scale(.82)}
-}
-
-/* MediaElement.js دکمه‌ها بدون پس‌زمینه */
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button{
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-/* اگر تم به همه svg ها display:none می‌دهد */
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button svg{
-  display:block !important;
+.single-jbg_ad .jbg-player-wrapper .mejs-controls {
+  z-index: 2;
 }
