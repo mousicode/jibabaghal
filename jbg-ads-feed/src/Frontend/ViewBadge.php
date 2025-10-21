@@ -87,7 +87,7 @@ class ViewBadge
           .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
           .jbg-single-header .row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
           .jbg-single-header .col-right{display:flex;flex-direction:column;gap:6px;min-width:40%}
-          .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:40%;justify-content:flex-start}
+          .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:40%;justify-content:flex-end}
           .jbg-single-header .title{margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827}
           .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px}
           .jbg-single-header .dot{opacity:.55}
