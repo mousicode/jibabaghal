@@ -1,0 +1,54 @@
+/* فقط صفحهٔ تکی ویدیو؛ بدون لمس رویدادها یا JS پلیر */
+.single-jbg_ad .jbg-player-wrapper{position:relative}
+
+/* یکنواختی گوشه‌ها */
+.single-jbg_ad .jbg-player-wrapper video,
+.single-jbg_ad .jbg-player-wrapper .plyr__poster,
+.single-jbg_ad .jbg-player-wrapper .plyr__video-wrapper{border-radius:14px;overflow:hidden}
+
+/* ---------- Plyr ---------- */
+@media (max-width: 575.98px){
+  .single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls{
+    padding:6px 8px; gap:6px;
+  }
+  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control{
+    width:36px; height:36px; border-radius:8px;
+  }
+  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg{
+    width:18px; height:18px;
+  }
+  /* نوار پیشرفت باریک‌تر و با فاصله از دکمه‌ها */
+  .single-jbg_ad .jbg-player-wrapper .plyr__progress{height:18px; padding:0 6px}
+  .single-jbg_ad .jbg-player-wrapper .plyr__progress input[type=range]{height:2px}
+  .single-jbg_ad .jbg-player-wrapper .plyr__volume{max-width:80px}
+
+  /* دکمه پلی وسط کوچکتر تا با seekbar تداخل بصری نداشته باشد */
+  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid{
+    transform:translate(-50%,-50%) scale(.85);
+  }
+
+  /* پس‌زمینه ملایم زیر کنترل‌ها؛ pointer-events دست‌نخورده */
+  .single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls::before{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:42px;
+    background:linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0));
+    z-index:-1; border-bottom-left-radius:14px; border-bottom-right-radius:14px;
+  }
+}
+
+/* ---------- MediaElement.js (پلیر پیش‌فرض وردپرس) ---------- */
+@media (max-width: 575.98px){
+  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-controls{
+    padding:6px 8px; height:42px !important;
+  }
+  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail{height:18px}
+  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail .mejs-time-total{
+    height:2px; margin:8px 6px;
+  }
+  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-button>button{
+    width:36px; height:36px; border-radius:8px;
+  }
+}
+
+/* ایمنی: کنترل‌ها بالاتر از ویدیو ولی روی ریل کلیک را نمی‌پوشانند */
+.single-jbg_ad .jbg-player-wrapper .plyr__controls,
+.single-jbg_ad .jbg-player-wrapper .mejs-controls{z-index:2}
