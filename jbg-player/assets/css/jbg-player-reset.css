@@ -1,0 +1,58 @@
+/* ریست استایل‌های قالب روی پلیر – فقط در صفحات jbg_ad اعمال می‌شود */
+
+/* محدوده امن */
+.single-jbg_ad .jbg-player-wrapper { position: relative }
+
+/* ---------- Plyr ---------- */
+.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls{
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 10px !important;
+  display: flex; align-items: center; gap: 8px;
+}
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  width: auto; height: auto; border-radius: 0 !important;
+}
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg{
+  display: block !important; opacity: 1 !important;
+  width: 20px; height: 20px;
+}
+.single-jbg_ad .jbg-player-wrapper .plyr__progress{
+  flex: 1 1 auto !important; min-width: 0; height: 20px; padding: 0 6px;
+}
+.single-jbg_ad .jbg-player-wrapper .plyr__volume{ max-width: 120px }
+.single-jbg_ad .jbg-player-wrapper .plyr__tooltip{ z-index: 3 }
+
+/* مربع‌های سفید/خاکستریِ ناشی از دکمه‌ها در قالب */
+.single-jbg_ad .jbg-player-wrapper .plyr__control::before,
+.single-jbg_ad .jbg-player-wrapper .plyr__control::after{ display:none !important }
+
+/* ---------- MediaElement.js (وردپرس) ---------- */
+.single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-controls{
+  background: transparent !important;
+  box-shadow: none !important;
+  height: 40px !important;
+  padding: 6px 8px !important;
+  display:flex; align-items:center; gap:8px;
+}
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button{
+  background: transparent !important;
+  border: 0 !important; box-shadow: none !important; padding: 0 !important;
+  width: auto; height: auto;
+}
+.single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail{
+  flex:1 1 auto !important; min-width:0; height: 18px;
+}
+.single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail .mejs-time-total{
+  height: 3px; margin: 8px 6px;
+}
+
+/* جلوگیری از استایل جهانی دکمه/لینک وودمارت */
+.single-jbg_ad .jbg-player-wrapper button,
+.single-jbg_ad .jbg-player-wrapper a{
+  background: none !important; box-shadow: none !important; border: 0 !important;
+}
