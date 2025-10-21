@@ -1,18 +1,17 @@
-/* ---------------------------
-   استایل ریسپانسیو پلیر (نهایی)
-   مخصوص صفحات jbg_ad
---------------------------- */
+/* ------------------------------------
+   پلیر ریسپانسیو با آیکن‌های سفارشی
+   فقط پلی، صدا، فول‌اسکرین + seekbar
+------------------------------------ */
 
 .single-jbg_ad .jbg-player-wrapper {
   position: relative;
+  overflow: hidden;
 }
 
-/* گوشه‌های هماهنگ با وودمارت */
+/* گوشه‌های هماهنگ */
 .single-jbg_ad .jbg-player-wrapper video,
-.single-jbg_ad .jbg-player-wrapper .plyr__poster,
 .single-jbg_ad .jbg-player-wrapper .plyr__video-wrapper {
   border-radius: 12px;
-  overflow: hidden;
 }
 
 /* ---------- Plyr ---------- */
@@ -20,40 +19,61 @@
   .single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
     padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
     border-radius: 0 0 12px 12px;
+    gap: 8px;
+  }
+
+  /* مخفی‌سازی همه کنترل‌ها */
+  .single-jbg_ad .jbg-player-wrapper .plyr__controls > * {
+    display: none !important;
+  }
+
+  /* نمایش فقط پلی، ولوم، فول‌اسکرین و نوار پیشرفت */
+  .single-jbg_ad .jbg-player-wrapper [data-plyr="play"],
+  .single-jbg_ad .jbg-player-wrapper .plyr__volume,
+  .single-jbg_ad .jbg-player-wrapper [data-plyr="fullscreen"],
+  .single-jbg_ad .jbg-player-wrapper .plyr__progress {
+    display: flex !important;
+    align-items: center;
   }
 
   /* دکمه‌ها */
-  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: transparent !important;
-    box-shadow: none !important;
+  .single-jbg_ad .jbg-player-wrapper .plyr__control {
+    width: 36px;
+    height: 36px;
     border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
     padding: 0;
-    color: #F49F1E !important;
   }
 
-  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg {
-    width: 18px;
-    height: 18px;
-    fill: #F49F1E !important;
-    color: #F49F1E !important;
-    display: block !important;
-    opacity: 1 !important;
+  /* آیکن سفارشی: پلی */
+  .single-jbg_ad .jbg-player-wrapper [data-plyr="play"] {
+    background: url("https://jibbaghal.com/wp-content/uploads/2025/10/play-svgrepo-com.svg")
+      center/20px no-repeat !important;
   }
 
-  /* hover */
-  .single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control:hover svg {
-    fill: #ffb94b !important;
-    color: #ffb94b !important;
+  /* آیکن سفارشی: صدا */
+  .single-jbg_ad .jbg-player-wrapper .plyr__volume button {
+    background: url("https://jibbaghal.com/wp-content/uploads/2025/10/speaker-2-svgrepo-com.svg")
+      center/20px no-repeat !important;
   }
 
-  /* نوار پیشرفت */
+  /* آیکن سفارشی: فول‌اسکرین */
+  .single-jbg_ad .jbg-player-wrapper [data-plyr="fullscreen"] {
+    background: url("https://jibbaghal.com/wp-content/uploads/2025/10/fullscreen-svgrepo-com.svg")
+      center/20px no-repeat !important;
+  }
+
+  /* حذف svg داخلی Plyr */
+  .single-jbg_ad .jbg-player-wrapper .plyr__control svg {
+    display: none !important;
+  }
+
+  /* رنگ و ضخامت نوار پیشرفت */
   .single-jbg_ad .jbg-player-wrapper .plyr__progress {
     flex: 1;
     min-width: 0;
@@ -61,138 +81,76 @@
     padding: 0 6px;
   }
 
-  .single-jbg_ad .jbg-player-wrapper .plyr__progress input[type=range] {
-    height: 2px;
+  .single-jbg_ad .jbg-player-wrapper .plyr__progress input[type="range"] {
+    height: 3px;
   }
 
-  /* رنگ اصلی نوار */
-  .single-jbg_ad .jbg-player-wrapper
+  .single-jbg_ad
+    .jbg-player-wrapper
     .plyr__progress
-    input[type=range]::-webkit-slider-thumb,
-  .single-jbg_ad .jbg-player-wrapper
+    input[type="range"]::-webkit-slider-thumb,
+  .single-jbg_ad
+    .jbg-player-wrapper
     .plyr__progress
-    input[type=range]::-moz-range-thumb,
-  .single-jbg_ad .jbg-player-wrapper
+    input[type="range"]::-moz-range-thumb,
+  .single-jbg_ad
+    .jbg-player-wrapper
     .plyr__progress
     .plyr__progress--played {
-    background-color: #F49F1E !important;
-  }
-
-  /* ولوم */
-  .single-jbg_ad .jbg-player-wrapper .plyr__volume {
-    max-width: 84px;
-  }
-
-  /* دکمه پلی وسط */
-  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid {
-    transform: translate(-50%, -50%) scale(0.82);
-    background: rgba(0, 0, 0, 0.5);
-    color: #F49F1E !important;
-  }
-
-  .single-jbg_ad .jbg-player-wrapper .plyr__control--overlaid svg {
-    fill: #F49F1E !important;
-    color: #F49F1E !important;
+    background-color: #f49f1e !important;
   }
 }
 
-/* ---------- MediaElement.js ---------- */
+/* ---------- MediaElement.js (در صورت fallback) ---------- */
 @media (max-width: 575.98px) {
-  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-controls {
+  .single-jbg_ad .jbg-player-wrapper .mejs-controls {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    height: 42px !important;
     padding: 6px 8px;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
     border-radius: 0 0 12px 12px;
   }
 
-  .single-jbg_ad .jbg-player-wrapper .mejs-container .mejs-time-rail {
-    flex: 1;
-    min-width: 0;
-    height: 18px;
+  /* فقط پلی، صدا، فول‌اسکرین، نوار */
+  .single-jbg_ad .jbg-player-wrapper .mejs-controls > div {
+    display: none !important;
   }
 
-  .single-jbg_ad
-    .jbg-player-wrapper
-    .mejs-container
-    .mejs-time-rail
-    .mejs-time-total {
-    height: 2px;
-    margin: 8px 6px;
-  }
-
-  .single-jbg_ad
-    .jbg-player-wrapper
-    .mejs-container
-    .mejs-button
-    > button {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    color: #F49F1E !important;
-  }
-
-  .single-jbg_ad
-    .jbg-player-wrapper
-    .mejs-container
-    .mejs-button
-    > button
-    svg {
-    fill: #F49F1E !important;
-    color: #F49F1E !important;
+  .single-jbg_ad .jbg-player-wrapper .mejs-playpause-button,
+  .single-jbg_ad .jbg-player-wrapper .mejs-time-rail,
+  .single-jbg_ad .jbg-player-wrapper .mejs-volume-button,
+  .single-jbg_ad .jbg-player-wrapper .mejs-fullscreen-button {
     display: block !important;
   }
 
-  .single-jbg_ad
-    .jbg-player-wrapper
-    .mejs-container
-    .mejs-button
-    > button:hover
-    svg {
-    fill: #ffb94b !important;
+  /* جایگزینی آیکن‌ها */
+  .single-jbg_ad .jbg-player-wrapper .mejs-playpause-button button {
+    background: url("https://jibbaghal.com/wp-content/uploads/2025/10/play-svgrepo-com.svg")
+      center/20px no-repeat !important;
   }
 
-  /* progress bar رنگ */
+  .single-jbg_ad .jbg-player-wrapper .mejs-volume-button button {
+    background: url("https://jibbaghal.com/wp-content/uploads/2025/10/speaker-2-svgrepo-com.svg")
+      center/20px no-repeat !important;
+  }
+
+  .single-jbg_ad .jbg-player-wrapper .mejs-fullscreen-button button {
+    background: url("https://jibbaghal.com/wp-content/uploads/2025/10/fullscreen-svgrepo-com.svg")
+      center/20px no-repeat !important;
+  }
+
+  /* حذف آیکن‌های svg داخلی */
+  .single-jbg_ad .jbg-player-wrapper .mejs-controls svg {
+    display: none !important;
+  }
+
+  /* progress */
   .single-jbg_ad
     .jbg-player-wrapper
     .mejs-time-rail
     .mejs-time-current {
-    background-color: #F49F1E !important;
+    background-color: #f49f1e !important;
   }
 }
-
-/* کنترل‌ها روی ویدیو، بدون تداخل با کلیک */
-.single-jbg_ad .jbg-player-wrapper .plyr__controls,
-.single-jbg_ad .jbg-player-wrapper .mejs-controls {
-  z-index: 2;
-}
-/* ===== فقط پلی، صدا و فول‌اسکرین ===== */
-
-/* Plyr */
-.single-jbg_ad .jbg-player-wrapper .plyr__controls > .plyr__controls__item {display:none !important;}
-/* مجازها */
-.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="play"],
-.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__volume,
-.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="fullscreen"],
-.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__progress {display:flex !important;}
-/* زمان، کپشن، تنظیمات، pip، دانلود، airplay… پنهان */
-.single-jbg_ad .jbg-player-wrapper .plyr__time,
-.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="captions"],
-.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="pip"],
-.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="airplay"],
-.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="settings"],
-.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="download"] {display:none !important;}
-
-/* MediaElement.js */
-.single-jbg_ad .jbg-player-wrapper .mejs-controls > div {display:none !important;}
-/* مجازها */
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-playpause-button,
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-time-rail,
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-volume-button,
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-horizontal-volume-slider,
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-fullscreen-button {display:block !important;}
