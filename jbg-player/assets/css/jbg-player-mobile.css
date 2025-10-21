@@ -171,3 +171,28 @@
 .single-jbg_ad .jbg-player-wrapper .mejs-controls {
   z-index: 2;
 }
+/* ===== فقط پلی، صدا و فول‌اسکرین ===== */
+
+/* Plyr */
+.single-jbg_ad .jbg-player-wrapper .plyr__controls > .plyr__controls__item {display:none !important;}
+/* مجازها */
+.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="play"],
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__volume,
+.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="fullscreen"],
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__progress {display:flex !important;}
+/* زمان، کپشن، تنظیمات، pip، دانلود، airplay… پنهان */
+.single-jbg_ad .jbg-player-wrapper .plyr__time,
+.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="captions"],
+.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="pip"],
+.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="airplay"],
+.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="settings"],
+.single-jbg_ad .jbg-player-wrapper .plyr__controls [data-plyr="download"] {display:none !important;}
+
+/* MediaElement.js */
+.single-jbg_ad .jbg-player-wrapper .mejs-controls > div {display:none !important;}
+/* مجازها */
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-playpause-button,
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-time-rail,
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-volume-button,
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-horizontal-volume-slider,
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-fullscreen-button {display:block !important;}
