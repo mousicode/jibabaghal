@@ -37,21 +37,6 @@ class ViewBadge
         return $count;
     }
 
-    private static function score_badge(int $post_id): string {
-        if (function_exists('shortcode_exists') && shortcode_exists('jbg_points_badge')) {
-            $out = do_shortcode('[jbg_points_badge id="'.intval($post_id).'"]');
-            if (is_string($out) && strpos($out, '[') === false) {
-                return '<span class="score-badge">'.$out.'</span>';
-            }
-        }
-        $score = get_post_meta($post_id, 'jbg_score', true);
-        if ($score === '') $score = get_post_meta($post_id, 'points', true);
-        if ($score === '') $score = get_post_meta($post_id, 'jbg_points', true);
-        if ($score === '' || $score === null) return '';
-        $score = is_numeric($score) ? (int)$score : wp_strip_all_tags((string)$score);
-        return '<span class="score-badge badge">'.$score.' امتیاز</span>';
-    }
-
     public static function register(): void {
         add_filter('the_content', [self::class, 'inject'], 7);
     }
@@ -86,8 +71,6 @@ class ViewBadge
           .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px}
           .jbg-single-header .dot{opacity:.55}
           .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
-          .jbg-single-header .score-badge .badge,
-          .jbg-single-header .score-badge{background:#eef2ff;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:700;color:#1f2937;white-space:nowrap}
           .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
           @media (max-width:640px){
             .jbg-single-header .title{font-size:18px}
@@ -96,11 +79,13 @@ class ViewBadge
           }
         </style>';
 
+        // راست: فقط عنوان + بازدید و زمان
         $right  = '<div class="col-right">';
-        $right .=   '<h1 class="title">'.esc_html(get_the_title($id)). self::score_badge($id) .'</h1>';
+        $right .=   '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>';
         $right .=   '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
         $right .= '</div>';
 
+        // چپ: لایک/دیس‌لایک + برند
         $left   = '<div class="col-left">';
         $left  .=   '<span class="ext-like">'.$like_shortcode.'</span>';
         if ($brand) $left .= '<span class="brand">'.esc_html($brand).'</span>';
