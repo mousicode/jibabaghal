@@ -117,6 +117,18 @@ class Bootstrap {
             }
         });
 
+        // enqueue استایل هدر ویدیو (همان فایلی که ساختی)
+        add_action('wp_enqueue_scripts', function () {
+            if (is_singular('jbg_ad')) {
+                wp_enqueue_style(
+                    'jbg-video-header',
+                    plugins_url('../assets/css/jbg-video-header.css', __FILE__),
+                    [],
+                    '1.0'
+                );
+            }
+        });
+
         /* -----------------------------------------------------------------
          * Progress / Gating / Points
          * ----------------------------------------------------------------- */

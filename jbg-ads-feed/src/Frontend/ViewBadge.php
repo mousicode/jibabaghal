@@ -52,7 +52,9 @@ class ViewBadge
         $when   = self::relative_time($id);
         $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
+        // CSS فقط اصلاح چیدمان موجود؛ بدون ایجاد فایل جدید
         $style = '<style id="jbg-single-header-css">
+          /* پنهان‌سازی تیتر پیش‌فرض و watched% تم */
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
           .single-jbg_ad .entry-title,
@@ -63,19 +65,40 @@ class ViewBadge
           .single-jbg_ad .jbg-watched,
           .single-jbg_ad .watched{display:none!important;}
 
+          /* هدر زیر پلیر */
           .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
-          .jbg-single-header .row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
-          .jbg-single-header .col-right{display:flex;flex-direction:column;gap:6px;min-width:40%}
-          .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:40%;justify-content:flex-end}
-          .jbg-single-header .title{margin:0;display:flex;align-items:center;gap:10px;font-size:24px;line-height:1.35;font-weight:800;color:#111827}
-          .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px}
+          .jbg-single-header .row{
+            display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap
+          }
+
+          /* راست: عنوان + متا در یک خط */
+          .jbg-single-header .col-right{
+            display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto
+          }
+          .jbg-single-header .title{
+            margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            font-size:24px;line-height:1.35;font-weight:800;color:#111827
+          }
+          .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
           .jbg-single-header .dot{opacity:.55}
-          .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
+
+          /* چپ: لایک/دیس‌لایک + برند در یک خط و راست‌چین */
+          .jbg-single-header .col-left{
+            display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:0 0 auto;min-width:0
+          }
           .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
+          .jbg-single-header .brand{
+            background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;
+            font-weight:600;white-space:nowrap
+          }
+
+          /* موبایل: همچنان همه در یک ردیف بمانند */
           @media (max-width:640px){
-            .jbg-single-header .title{font-size:18px}
+            .jbg-single-header .row{gap:8px;flex-wrap:nowrap}
+            .jbg-single-header .title{font-size:18px;max-width:55vw}
             .jbg-single-header .sub{font-size:12.5px}
-            .jbg-single-header .col-left,.jbg-single-header .col-right{min-width:100%;justify-content:flex-start}
+            .jbg-single-header .col-right{flex:1 1 auto;min-width:0}
+            .jbg-single-header .col-left{flex:0 0 auto;justify-content:flex-end}
           }
         </style>';
 
@@ -93,6 +116,7 @@ class ViewBadge
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
+        // انتقال هدر به زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
