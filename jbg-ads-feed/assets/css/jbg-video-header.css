@@ -26,13 +26,7 @@
 
 /* ===== دسکتاپ: چپ واقعا برود سمت چپ ===== */
 @media (min-width:769px){
-  .jbg-single-header .row{flex-wrap:nowrap}
-  .jbg-single-header .col-right{flex:0 1 auto;min-width:0;order:1}
-  .jbg-single-header .col-left{
-    order:2;
-    margin-left:auto;              /* فیزیکی */
-    margin-inline-start:auto;      /* منطقی برای RTL/LTR */
-    justify-content:flex-end;
-    flex:0 0 auto
-  }
+  .jbg-single-header .row{display:flex;align-items:center;gap:10px;justify-content:flex-start} /* شروع ردیف از راست (RTL) ولی بدون فاصلهٔ بین */
+  .jbg-single-header .col-right{order:1;margin-inline-end:auto;min-width:0}  /* عنوان را تا لبهٔ راست هل بده */
+  .jbg-single-header .col-left{order:2;margin:0;justify-content:flex-end;flex:0 0 auto}        /* گروه لایک/برند در گوشهٔ چپ بماند */
 }
