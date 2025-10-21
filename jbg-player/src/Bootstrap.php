@@ -57,6 +57,14 @@ class Bootstrap {
   display:block !important;
   opacity:1 !important;
 }
+/* رنگ آیکون‌ها */
+.single-jbg_ad .jbg-player-wrapper .plyr__controls svg path,
+.single-jbg_ad .jbg-player-wrapper .plyr__controls svg polygon,
+.single-jbg_ad .jbg-player-wrapper .plyr__controls svg rect,
+.single-jbg_ad .jbg-player-wrapper .plyr__controls svg circle {
+  fill: #F49F1E !important;
+  stroke: #F49F1E !important;
+}
 /* MediaElement fallback reset */
 .single-jbg_ad .jbg-player-wrapper .mejs-controls{
   background:transparent !important; box-shadow:none !important;
