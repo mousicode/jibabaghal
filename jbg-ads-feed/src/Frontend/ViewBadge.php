@@ -37,16 +37,13 @@ class ViewBadge
         return $count;
     }
 
-    /** امتیاز: اگر شورت‌کد ثبت است، اجرا؛ وگرنه از متا بخوان */
     private static function score_badge(int $post_id): string {
         if (function_exists('shortcode_exists') && shortcode_exists('jbg_points_badge')) {
             $out = do_shortcode('[jbg_points_badge id="'.intval($post_id).'"]');
-            // اگر خروجی واقعاً رندر شد
             if (is_string($out) && strpos($out, '[') === false) {
                 return '<span class="score-badge">'.$out.'</span>';
             }
         }
-        // fallback از متاهای رایج
         $score = get_post_meta($post_id, 'jbg_score', true);
         if ($score === '') $score = get_post_meta($post_id, 'points', true);
         if ($score === '') $score = get_post_meta($post_id, 'jbg_points', true);
@@ -68,11 +65,8 @@ class ViewBadge
         $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
         $viewsF = self::compact_views($views) . ' بازدید';
         $when   = self::relative_time($id);
-
-        // لایک/دیس‌لایک از افزونهٔ جدید
         $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // CSS چیدمان و مخفی‌سازی‌های لازم
         $style = '<style id="jbg-single-header-css">
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
@@ -88,7 +82,7 @@ class ViewBadge
           .jbg-single-header .row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
           .jbg-single-header .col-right{display:flex;flex-direction:column;gap:6px;min-width:40%}
           .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:40%;justify-content:flex-end}
-          .jbg-single-header .title{margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827}
+          .jbg-single-header .title{margin:0;display:flex;align-items:center;gap:10px;font-size:24px;line-height:1.35;font-weight:800;color:#111827}
           .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px}
           .jbg-single-header .dot{opacity:.55}
           .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
@@ -98,26 +92,22 @@ class ViewBadge
           @media (max-width:640px){
             .jbg-single-header .title{font-size:18px}
             .jbg-single-header .sub{font-size:12.5px}
-            .jbg-single-header .col-left,.jbg-single-header .col-right{min-width:100%}
+            .jbg-single-header .col-left,.jbg-single-header .col-right{min-width:100%;justify-content:flex-start}
           }
         </style>';
 
-        // راست: عنوان + بازدید و زمان
         $right  = '<div class="col-right">';
-        $right .=   '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>';
+        $right .=   '<h1 class="title">'.esc_html(get_the_title($id)). self::score_badge($id) .'</h1>';
         $right .=   '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
         $right .= '</div>';
 
-        // چپ: لایک/دیس‌لایک + برند + امتیاز
         $left   = '<div class="col-left">';
         $left  .=   '<span class="ext-like">'.$like_shortcode.'</span>';
         if ($brand) $left .= '<span class="brand">'.esc_html($brand).'</span>';
-        $left  .=   self::score_badge($id);
         $left  .= '</div>';
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
-        // انتقال زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
