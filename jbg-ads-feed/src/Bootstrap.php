@@ -106,7 +106,7 @@ class Bootstrap {
             }
         });
 
-        // نشان‌گر بازدید
+        // سرخط و متای زیر پلیر + پنهان‌سازی watched%
         add_action('init', function () {
             $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
             if (file_exists($vb)) {
@@ -117,24 +117,7 @@ class Bootstrap {
             }
         });
 
-        // UI/Assets لایک — ترجیح با LikeUI (تزریق کنار عنوان)؛ اگر نبود، fallback به LikeAssets
-        add_action('init', function () {
-            $ui = JBG_ADS_DIR . 'src/Frontend/LikeUI.php';
-            if (file_exists($ui)) {
-                require_once $ui;
-                if (class_exists('\\JBG\\Ads\\Frontend\\LikeUI')) {
-                    \JBG\Ads\Frontend\LikeUI::register();
-                    return;
-                }
-            }
-            $assets = JBG_ADS_DIR . 'src/Frontend/LikeAssets.php';
-            if (file_exists($assets)) {
-                require_once $assets;
-                if (class_exists('\\JBG\\Ads\\Frontend\\LikeAssets')) {
-                    \JBG\Ads\Frontend\LikeAssets::register();
-                }
-            }
-        });
+        /*  توجه: بلوک قدیمی UI/Assets لایک حذف شد تا فقط شورت‌کد افزونهٔ جدید استفاده شود  */
 
         /* -----------------------------------------------------------------
          * Progress / Gating / Points

@@ -1,15 +1,7 @@
 <?php
 namespace JBG\Ads\Frontend;
-
 if (!defined('ABSPATH')) exit;
 
-/**
- * ViewBadge: هدر داخلیِ صفحهٔ تک آگهی
- * - عنوان و متا زیر پلیر
- * - مخفی‌سازی هدر قالب WoodMart
- * - افزودن کلاس .jbg-title روی <h1> تا اسکریپت لایک محل تزریق را پیدا کند
- * - حذف صرفاً‌ِ ظاهری برچسب watched%
- */
 class ViewBadge
 {
     private static function compact_views(int $n): string {
@@ -35,7 +27,7 @@ class ViewBadge
         $meta = (int) get_post_meta($ad_id, 'jbg_views_count', true);
         if ($meta > 0) return $meta;
         global $wpdb;
-        $table = $wpdb->prefix . 'jbg_views';
+        $table  = $wpdb->prefix . 'jbg_views';
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) return 0;
         $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id=%d", $ad_id));
@@ -45,7 +37,6 @@ class ViewBadge
     }
 
     public static function register(): void {
-        // بعد از تولید بدنهٔ محتوا
         add_filter('the_content', [self::class, 'inject'], 7);
     }
 
@@ -59,29 +50,24 @@ class ViewBadge
         $viewsF = self::compact_views($views) . ' بازدید';
         $when   = self::relative_time($id);
 
-        // CSS فقط ظاهری
+        // CSS: مخفی کردن هدر WoodMart + watched%
         $style = '<style id="jbg-single-header-css">
-          /* هدر پیش‌فرض WoodMart و تیترهای عمومی را در single-jbg_ad پنهان کن */
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
           .single-jbg_ad .entry-title,
           .single-jbg_ad h1.entry-title,
           .single-jbg_ad .post-title,
-          .single-jbg_ad .elementor-heading-title{display:none !important;}
-
-          /* حذف صرفاً ظاهری نشانگر watched% بدون تغییر منطق بک‌اند */
+          .single-jbg_ad .elementor-heading-title{display:none!important;}
+          .single-jbg_ad .jbg-status,
           .single-jbg_ad .jbg-watched,
-          .single-jbg_ad .jbg-watch,
-          .single-jbg_ad .watched{display:none !important;}
-
-          .jbg-player-wrapper .jbg-single-header{
-            width:100%;margin:10px 0 0;padding:0;box-sizing:border-box;direction:rtl;text-align:right;
-          }
+          .single-jbg_ad .watched{display:none!important;}
+          .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl;text-align:right}
           .jbg-single-header .jbg-headrow{display:flex;align-items:baseline;gap:12px}
           .jbg-single-header .jbg-single-title{margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827}
           .jbg-single-header .jbg-single-meta{margin-inline-start:auto;display:flex;gap:8px;align-items:center;font-size:14px;color:#374151;flex-wrap:nowrap}
           .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
           .jbg-single-header .dot{opacity:.55}
+          .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:8px;margin-inline-start:8px}
           @media (max-width:640px){
             .jbg-single-header .jbg-headrow{flex-direction:column;align-items:flex-end;gap:6px}
             .jbg-single-header .jbg-single-title{font-size:16px}
@@ -89,15 +75,24 @@ class ViewBadge
           }
         </style>';
 
-        // هدر داخلی: کلاس .jbg-title افزوده شد تا اسکریپت لایک آن را پیدا کند
-        $header  = '<div class="jbg-single-header"><div class="jbg-headrow">';
-        $header .= '<h1 class="jbg-single-title jbg-title">'.esc_html(get_the_title($id)).'</h1>';
-        $header .= '<div class="jbg-single-meta">';
-        if ($brand) $header .= '<span class="brand">'.esc_html($brand).'</span><span class="dot">•</span>';
-        $header .= '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
-        $header .= '</div></div></div>';
+        // شورت‌کد افزونهٔ جدید کنار برند
+        $short = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // انتقال قطعی هدر به زیر پلیر
+        $header  = '<div class="jbg-single-header"><div class="jbg-headrow">';
+        $header .=   '<h1 class="jbg-single-title">'.esc_html(get_the_title($id)).'</h1>';
+        $header .=   '<div class="jbg-single-meta">';
+        if ($brand) {
+            $header .= '<span class="brand">'.esc_html($brand).'</span>';
+            $header .= '<span class="ext-like">'.$short.'</span>'; // لایک/دیس‌لایک افزونهٔ جدید
+            $header .= '<span class="dot">•</span>';
+        } else {
+            $header .= '<span class="ext-like">'.$short.'</span><span class="dot">•</span>';
+        }
+        $header .=     '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
+        $header .=   '</div>';
+        $header .= '</div></div>';
+
+        // جابه‌جایی قطعی به زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
@@ -109,7 +104,6 @@ class ViewBadge
 
         static $once=false;
         if(!$once){ $content = $style . $content; $once=true; }
-
         return $header . $script . $content;
     }
 }
