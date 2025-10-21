@@ -116,3 +116,12 @@
     order: 1;
   }
 }
+@media (min-width: 769px){
+  .jbg-single-header .row{flex-wrap:nowrap}
+  .jbg-single-header .col-right{flex:0 1 auto;min-width:0}
+  .jbg-single-header .col-left{
+    margin-inline-start:auto; /* در RTL هل می‌دهد سمت چپ */
+    justify-content:flex-end;
+    flex:0 0 auto;
+  }
+}
