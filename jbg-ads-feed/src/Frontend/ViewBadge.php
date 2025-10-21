@@ -1,5 +1,6 @@
 <?php
 namespace JBG\Ads\Frontend;
+
 if (!defined('ABSPATH')) exit;
 
 class ViewBadge
@@ -36,6 +37,25 @@ class ViewBadge
         return $count;
     }
 
+    /** امتیاز: تلاش برای گرفتن خروجی از شورت‌کد یا متای رایج؛ درصورت نبود، خالی */
+    private static function score_badge(int $post_id): string {
+        // اگر افزونه‌ای شورت‌کد امتیاز دارد، این‌ها را امتحان کن
+        foreach ([
+            '[jbg_points_badge id=%d]',
+            '[jbg_score id=%d]',
+            '[points_badge id=%d]',
+        ] as $fmt) {
+            $sc = do_shortcode(sprintf($fmt, $post_id));
+            if (is_string($sc) && trim(wp_strip_all_tags($sc)) !== '') return '<span class="score-badge">'.$sc.'</span>';
+        }
+        // fallback ساده از متاهای رایج
+        $score = get_post_meta($post_id, 'jbg_score', true);
+        if ($score === '') $score = get_post_meta($post_id, 'points', true);
+        if ($score === '') $score = get_post_meta($post_id, 'jbg_points', true);
+        $score = is_numeric($score) ? (int)$score : null;
+        return $score !== null ? '<span class="score-badge badge">'.$score.' امتیاز</span>' : '';
+    }
+
     public static function register(): void {
         add_filter('the_content', [self::class, 'inject'], 7);
     }
@@ -50,7 +70,10 @@ class ViewBadge
         $viewsF = self::compact_views($views) . ' بازدید';
         $when   = self::relative_time($id);
 
-        // CSS: مخفی کردن هدر WoodMart + watched%
+        // شورت‌کد افزونه جدید لایک/دیس‌لایک
+        $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
+
+        // CSS: مخفی‌سازی هدر WoodMart و watched% و چیدمان دو ستونه
         $style = '<style id="jbg-single-header-css">
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
@@ -61,36 +84,39 @@ class ViewBadge
           .single-jbg_ad .jbg-status,
           .single-jbg_ad .jbg-watched,
           .single-jbg_ad .watched{display:none!important;}
-          .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl;text-align:right}
-          .jbg-single-header .jbg-headrow{display:flex;align-items:baseline;gap:12px}
-          .jbg-single-header .jbg-single-title{margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827}
-          .jbg-single-header .jbg-single-meta{margin-inline-start:auto;display:flex;gap:8px;align-items:center;font-size:14px;color:#374151;flex-wrap:nowrap}
-          .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
+
+          .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
+          .jbg-single-header .row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+          .jbg-single-header .col-right{display:flex;flex-direction:column;gap:6px;min-width:40%}
+          .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:40%;justify-content:flex-start}
+          .jbg-single-header .title{margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827}
+          .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px}
           .jbg-single-header .dot{opacity:.55}
-          .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:8px;margin-inline-start:8px}
+          .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
+          .jbg-single-header .score-badge .badge,
+          .jbg-single-header .score-badge{background:#eef2ff;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:700;color:#1f2937;white-space:nowrap}
+          .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
           @media (max-width:640px){
-            .jbg-single-header .jbg-headrow{flex-direction:column;align-items:flex-end;gap:6px}
-            .jbg-single-header .jbg-single-title{font-size:16px}
-            .jbg-single-header .jbg-single-meta{font-size:12.5px;margin-inline-start:0;flex-wrap:wrap;justify-content:flex-start}
+            .jbg-single-header .title{font-size:18px}
+            .jbg-single-header .sub{font-size:12.5px}
+            .jbg-single-header .col-left,.jbg-single-header .col-right{min-width:100%}
           }
         </style>';
 
-        // شورت‌کد افزونهٔ جدید کنار برند
-        $short = do_shortcode('[posts_like_dislike id=' . $id . ']');
+        // ستون راست: عنوان + بازدید و زمان
+        $right  = '<div class="col-right">';
+        $right .=   '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>';
+        $right .=   '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
+        $right .= '</div>';
 
-        $header  = '<div class="jbg-single-header"><div class="jbg-headrow">';
-        $header .=   '<h1 class="jbg-single-title">'.esc_html(get_the_title($id)).'</h1>';
-        $header .=   '<div class="jbg-single-meta">';
-        if ($brand) {
-            $header .= '<span class="brand">'.esc_html($brand).'</span>';
-            $header .= '<span class="ext-like">'.$short.'</span>'; // لایک/دیس‌لایک افزونهٔ جدید
-            $header .= '<span class="dot">•</span>';
-        } else {
-            $header .= '<span class="ext-like">'.$short.'</span><span class="dot">•</span>';
-        }
-        $header .=     '<span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span>';
-        $header .=   '</div>';
-        $header .= '</div></div>';
+        // ستون چپ: لایک/دیس‌لایک + برند + امتیاز
+        $left   = '<div class="col-left">';
+        $left  .=   '<span class="ext-like">'.$like_shortcode.'</span>';
+        if ($brand) $left .= '<span class="brand">'.esc_html($brand).'</span>';
+        $left  .=   self::score_badge($id);
+        $left  .= '</div>';
+
+        $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
         // جابه‌جایی قطعی به زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
