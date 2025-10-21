@@ -12,7 +12,7 @@ class Bootstrap {
         add_action('wp', [Renderer::class, 'bootstrap']);
         add_action('rest_api_init', [WatchController::class, 'register_routes']);
 
-        // ریست ظاهر پلیر در برابر قالب‌ها (بعد از plyr.css)
+        // ریست ظاهر پلیر و رنگ آیکون‌ها (بعد از plyr.css)
         add_action('wp_enqueue_scripts', [self::class, 'force_skin'], 99);
     }
 
@@ -21,68 +21,97 @@ class Bootstrap {
 
         $css = <<<CSS
 /* ---- Force default Plyr look on single jbg_ad ---- */
-.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls{
-  background:transparent !important;
-  box-shadow:none !important;
-  padding:8px 12px !important;
-  gap:8px !important;
-  flex-wrap:nowrap !important;
+.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 8px 12px !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
 }
-.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls::before{display:none !important}
-.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control{
-  background:none !important;
-  border:0 !important;
-  box-shadow:none !important;
-  border-radius:0 !important;
-  padding:0 !important;
-  width:auto !important; height:auto !important;
+.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls::before {
+  display: none !important;
 }
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+/* حذف استایل قالب از دکمه‌ها */
 .single-jbg_ad .jbg-player-wrapper button,
-.single-jbg_ad .jbg-player-wrapper a{
-  background:none !important;
-  border:0 !important;
-  box-shadow:none !important;
+.single-jbg_ad .jbg-player-wrapper a {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
-/* progress takes the middle space */
-.single-jbg_ad .jbg-player-wrapper .plyr__progress{
-  flex:1 1 auto !important;
-  min-width:0 !important;
-  height:auto;
-  padding:0 6px !important;
+
+/* نوار پیشرفت */
+.single-jbg_ad .jbg-player-wrapper .plyr__progress {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: auto;
+  padding: 0 6px !important;
 }
-/* keep volume width sensible */
-.single-jbg_ad .jbg-player-wrapper .plyr__volume{max-width:120px}
-/* ensure SVG icons are visible */
-.single-jbg_ad .jbg-player-wrapper .plyr__control svg{
-  display:block !important;
-  opacity:1 !important;
+
+/* بخش صدا */
+.single-jbg_ad .jbg-player-wrapper .plyr__volume {
+  max-width: 120px;
 }
-/* رنگ آیکون‌ها */
-.single-jbg_ad .jbg-player-wrapper .plyr__controls svg path,
-.single-jbg_ad .jbg-player-wrapper .plyr__controls svg polygon,
-.single-jbg_ad .jbg-player-wrapper .plyr__controls svg rect,
-.single-jbg_ad .jbg-player-wrapper .plyr__controls svg circle {
-  fill: #F49F1E !important;
-  stroke: #F49F1E !important;
+
+/* رنگ ایکن‌ها در تمام حالت‌ها */
+.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls .plyr__control,
+.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls .plyr__control:hover,
+.single-jbg_ad .jbg-player-wrapper .plyr--video .plyr__controls .plyr__control:focus {
+  color: #F49F1E !important;
 }
+
+/* svg پیروی از رنگ دکمه */
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg,
+.single-jbg_ad .jbg-player-wrapper .plyr__controls .plyr__control svg * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  opacity: 1 !important;
+}
+
 /* MediaElement fallback reset */
-.single-jbg_ad .jbg-player-wrapper .mejs-controls{
-  background:transparent !important; box-shadow:none !important;
-  height:40px !important; padding:6px 8px !important;
-  display:flex; align-items:center; gap:8px;
+.single-jbg_ad .jbg-player-wrapper .mejs-controls {
+  background: transparent !important;
+  box-shadow: none !important;
+  height: 40px !important;
+  padding: 6px 8px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button>button{
-  background:transparent !important; border:0 !important; box-shadow:none !important; padding:0 !important;
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: #F49F1E !important;
 }
-.single-jbg_ad .jbg-player-wrapper .mejs-time-rail{flex:1 1 auto !important; min-width:0 !important;}
-.single-jbg_ad .jbg-player-wrapper .mejs-time-rail .mejs-time-total{height:3px; margin:8px 6px}
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button svg,
+.single-jbg_ad .jbg-player-wrapper .mejs-controls .mejs-button > button svg * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+.single-jbg_ad .jbg-player-wrapper .mejs-time-rail {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+.single-jbg_ad .jbg-player-wrapper .mejs-time-rail .mejs-time-total {
+  height: 3px;
+  margin: 8px 6px;
+}
 CSS;
 
-        // سعی کن بعد از plyr.css تزریق شود
         if (wp_style_is('plyr', 'enqueued')) {
             wp_add_inline_style('plyr', $css);
         } else {
-            // اگر هندل plyr متفاوت است یا لود نشده، یک استایل مستقل بارگذاری کن
             wp_register_style('jbg-player-reset-inline', false);
             wp_enqueue_style('jbg-player-reset-inline');
             wp_add_inline_style('jbg-player-reset-inline', $css);
