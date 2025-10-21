@@ -37,23 +37,22 @@ class ViewBadge
         return $count;
     }
 
-    /** امتیاز: تلاش برای گرفتن خروجی از شورت‌کد یا متای رایج؛ درصورت نبود، خالی */
+    /** امتیاز: اگر شورت‌کد ثبت است، اجرا؛ وگرنه از متا بخوان */
     private static function score_badge(int $post_id): string {
-        // اگر افزونه‌ای شورت‌کد امتیاز دارد، این‌ها را امتحان کن
-        foreach ([
-            '[jbg_points_badge id=%d]',
-            '[jbg_score id=%d]',
-            '[points_badge id=%d]',
-        ] as $fmt) {
-            $sc = do_shortcode(sprintf($fmt, $post_id));
-            if (is_string($sc) && trim(wp_strip_all_tags($sc)) !== '') return '<span class="score-badge">'.$sc.'</span>';
+        if (function_exists('shortcode_exists') && shortcode_exists('jbg_points_badge')) {
+            $out = do_shortcode('[jbg_points_badge id="'.intval($post_id).'"]');
+            // اگر خروجی واقعاً رندر شد
+            if (is_string($out) && strpos($out, '[') === false) {
+                return '<span class="score-badge">'.$out.'</span>';
+            }
         }
-        // fallback ساده از متاهای رایج
+        // fallback از متاهای رایج
         $score = get_post_meta($post_id, 'jbg_score', true);
         if ($score === '') $score = get_post_meta($post_id, 'points', true);
         if ($score === '') $score = get_post_meta($post_id, 'jbg_points', true);
-        $score = is_numeric($score) ? (int)$score : null;
-        return $score !== null ? '<span class="score-badge badge">'.$score.' امتیاز</span>' : '';
+        if ($score === '' || $score === null) return '';
+        $score = is_numeric($score) ? (int)$score : wp_strip_all_tags((string)$score);
+        return '<span class="score-badge badge">'.$score.' امتیاز</span>';
     }
 
     public static function register(): void {
@@ -70,10 +69,10 @@ class ViewBadge
         $viewsF = self::compact_views($views) . ' بازدید';
         $when   = self::relative_time($id);
 
-        // شورت‌کد افزونه جدید لایک/دیس‌لایک
+        // لایک/دیس‌لایک از افزونهٔ جدید
         $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // CSS: مخفی‌سازی هدر WoodMart و watched% و چیدمان دو ستونه
+        // CSS چیدمان و مخفی‌سازی‌های لازم
         $style = '<style id="jbg-single-header-css">
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
@@ -103,13 +102,13 @@ class ViewBadge
           }
         </style>';
 
-        // ستون راست: عنوان + بازدید و زمان
+        // راست: عنوان + بازدید و زمان
         $right  = '<div class="col-right">';
         $right .=   '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>';
         $right .=   '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
         $right .= '</div>';
 
-        // ستون چپ: لایک/دیس‌لایک + برند + امتیاز
+        // چپ: لایک/دیس‌لایک + برند + امتیاز
         $left   = '<div class="col-left">';
         $left  .=   '<span class="ext-like">'.$like_shortcode.'</span>';
         if ($brand) $left .= '<span class="brand">'.esc_html($brand).'</span>';
@@ -118,7 +117,7 @@ class ViewBadge
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
-        // جابه‌جایی قطعی به زیر پلیر
+        // انتقال زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
