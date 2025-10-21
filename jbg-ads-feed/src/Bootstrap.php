@@ -62,17 +62,6 @@ class Bootstrap {
             }
         });
 
-        // NEW: Carousel of latest ads
-        add_action('init', function () {
-            $f = JBG_ADS_DIR . 'src/Frontend/CarouselShortcode.php';
-            if (file_exists($f)) {
-                require_once $f;
-                if (class_exists('\\JBG\\Ads\\Frontend\\CarouselShortcode')) {
-                    \JBG\Ads\Frontend\CarouselShortcode::register();
-                }
-            }
-        });
-
         // نمایش امتیاز کاربر (در صورت وجود)
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
@@ -116,8 +105,6 @@ class Bootstrap {
                 }
             }
         });
-
-        /*  توجه: بلوک قدیمی UI/Assets لایک حذف شد تا فقط شورت‌کد افزونهٔ جدید استفاده شود  */
 
         /* -----------------------------------------------------------------
          * Progress / Gating / Points
