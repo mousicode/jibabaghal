@@ -17,3 +17,18 @@ margin-top:10px; background:#16a34a; color:#fff; border:none; padding:10px 14px;
 .jbg-quiz-meta-sub{font-size:12px;color:#4b5563;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .jbg-quiz-meta-sub .brand{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-weight:600}
 .jbg-quiz-meta-sub .dot{opacity:.55}
+#jbg-quiz .jbg-quiz-btn {
+  display: inline-block;
+  background: rgb(1,111,135);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 999px; /* گرد کامل */
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+#jbg-quiz .jbg-quiz-btn:hover {
+  background: rgb(0,95,115);
+}
