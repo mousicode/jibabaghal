@@ -4,20 +4,25 @@ namespace JBG\Quiz\Frontend;
 class Renderer {
 
     public static function bootstrap(): void {
+        // شورت‌کد همیشه ثبت شود
         add_shortcode('jbg_quiz', [self::class, 'render_shortcode']);
+        // اسکریپت/استایل فقط در صفحه تکی ویدیو
         add_action('wp_enqueue_scripts', [self::class, 'enqueue_assets']);
     }
 
     public static function enqueue_assets(): void {
         if (!is_singular('jbg_ad')) return;
 
+        // نسخه برای خالی شدن کش
         $ver = '0.1.6';
 
         wp_enqueue_style('jbg-quiz', JBG_QUIZ_URL . 'assets/css/jbg-quiz.css', [], $ver);
         wp_enqueue_script('jbg-quiz', JBG_QUIZ_URL . 'assets/js/jbg-quiz.js', [], $ver, true);
 
+        // شناسه ویدیو فعلی
         $curId = (int) get_queried_object_id();
 
+        // لینک و عنوان «ویدیوی بعدی»
         $nextHref = ''; $nextTitle = '';
         if ($curId > 0 && class_exists('\\JBG\\Ads\\Progress\\Access')) {
             $nextId = \JBG\Ads\Progress\Access::next_ad_id($curId);
@@ -27,8 +32,10 @@ class Renderer {
             }
         }
 
+        // امتیاز تعریف‌شده برای همین ویدیو
         $points = (int) get_post_meta($curId, 'jbg_points', true);
 
+        // داده‌های موردنیاز JS
         wp_localize_script('jbg-quiz', 'JBG_QUIZ', [
             'rest'      => rest_url('jbg/v1/quiz/submit'),
             'restView'  => rest_url('jbg/v1/view/confirm'),
@@ -52,23 +59,18 @@ class Renderer {
         $h  = '<div id="jbg-quiz" class="jbg-quiz" data-ad="'.esc_attr($id).'" style="display:none">';
         $h .= '  <div class="jbg-quiz-card">';
 
-        // قبلاً: عنوان ثابت Quiz + پاراگراف سؤال
-        // $h .= '    <h3 class="jbg-quiz-title">'.esc_html__("Quiz","jbg-quiz").'</h3>';
-        // $h .= '    <p class="jbg-quiz-q">'.wp_kses_post($q).'</p>';
-
-        // جدید: خودِ متن سؤال به عنوان تیتر
+        // عنوان ثابت حذف شد؛ خود متن سؤال به‌عنوان تیتر
         $h .= '    <h3 class="jbg-quiz-title">'.wp_kses_post($q).'</h3>';
 
         $h .= '    <form id="jbg-quiz-form">';
-        $h .=        self::radio('a1',$a1,1).self::radio('a2',$a2,2).self::radio('a3',$a3,3).self::radio('a4',$a4,4);
-
-        // قبلاً: دکمه Submit بدون id
-        // $h .= '      <button type="submit" class="jbg-quiz-btn">'.esc_html__("Submit","jbg-quiz").'</button>';
-
-        // جدید: متن فارسی + id ثابت برای استایل‌دهی
-        $h .= '      <button type="submit" id="jbg-quiz-btn" class="jbg-quiz-btn jbg-btn">ثبت</button>';
-
+        $h .=        self::radio('a1',$a1,1)
+                  .  self::radio('a2',$a2,2)
+                  .  self::radio('a3',$a3,3)
+                  .  self::radio('a4',$a4,4);
+        // تغییر فقط متن دکمه
+        $h .= '      <button type="submit" class="jbg-quiz-btn">ارسال پاسخ</button>';
         $h .= '    </form>';
+
         $h .= '    <div id="jbg-quiz-result" class="jbg-quiz-result" style="margin-top:8px"></div>';
         $h .= '    <div id="jbg-next-wrap" style="margin-top:10px"><a id="jbg-next-btn" class="jbg-btn" style="display:none"></a></div>';
         $h .= '  </div></div>';
