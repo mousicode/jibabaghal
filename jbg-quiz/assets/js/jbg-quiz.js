@@ -121,7 +121,7 @@
           } else if (data && data.message){
             gateMsg('✖ ' + data.message, 'jbg-quiz-result--err');
           } else {
-            gateMsg('✖ پاسخ نادرست. دوباره تلاش کنید.', 'jbg-quiz-result--err');
+            gateMsg('✖ پاسخ نادرست. مجدد ویدیو را تماشا کنید', 'jbg-quiz-result--err');
           }
         })
         .catch(function(){
