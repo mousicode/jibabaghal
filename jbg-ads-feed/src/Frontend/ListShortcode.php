@@ -101,14 +101,27 @@ class ListShortcode {
         $a = shortcode_atts([
             'limit'   => 12,
             'title'   => '',
-            'orderby' => '',   // اختیاری: 'views' برای مرتب‌سازی بر اساس بیشترین بازدید
+            'orderby' => '',   // '', 'views', 'date'
         ], $atts, 'jbg_ads');
 
         $posts = self::fetch_posts($a);
         if (empty($posts)) return '';
 
-        // اگر orderby=views، فقط همین خروجی شورت‌کد بر اساس بازدید مرتب می‌شود
-        $sort_by_views = (strtolower((string)$a['orderby']) === 'views');
+        // تشخیص حالت مرتب‌سازی
+        $orderby       = strtolower(trim((string)$a['orderby']));
+        $sort_by_views = ($orderby === 'views');
+        $sort_by_date  = ($orderby === 'date');
+
+        // مرتب‌سازی بر اساس تاریخ انتشار (جدیدترین اول) در سطح پست‌ها
+        if ($sort_by_date) {
+            usort($posts, function($pA, $pB){
+                $tA = get_post_time('U', true, $pA);
+                $tB = get_post_time('U', true, $pB);
+                return $tB <=> $tA;
+            });
+        }
+
+        // مرتب‌سازی بر اساس بیشترین بازدید در سطح پست‌ها
         if ($sort_by_views) {
             usort($posts, function($pA, $pB){
                 $va = (int) Helpers::views_count((int)$pA->ID);
@@ -134,8 +147,8 @@ class ListShortcode {
             ];
         }
 
-        // مرتب‌سازی پیش‌فرض قبلی (CPV → BR → Boost) فقط وقتی orderby=views نیست
-        if (!$sort_by_views) {
+        // مرتب‌سازی پیش‌فرض (CPV → BR → Boost) فقط وقتی views/date فعال نیست
+        if (!$sort_by_views && !$sort_by_date) {
             usort($items, function($a,$b){
                 if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
                 if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
@@ -189,7 +202,6 @@ class ListShortcode {
 
             echo '<div class="jbg-card-body">';
 
-            // Badges
             echo   '<div class="jbg-badges">';
             if ($watched) {
                 echo '<span class="jbg-badge watched">دیده‌شده</span>';
@@ -198,7 +210,6 @@ class ListShortcode {
             }
             echo   '</div>';
 
-            // Title + Like/Dislike pill (نمایشی)
             echo   '<div class="jbg-card-top">';
             echo     '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
             echo     '<div class="jbg-react-pill" title="بازخورد">';
@@ -208,13 +219,12 @@ class ListShortcode {
             echo       '</span>';
             echo       '<span>•</span>';
             echo       '<span class="dislike" style="display:inline-flex;align-items:center;gap:6px">';
-            echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M22 3h-4v12h4V3zM2 15c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L11 24l6.41-6.41c.38-.37.59-.89.59-1.42V5c0-1.1-.9-2-2-2H7c-.82 0-1.54.5-1.84 1.22l-3 7c-.11.23-.16.48-.16.74V15z"/></svg>';
+            echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M22 3h-4v12h4V3zM2 15c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17 .79.44 1.06L11 24l6.41-6.41c.38-.37.59-.89.59-1.42V5c0-1.1-.9-2-2-2H7c-.82 0-1.54 .5-1.84 1.22l-3 7c-.11 .23-.16 .48-.16 .74V15z"/></svg>';
             echo         '<span>'.esc_html(number_format_i18n((int)$it['dislikes'])).'</span>';
             echo       '</span>';
             echo     '</div>';
             echo   '</div>';
 
-            // Meta line
             echo   '<div class="jbg-card-sub">';
             if ($brand) echo '<span>'.esc_html($brand).'</span><span> • </span>';
             echo       '<span>'.esc_html($when).'</span><span> • </span><span>'.esc_html($viewsF).'</span>';
@@ -222,7 +232,6 @@ class ListShortcode {
 
             echo '</div>'; // body
 
-            // Button
             echo '<div class="jbg-card-actions">';
             if ($open) {
                 echo '<a class="jbg-btn" href="'.esc_url($it['link']).'">مشاهده</a>';
