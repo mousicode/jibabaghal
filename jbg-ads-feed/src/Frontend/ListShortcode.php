@@ -44,10 +44,8 @@ class ListShortcode {
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
             'fields'              => 'all',
-            // مرتب‌سازی را در PHP انجام می‌دهیم
         ];
 
-        // فیلترهای اختیاری
         if (!empty($atts['brand'])) {
             $base['tax_query'][] = [
                 'taxonomy' => 'jbg_brand',
@@ -63,11 +61,11 @@ class ListShortcode {
             ];
         }
 
-        // 1) فیلترها خاموش + lang=all
+        // 1) suppress_filters=true + lang=all
         $args1 = $base + ['suppress_filters' => true,  'lang' => 'all'];
         $q = new \WP_Query($args1);
 
-        // 2) اگر خالی بود: فیلترها روشن
+        // 2) fallback: suppress_filters=false
         if (!$q->have_posts()) {
             $args2 = $base + ['suppress_filters' => false, 'lang' => 'all'];
             $q = new \WP_Query($args2);
@@ -76,7 +74,7 @@ class ListShortcode {
             }
         }
 
-        // 3) اگر هنوز خالی: بدون lang
+        // 3) fallback: بدون lang
         if (!$q->have_posts()) {
             $args3 = $base;
             unset($args3['lang']);
@@ -101,14 +99,25 @@ class ListShortcode {
 
     public static function render($atts = []): string {
         $a = shortcode_atts([
-            'limit' => 12,
-            'title' => '',
+            'limit'   => 12,
+            'title'   => '',
+            'orderby' => '',   // اختیاری: 'views' برای مرتب‌سازی بر اساس بیشترین بازدید
         ], $atts, 'jbg_ads');
 
         $posts = self::fetch_posts($a);
         if (empty($posts)) return '';
 
-        // آماده‌سازی + مرتب‌سازی طبق CPV↓/BR↓/Boost↓
+        // اگر orderby=views، فقط همین خروجی شورت‌کد بر اساس بازدید مرتب می‌شود
+        $sort_by_views = (strtolower((string)$a['orderby']) === 'views');
+        if ($sort_by_views) {
+            usort($posts, function($pA, $pB){
+                $va = (int) Helpers::views_count((int)$pA->ID);
+                $vb = (int) Helpers::views_count((int)$pB->ID);
+                return $vb <=> $va; // نزولی
+            });
+        }
+
+        // آماده‌سازی داده‌ها
         $items = [];
         foreach ($posts as $p) {
             $items[] = [
@@ -119,21 +128,23 @@ class ListShortcode {
                 'cpv'       => (int) get_post_meta($p->ID, 'jbg_cpv', true),
                 'br'        => (int) get_post_meta($p->ID, 'jbg_budget_remaining', true),
                 'boost'     => (int) get_post_meta($p->ID, 'jbg_priority_boost', true),
-                'likes'     => (int) get_post_meta($p->ID, 'jbg_like_count', true),      // ← لایک
-                'dislikes'  => (int) get_post_meta($p->ID, 'jbg_dislike_count', true),   // ← دیس‌لایک (جدید)
+                'likes'     => (int) get_post_meta($p->ID, 'jbg_like_count', true),
+                'dislikes'  => (int) get_post_meta($p->ID, 'jbg_dislike_count', true),
                 'seq'       => Access::seq((int)$p->ID),
             ];
         }
 
-        usort($items, function($a,$b){
-            if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
-            if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
-            return ($b['boost'] <=> $a['boost']);
-        });
+        // مرتب‌سازی پیش‌فرض قبلی (CPV → BR → Boost) فقط وقتی orderby=views نیست
+        if (!$sort_by_views) {
+            usort($items, function($a,$b){
+                if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
+                if ($a['br']  !== $b['br'])    return ($b['br']    <=> $a['br']);
+                return ($b['boost'] <=> $a['boost']);
+            });
+        }
 
         $user_id = get_current_user_id();
 
-        // CSS سبک (مثل نسخهٔ فعلی)
         static $css_once = false;
         ob_start();
         if (!$css_once) {
@@ -166,7 +177,6 @@ class ListShortcode {
             $open   = Access::is_unlocked($user_id, $id);
             $watched= ($user_id>0) ? Access::has_passed($user_id,$id) : false;
 
-            // شمارش بازدید از Helper فعلی پروژه
             $views  = Helpers::views_count($id);
             $viewsF = self::compact_num((int)$views).' بازدید';
             $when   = self::relative_time($id);
@@ -188,17 +198,15 @@ class ListShortcode {
             }
             echo   '</div>';
 
-            // Title + Like/Dislike pill (نمایشی فقط)
+            // Title + Like/Dislike pill (نمایشی)
             echo   '<div class="jbg-card-top">';
             echo     '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
             echo     '<div class="jbg-react-pill" title="بازخورد">';
-            // like
             echo       '<span class="like" style="display:inline-flex;align-items:center;gap:6px">';
             echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M2 21h4V9H2v12zM22 9c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13 0 6.59 6.41C6.21 6.78 6 7.3 6 7.83V19c0 1.1.9 2 2 2h9c.82 0 1.54-.5 1.84-1.22l3-7c.11-.23.16-.48.16-.74V9z"/></svg>';
             echo         '<span>'.esc_html(number_format_i18n((int)$it['likes'])).'</span>';
             echo       '</span>';
             echo       '<span>•</span>';
-            // dislike
             echo       '<span class="dislike" style="display:inline-flex;align-items:center;gap:6px">';
             echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M22 3h-4v12h4V3zM2 15c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L11 24l6.41-6.41c.38-.37.59-.89.59-1.42V5c0-1.1-.9-2-2-2H7c-.82 0-1.54.5-1.84 1.22l-3 7c-.11.23-.16.48-.16.74V15z"/></svg>';
             echo         '<span>'.esc_html(number_format_i18n((int)$it['dislikes'])).'</span>';
