@@ -107,12 +107,10 @@ class ListShortcode {
         $posts = self::fetch_posts($a);
         if (empty($posts)) return '';
 
-        // تشخیص حالت مرتب‌سازی
         $orderby       = strtolower(trim((string)$a['orderby']));
         $sort_by_views = ($orderby === 'views');
         $sort_by_date  = ($orderby === 'date');
 
-        // مرتب‌سازی بر اساس تاریخ انتشار (جدیدترین اول) در سطح پست‌ها
         if ($sort_by_date) {
             usort($posts, function($pA, $pB){
                 $tA = get_post_time('U', true, $pA);
@@ -121,16 +119,14 @@ class ListShortcode {
             });
         }
 
-        // مرتب‌سازی بر اساس بیشترین بازدید در سطح پست‌ها
         if ($sort_by_views) {
             usort($posts, function($pA, $pB){
                 $va = (int) Helpers::views_count((int)$pA->ID);
                 $vb = (int) Helpers::views_count((int)$pB->ID);
-                return $vb <=> $va; // نزولی
+                return $vb <=> $va;
             });
         }
 
-        // آماده‌سازی داده‌ها
         $items = [];
         foreach ($posts as $p) {
             $items[] = [
@@ -147,7 +143,6 @@ class ListShortcode {
             ];
         }
 
-        // مرتب‌سازی پیش‌فرض (CPV → BR → Boost) فقط وقتی views/date فعال نیست
         if (!$sort_by_views && !$sort_by_date) {
             usort($items, function($a,$b){
                 if ($a['cpv'] !== $b['cpv'])   return ($b['cpv']   <=> $a['cpv']);
@@ -169,17 +164,17 @@ class ListShortcode {
                 .jbg-card-body{padding:12px 14px}
                 .jbg-card-title{font-weight:700;margin:0}
                 .jbg-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-                .jbg-react-pill{display:inline-flex;align-items:center;gap:10px;font-size:12px;color:#6b7280}
-                .jbg-react-pill svg{display:block}
+                /* آیکون‌های لایک/دیس‌لایک حذف شد، پس استایلشان نمی‌خواهیم */
                 .jbg-card-sub{color:#6b7280;font-size:12px;margin-bottom:10px}
                 .jbg-badges{display:flex;gap:6px;align-items:center;margin-bottom:6px}
                 .jbg-badge{border-radius:9999px;padding:2px 8px;font-size:11px;border:1px solid #e5e7eb;background:#f9fafb}
                 .jbg-badge.lock{color:#be185d;background:#fff1f2;border-color:#fecdd3}
                 .jbg-badge.watched{color:#166534;background:#dcfce7;border-color:#bbf7d0}
                 .jbg-card-actions{margin-top:auto;padding:0 14px 14px}
-                .jbg-btn{display:inline-block;background:#2563eb;color:#fff;border-radius:10px;padding:8px 14px;font-size:14px;text-align:center}
+                .jbg-btn{display:inline-block;background:rgb(1,111,135);color:#fff;border-radius:9999px;padding:9px 16px;font-size:14px;text-align:center;transition:filter .15s}
+                .jbg-btn:hover{filter:brightness(0.95)}
                 .jbg-btn[disabled]{opacity:.5;cursor:not-allowed}
-                .jbg-card a,.jbg-card a:visited,.jbg-card a:hover,.jbg-card a:focus{ text-decoration:none !important; }
+                .jbg-card a,.jbg-card a:visited,.jbg-card a:hover,.jbg-card a:focus{text-decoration:none!important}
             </style>';
         }
 
@@ -210,19 +205,9 @@ class ListShortcode {
             }
             echo   '</div>';
 
+            // عنوان بدون آیکون‌های لایک/دیس‌لایک
             echo   '<div class="jbg-card-top">';
             echo     '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
-            echo     '<div class="jbg-react-pill" title="بازخورد">';
-            echo       '<span class="like" style="display:inline-flex;align-items:center;gap:6px">';
-            echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M2 21h4V9H2v12zM22 9c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13 0 6.59 6.41C6.21 6.78 6 7.3 6 7.83V19c0 1.1.9 2 2 2h9c.82 0 1.54-.5 1.84-1.22l3-7c.11-.23.16-.48.16-.74V9z"/></svg>';
-            echo         '<span>'.esc_html(number_format_i18n((int)$it['likes'])).'</span>';
-            echo       '</span>';
-            echo       '<span>•</span>';
-            echo       '<span class="dislike" style="display:inline-flex;align-items:center;gap:6px">';
-            echo         '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M22 3h-4v12h4V3zM2 15c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17 .79.44 1.06L11 24l6.41-6.41c.38-.37.59-.89.59-1.42V5c0-1.1-.9-2-2-2H7c-.82 0-1.54 .5-1.84 1.22l-3 7c-.11 .23-.16 .48-.16 .74V15z"/></svg>';
-            echo         '<span>'.esc_html(number_format_i18n((int)$it['dislikes'])).'</span>';
-            echo       '</span>';
-            echo     '</div>';
             echo   '</div>';
 
             echo   '<div class="jbg-card-sub">';
