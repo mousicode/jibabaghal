@@ -61,7 +61,7 @@
 }
 .jbg-actions > * + *{ margin-left:8px; }
 
-/* Button */
+/* Base button (kept for compatibility; theme may override) */
 .jbg-btn{
   background:#2563eb;
   color:#fff;
@@ -93,8 +93,40 @@
 
 /* وضعیت تماشا */
 #jbg-status{margin-top:8px;font-size:14px;opacity:.85;text-align:right}
+
 /* دکمه شروع آزمون: پنهان تا وقتی JS آن را visible کند */
 #jbg-quiz-btn,
 .jbg-quiz-trigger{display:none}
 #jbg-quiz-btn[data-jbg-visible="1"],
 .jbg-quiz-trigger[data-jbg-visible="1"]{display:inline-block}
+
+/* ---------- FINAL OVERRIDES FOR QUIZ BUTTON (ID-specific, defeats theme) ---------- */
+.single-jbg_ad .jbg-player-wrapper #jbg-quiz-btn{
+  background: rgb(1,111,135) !important; /* requested background */
+  color:#fff !important;                 /* white text */
+  border:none !important;
+  padding:10px 22px !important;
+  border-radius:9999px !important;       /* fully rounded */
+  font-weight:600 !important;
+  font-size:15px !important;
+  text-transform:none !important;
+  box-shadow:none !important;
+  line-height:1.2 !important;
+  cursor:pointer !important;
+  transition:background .2s ease, transform .05s ease !important;
+}
+.single-jbg_ad .jbg-player-wrapper #jbg-quiz-btn:not(:disabled):hover{
+  background: rgb(0,95,115) !important;  /* darker on hover */
+  transform: translateY(-1px);
+}
+.single-jbg_ad .jbg-player-wrapper #jbg-quiz-btn:disabled{
+  opacity:.6 !important;
+  cursor:not-allowed !important;
+}
+
+/* Neutralize theme button styles inside player scope */
+.single-jbg_ad .jbg-player-wrapper #jbg-quiz-btn,
+.single-jbg_ad .jbg-player-wrapper button#jbg-quiz-btn{
+  box-shadow:none !important;
+  border-image:none !important;
+}
