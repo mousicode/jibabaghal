@@ -40,7 +40,7 @@ class Renderer {
 
         $escaped_src = esc_url($src);
         $escaped_id  = (int) $post_id; // امن برای درج در HTML
-        $btn = '<button id="jbg-quiz-btn" class="jbg-btn" disabled>' . esc_html__('Start Quiz','jbg-player') . '</button>';
+        $btn = '<button id="jbg-quiz-btn" class="jbg-btn" disabled>' . esc_html__('شروع آزمون','jbg-player') . '</button>';
 
         // Player container
         $html = '<div class="jbg-player-wrapper" data-src="' . $escaped_src . '" data-ad-id="' . $escaped_id . '">'
