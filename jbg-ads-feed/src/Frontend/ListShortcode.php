@@ -61,11 +61,9 @@ class ListShortcode {
             ];
         }
 
-        // 1) suppress_filters=true + lang=all
         $args1 = $base + ['suppress_filters' => true,  'lang' => 'all'];
         $q = new \WP_Query($args1);
 
-        // 2) fallback: suppress_filters=false
         if (!$q->have_posts()) {
             $args2 = $base + ['suppress_filters' => false, 'lang' => 'all'];
             $q = new \WP_Query($args2);
@@ -74,7 +72,6 @@ class ListShortcode {
             }
         }
 
-        // 3) fallback: بدون lang
         if (!$q->have_posts()) {
             $args3 = $base;
             unset($args3['lang']);
@@ -101,7 +98,9 @@ class ListShortcode {
         $a = shortcode_atts([
             'limit'   => 12,
             'title'   => '',
-            'orderby' => '',   // '', 'views', 'date'
+            'orderby' => '',
+            'cat'     => '',  // ✅ اضافه شد
+            'brand'   => '',  // ✅ اضافه شد
         ], $atts, 'jbg_ads');
 
         $posts = self::fetch_posts($a);
@@ -164,7 +163,6 @@ class ListShortcode {
                 .jbg-card-body{padding:12px 14px}
                 .jbg-card-title{font-weight:700;margin:0}
                 .jbg-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-                /* آیکون‌های لایک/دیس‌لایک حذف شد، پس استایلشان نمی‌خواهیم */
                 .jbg-card-sub{color:#6b7280;font-size:12px;margin-bottom:10px}
                 .jbg-badges{display:flex;gap:6px;align-items:center;margin-bottom:6px}
                 .jbg-badge{border-radius:9999px;padding:2px 8px;font-size:11px;border:1px solid #e5e7eb;background:#f9fafb}
@@ -197,23 +195,22 @@ class ListShortcode {
 
             echo '<div class="jbg-card-body">';
 
-            echo   '<div class="jbg-badges">';
+            echo '<div class="jbg-badges">';
             if ($watched) {
                 echo '<span class="jbg-badge watched">دیده‌شده</span>';
             } elseif (!$open) {
                 echo '<span class="jbg-badge lock">قفل</span>';
             }
-            echo   '</div>';
+            echo '</div>';
 
-            // عنوان بدون آیکون‌های لایک/دیس‌لایک
-            echo   '<div class="jbg-card-top">';
-            echo     '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
-            echo   '</div>';
+            echo '<div class="jbg-card-top">';
+            echo '<div class="jbg-card-title">'.esc_html($it['title']).'</div>';
+            echo '</div>';
 
-            echo   '<div class="jbg-card-sub">';
+            echo '<div class="jbg-card-sub">';
             if ($brand) echo '<span>'.esc_html($brand).'</span><span> • </span>';
-            echo       '<span>'.esc_html($when).'</span><span> • </span><span>'.esc_html($viewsF).'</span>';
-            echo   '</div>';
+            echo '<span>'.esc_html($when).'</span><span> • </span><span>'.esc_html($viewsF).'</span>';
+            echo '</div>';
 
             echo '</div>'; // body
 
