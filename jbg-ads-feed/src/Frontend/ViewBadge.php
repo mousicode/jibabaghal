@@ -3,8 +3,7 @@ namespace JBG\Ads\Frontend;
 
 if (!defined('ABSPATH')) exit;
 
-class ViewBadge
-{
+class ViewBadge {
     private static function compact_views(int $n): string {
         if ($n >= 1000000000) { $v=$n/1000000000; $u=' میلیارد'; }
         elseif ($n >= 1000000){ $v=$n/1000000;    $u=' میلیون'; }
@@ -64,14 +63,14 @@ class ViewBadge
           .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
           .jbg-single-header .row{
             display:flex;align-items:center;gap:12px;
-            flex-wrap:nowrap!important;
-            justify-content:space-between!important;
+            flex-wrap:nowrap;
+            justify-content:flex-start; /* ← کلید اصلی */
             width:100%;
           }
 
           .jbg-single-header .col-right{
             display:flex;align-items:center;gap:10px;
-            flex:1 1 auto;min-width:0!important;
+            flex:1 1 auto;min-width:0; /* اجازه کوتاه شدن عنوان */
           }
           .jbg-single-header .title{
             margin:0;max-width:100%;
@@ -86,7 +85,7 @@ class ViewBadge
 
           .jbg-single-header .col-left{
             display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;
-            justify-content:flex-end;margin-inline-start:auto!important;
+            justify-content:flex-end;margin-inline-start:auto; /* به گوشه چپ بچسبد */
           }
           .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
           .jbg-single-header .brand{
@@ -96,7 +95,7 @@ class ViewBadge
 
           @media (max-width:640px){
             .jbg-single-header .row{gap:8px}
-            .jbg-single-header .title{font-size:18px;max-width:55vw!important}
+            .jbg-single-header .title{font-size:18px;max-width:55vw}
             .jbg-single-header .sub{font-size:12.5px}
           }
         </style>';

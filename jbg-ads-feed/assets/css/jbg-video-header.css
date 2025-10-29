@@ -1,32 +1,41 @@
-/* ===== ساختار کلی ===== */
-.jbg-single-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
-.jbg-single-header .row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
+/* ===== هدر زیر پلیر ===== */
+.jbg-single-header{display:flex;align-items:center;gap:10px;margin-top:10px}
+.jbg-single-header .row{
+  display:flex;align-items:center;gap:12px;
+  flex-wrap:nowrap;               /* همیشه یک ردیف */
+  justify-content:flex-start;     /* مشکل Space-Between حل شد */
+  width:100%;
+}
 
-/* ستون راست: عنوان و امتیاز */
-.jbg-single-header .col-right{display:flex;align-items:center;gap:8px}
+/* ستون راست: عنوان + متا */
+.jbg-single-header .col-right{
+  display:flex;align-items:center;gap:10px;
+  flex:1 1 auto;min-width:0;      /* اجازه کوتاه‌شدن عنوان */
+}
+.jbg-single-header .title{
+  margin:0;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.jbg-single-header .sub{
+  display:flex;gap:8px;align-items:center;
+  white-space:nowrap;
+}
+.jbg-single-header .dot{opacity:.55}
 
-/* ستون چپ: لایک/دیس‌لایک و برند */
-.jbg-single-header .col-left{display:flex;align-items:center;justify-content:flex-end;gap:10px}
-
-/* فاصله داخلی */
-.jbg-single-header .col-left>*,
-.jbg-single-header .col-right>*{margin:0 4px}
+/* ستون چپ: لایک/دیس‌لایک و برند در گوشهٔ چپ */
+.jbg-single-header .col-left{
+  display:flex;align-items:center;gap:10px;flex:0 0 auto;
+  justify-content:flex-end;margin-inline-start:auto;
+}
+.jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
+.jbg-single-header .brand{
+  background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;
+  border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap
+}
 
 /* ===== موبایل ===== */
 @media (max-width:768px){
-  .jbg-single-header{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between}
-  .jbg-single-header .col-right,
-  .jbg-single-header .col-left{
-    flex:1 1 100%;
-    display:flex;align-items:center;justify-content:space-between;gap:6px
-  }
-  .jbg-single-header .col-left{order:2}
-  .jbg-single-header .col-right{order:1}
-}
-
-/* ===== دسکتاپ: چپ واقعا برود سمت چپ ===== */
-@media (min-width:769px){
-  .jbg-single-header .row{display:flex;align-items:center;gap:10px;justify-content:flex-start} /* شروع ردیف از راست (RTL) ولی بدون فاصلهٔ بین */
-  .jbg-single-header .col-right{order:1;margin-inline-end:auto;min-width:0}  /* عنوان را تا لبهٔ راست هل بده */
-  .jbg-single-header .col-left{order:2;margin:0;justify-content:flex-end;flex:0 0 auto}        /* گروه لایک/برند در گوشهٔ چپ بماند */
+  .jbg-single-header .row{gap:8px}
+  .jbg-single-header .title{max-width:55vw}
+  .jbg-single-header .sub{font-size:12.5px}
 }
