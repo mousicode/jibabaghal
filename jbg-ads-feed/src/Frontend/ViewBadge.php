@@ -53,56 +53,58 @@ class ViewBadge {
 
         /* تمام CSS همین‌جا تزریق می‌شود */
         $style = '<style id="jbg-single-header-css">
-          /* پنهان‌سازی عنوان‌های پیش‌فرض قالب و درصد تماشا */
-          .single-jbg_ad header.wd-single-post-header,
-          .single-jbg_ad h1.wd-entities-title,
-          .single-jbg_ad .entry-title,
-          .single-jbg_ad h1.entry-title,
-          .single-jbg_ad .post-title,
-          .single-jbg_ad .elementor-heading-title{display:none!important;}
-          .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
+  /* پنهان‌سازی تیتر پیش‌فرض قالب و watched% */
+  .single-jbg_ad header.wd-single-post-header,
+  .single-jbg_ad h1.wd-entities-title,
+  .single-jbg_ad .entry-title,
+  .single-jbg_ad h1.entry-title,
+  .single-jbg_ad .post-title,
+  .single-jbg_ad .elementor-heading-title{display:none!important;}
+  .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-          /* بلاک سرخط سفارشی */
-          .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
-          .jbg-single-header .row{
-            display:flex;align-items:center;gap:12px;
-            flex-wrap:nowrap;justify-content:space-between;width:100%;
-          }
+  /* هدر سفارشی زیر پلیر */
+  .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
+  .jbg-single-header .row{
+    display:flex;align-items:center;gap:12px;flex-wrap:nowrap;
+    justify-content:space-between;width:100%;
+  }
 
-          /* ستون راست: عنوان + متا — دسکتاپ در یک خط */
-          .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
-          .jbg-single-header .title{
-            margin:0;max-width:100%;
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-            font-size:24px;line-height:1.35;font-weight:800;color:#111827;
-          }
-          .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
-          .jbg-single-header .dot{opacity:.55}
+  /* راست: عنوان + متا (دسکتاپ) */
+  .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
+  .jbg-single-header .title{
+    margin:0;max-width:100%;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis; /* دسکتاپ: یک‌خط با ellipsis */
+    font-size:24px;line-height:1.35;font-weight:800;color:#111827;
+  }
+  .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
+  .jbg-single-header .dot{opacity:.55}
 
-          /* ستون چپ: لایک/دیس‌لایک + برند */
-          .jbg-single-header .col-left{
-            display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;
-            justify-content:flex-end;margin-inline-start:auto;
-          }
-          .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
-          .jbg-single-header .brand{
-            background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;
-            padding:3px 10px;font-weight:600;white-space:nowrap
-          }
+  /* چپ: لایک/دیس‌لایک + برند */
+  .jbg-single-header .col-left{
+    display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;
+    justify-content:flex-end;margin-inline-start:auto;
+  }
+  .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
+  .jbg-single-header .brand{
+    background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;
+    padding:3px 10px;font-weight:600;white-space:nowrap
+  }
 
-          /* موبایل: اول عنوان تمام‌عرض و چندخطی، بعد متا، بعد لایک/برند */
-          @media (max-width:640px){
-            .jbg-single-header .row{flex-direction:column;align-items:stretch;gap:6px}
-            .jbg-single-header .col-right{order:1;width:100%;min-width:0;display:block}
-            .jbg-single-header .title{
-              font-size:18px;line-height:1.5;width:100%;
-              white-space:normal;overflow:visible;text-overflow:clip;  /* چندخطی */
-              margin:0 0 4px 0;
-            }
-            .jbg-single-header .sub{font-size:12.5px;margin-top:0;white-space:nowrap}
-            .jbg-single-header .col-left{order:3;width:100%;justify-content:flex-start;gap:10px}
-          }
-        </style>';
+  /* موبایل: عنوان تمام‌عرض و بدون ellipsis؛ متا زیر آن؛ سپس لایک/برند */
+  @media (max-width:640px){
+    .jbg-single-header .row{flex-direction:column;align-items:stretch;gap:6px}
+    .jbg-single-header .col-right{order:1;width:100%;display:block}
+    .jbg-single-header .title{
+      display:block;width:100%;
+      white-space:normal;overflow:visible;text-overflow:clip; /* اجازهٔ wrap کامل عنوان */
+      font-size:18px;line-height:1.45;margin:0;
+    }
+    .jbg-single-header .sub{
+      font-size:12.5px;white-space:nowrap;margin-top:2px;
+    }
+    .jbg-single-header .col-left{order:3;width:100%;justify-content:flex-start;gap:10px}
+  }
+</style>';
 
         $right  = '<div class="col-right">'
                 . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
