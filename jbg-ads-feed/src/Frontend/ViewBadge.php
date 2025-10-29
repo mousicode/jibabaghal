@@ -51,9 +51,9 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // تمام CSS اینجا
+        /* تمام CSS همین‌جا تزریق می‌شود */
         $style = '<style id="jbg-single-header-css">
-          /* مخفی‌سازی تیترهای پیش‌فرض قالب و watched% */
+          /* پنهان‌سازی عنوان‌های پیش‌فرض قالب و درصد تماشا */
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
           .single-jbg_ad .entry-title,
@@ -62,11 +62,14 @@ class ViewBadge {
           .single-jbg_ad .elementor-heading-title{display:none!important;}
           .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-          /* هدر سفارشی زیر پلیر */
+          /* بلاک سرخط سفارشی */
           .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
-          .jbg-single-header .row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;justify-content:space-between;width:100%}
+          .jbg-single-header .row{
+            display:flex;align-items:center;gap:12px;
+            flex-wrap:nowrap;justify-content:space-between;width:100%;
+          }
 
-          /* راست: عنوان + متا در یک ردیف (دسکتاپ) */
+          /* ستون راست: عنوان + متا — دسکتاپ در یک خط */
           .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
           .jbg-single-header .title{
             margin:0;max-width:100%;
@@ -76,17 +79,27 @@ class ViewBadge {
           .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
           .jbg-single-header .dot{opacity:.55}
 
-          /* چپ: لایک/دیس‌لایک + برند */
-          .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;justify-content:flex-end;margin-inline-start:auto}
+          /* ستون چپ: لایک/دیس‌لایک + برند */
+          .jbg-single-header .col-left{
+            display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;
+            justify-content:flex-end;margin-inline-start:auto;
+          }
           .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
-          .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
+          .jbg-single-header .brand{
+            background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;
+            padding:3px 10px;font-weight:600;white-space:nowrap
+          }
 
-          /* موبایل: عنوان تمام‌عرض و چندخطی، سپس متا، سپس لایک/برند */
+          /* موبایل: اول عنوان تمام‌عرض و چندخطی، بعد متا، بعد لایک/برند */
           @media (max-width:640px){
             .jbg-single-header .row{flex-direction:column;align-items:stretch;gap:6px}
-            .jbg-single-header .col-right{order:1;width:100%;justify-content:flex-start;min-width:0}
-            .jbg-single-header .title{font-size:18px;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4;width:100%}
-            .jbg-single-header .sub{font-size:12.5px;margin-top:2px;white-space:nowrap}
+            .jbg-single-header .col-right{order:1;width:100%;min-width:0;display:block}
+            .jbg-single-header .title{
+              font-size:18px;line-height:1.5;width:100%;
+              white-space:normal;overflow:visible;text-overflow:clip;  /* چندخطی */
+              margin:0 0 4px 0;
+            }
+            .jbg-single-header .sub{font-size:12.5px;margin-top:0;white-space:nowrap}
             .jbg-single-header .col-left{order:3;width:100%;justify-content:flex-start;gap:10px}
           }
         </style>';
