@@ -4,6 +4,7 @@ namespace JBG\Ads\Frontend;
 if (!defined('ABSPATH')) exit;
 
 class ViewBadge {
+
     private static function compact_views(int $n): string {
         if ($n >= 1000000000) { $v=$n/1000000000; $u=' میلیارد'; }
         elseif ($n >= 1000000){ $v=$n/1000000;    $u=' میلیون'; }
@@ -51,6 +52,7 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
+        // فقط پنهان‌سازی تیتر تم؛ چیدمان در CSS فایل اعمال می‌شود
         $style = '<style id="jbg-single-header-css">
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
@@ -59,45 +61,6 @@ class ViewBadge {
           .single-jbg_ad .post-title,
           .single-jbg_ad .elementor-heading-title{display:none!important;}
           .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
-
-          .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
-          .jbg-single-header .row{
-            display:flex;align-items:center;gap:12px;
-            flex-wrap:nowrap;
-            justify-content:flex-start; /* ← کلید اصلی */
-            width:100%;
-          }
-
-          .jbg-single-header .col-right{
-            display:flex;align-items:center;gap:10px;
-            flex:1 1 auto;min-width:0; /* اجازه کوتاه شدن عنوان */
-          }
-          .jbg-single-header .title{
-            margin:0;max-width:100%;
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-            font-size:24px;line-height:1.35;font-weight:800;color:#111827
-          }
-          .jbg-single-header .sub{
-            display:flex;gap:8px;align-items:center;
-            color:#374151;font-size:14px;white-space:nowrap;flex:0 0 auto
-          }
-          .jbg-single-header .dot{opacity:.55}
-
-          .jbg-single-header .col-left{
-            display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;
-            justify-content:flex-end;margin-inline-start:auto; /* به گوشه چپ بچسبد */
-          }
-          .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
-          .jbg-single-header .brand{
-            background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;
-            font-weight:600;white-space:nowrap
-          }
-
-          @media (max-width:640px){
-            .jbg-single-header .row{gap:8px}
-            .jbg-single-header .title{font-size:18px;max-width:55vw}
-            .jbg-single-header .sub{font-size:12.5px}
-          }
         </style>';
 
         $right  = '<div class="col-right">'
@@ -112,6 +75,7 @@ class ViewBadge {
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
+        // انتقال هدر به زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
