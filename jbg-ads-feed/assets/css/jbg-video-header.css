@@ -1,39 +1,44 @@
-/* ===== هدر زیر پلیر: خط به خط ===== */
-.jbg-single-header{direction:rtl;margin-top:10px}
-.jbg-single-header .stack{display:flex;flex-direction:column;gap:8px;width:100%}
-
-/* هر ردیف */
-.jbg-single-header .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-
-/* عنوان */
-.jbg-single-header .row-title .title{
-  margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%
+/* ===== زیر پلیر: دسکتاپ (بدون تغییر) ===== */
+.jbg-single-header{display:flex;align-items:center;gap:10px;margin-top:10px}
+.jbg-single-header .row{
+  display:flex;align-items:center;gap:12px;
+  flex-wrap:nowrap;                /* یک ردیف */
+  justify-content:flex-start;      /* عنوان سمت راست، گروه چپ بچسبد به چپ */
+  width:100%;
 }
-
-/* متا: امتیاز + بازدید + زمان */
-.jbg-single-header .row-meta{gap:12px}
-.jbg-single-header .score{display:inline-flex;align-items:center}
-.jbg-single-header .sub{color:#374151;font-size:14px;white-space:nowrap;display:inline-flex;gap:8px;align-items:center}
+.jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
+.jbg-single-header .title{margin:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jbg-single-header .sub{display:flex;gap:8px;align-items:center;white-space:nowrap}
 .jbg-single-header .dot{opacity:.55}
-
-/* اکشن‌ها: لایک/دیس‌لایک + برند */
-.jbg-single-header .row-actions{gap:10px}
+.jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex:0 0 auto;justify-content:flex-end;margin-inline-start:auto}
 .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
-.jbg-single-header .brand{
-  background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;
-  border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap
-}
+.jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
 
-/* فقط موبایل: سه خط */
+/* ===== موبایل: اول عنوان تمام‌عرض، بعد زیرش متا + لایک/برند ===== */
 @media (max-width:640px){
-  .jbg-single-header .row{flex-wrap:wrap;align-items:flex-start;gap:6px}
-  .jbg-single-header .col-right{
-    flex-basis:100%;display:flex;flex-direction:column;align-items:flex-start;gap:4px
+  .jbg-single-header .row{
+    flex-wrap:wrap;
+    align-items:flex-start;
+    justify-content:space-between;  /* سطر دوم: متا راست، لایک/برند چپ */
+    gap:8px;
   }
-  .jbg-single-header .title{font-size:18px;max-width:100%}
-  .jbg-single-header .sub{font-size:12.5px}
+  /* col-right به ظرف انعطاف‌پذیر تبدیل می‌شود */
+  .jbg-single-header .col-right{
+    display:flex;flex-wrap:wrap;align-items:center;
+    flex:1 1 100%;                  /* کل عرض سطر اول */
+    min-width:0;
+  }
+  .jbg-single-header .col-right .title{
+    order:1;flex:1 1 100%;
+    font-size:18px;line-height:1.4;
+  }
+  .jbg-single-header .col-right .sub{
+    order:2;flex:0 0 auto;          /* متا در سطر دوم، سمت راست */
+    font-size:12.5px;
+  }
   .jbg-single-header .col-left{
-    order:3;flex-basis:100%;justify-content:flex-start;gap:8px
+    order:2;flex:0 0 auto;           /* کنار متا قرار بگیرد، سمت چپ */
+    margin-inline-start:0;
+    justify-content:flex-end;
   }
 }

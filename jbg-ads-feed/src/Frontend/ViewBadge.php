@@ -49,10 +49,10 @@ class ViewBadge {
         $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
         $viewsF = self::compact_views($views) . ' بازدید';
         $when   = self::relative_time($id);
-        $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
+        $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
+        // فقط مخفی‌سازی تیتر پیش‌فرض تم
         $style = '<style id="jbg-single-header-css">
-          /* مخفی‌سازی تیتر تم */
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
           .single-jbg_ad .entry-title,
@@ -60,52 +60,19 @@ class ViewBadge {
           .single-jbg_ad .post-title,
           .single-jbg_ad .elementor-heading-title{display:none!important;}
           .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
-
-          /* دسکتاپ: همان چیدمان قبلی */
-          .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;direction:rtl}
-          .jbg-single-header .row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
-          .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto}
-          .jbg-single-header .title{
-            margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-            font-size:24px;line-height:1.35;font-weight:800;color:#111827
-          }
-          .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
-          .jbg-single-header .dot{opacity:.55}
-          .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex:0 0 auto;justify-content:flex-end;margin-inline-start:auto}
-          .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
-          .jbg-single-header .brand{
-            background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap
-          }
-
-          /* فقط موبایل: سه خط پشت سرهم */
-          @media (max-width:640px){
-            .jbg-single-header .row{flex-wrap:wrap;align-items:flex-start;gap:6px}
-            .jbg-single-header .col-right{
-              flex-basis:100%;display:flex;flex-direction:column;align-items:flex-start;gap:4px
-            }
-            .jbg-single-header .title{font-size:18px;max-width:100%}
-            .jbg-single-header .sub{font-size:12.5px}
-            .jbg-single-header .col-left{
-              order:3;flex-basis:100%;justify-content:flex-start;gap:8px
-            }
-          }
         </style>';
 
-        // راست: عنوان + متا
         $right  = '<div class="col-right">'
                 . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
                 . '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>'
                 . '</div>';
 
-        // چپ: لایک/دیس‌لایک + برند
-        $left   = '<div class="col-left">'
-                . '<span class="ext-like">'.$like_shortcode.'</span>'
+        $left   = '<div class="col-left"><span class="ext-like">'.$like.'</span>'
                 . ($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '')
                 . '</div>';
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
-        // انتقال زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
