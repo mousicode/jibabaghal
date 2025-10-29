@@ -48,7 +48,8 @@ class PointsDiscountSettings {
                 $d = self::defaults();
                 return [
                     'points_per_unit' => max(1, (int)($v['points_per_unit'] ?? $d['points_per_unit'])),
-                    'toman_per_unit'  => max(100, (int)($v['toman_per_unit']  ?? $d['toman_per_unit'])),
+                    // حذف محدودیت 100 و هرگونه پله‌بندی؛ فقط حداقل صفر
+                    'toman_per_unit'  => max(0, (int)($v['toman_per_unit']  ?? $d['toman_per_unit'])),
                     'min_points'      => max(0, (int)($v['min_points']      ?? $d['min_points'])),
                     'expiry_days'     => max(1, (int)($v['expiry_days']     ?? $d['expiry_days'])),
                 ];
@@ -64,7 +65,8 @@ class PointsDiscountSettings {
 
         add_settings_field('toman_per_unit', __('معادل چند تومان', 'jbg-ads'), function () {
             $o = self::get();
-            echo '<input type="number" min="100" step="1000" name="'.esc_attr(self::OPTION).'[toman_per_unit]" value="'.esc_attr($o['toman_per_unit']).'"> تومان';
+            // بدون محدودیت اجباری مرورگر
+            echo '<input type="number" min="0" step="1" name="'.esc_attr(self::OPTION).'[toman_per_unit]" value="'.esc_attr($o['toman_per_unit']).'"> تومان';
         }, self::OPTION, 'jbg_pts_disc_sec');
 
         add_settings_field('min_points', __('حداقل امتیاز برای تبدیل', 'jbg-ads'), function () {
