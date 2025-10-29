@@ -52,7 +52,10 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // فقط پنهان‌سازی تیتر تم؛ چیدمان در CSS فایل اعمال می‌شود
+        // امتیاز (اختیاری؛ اگر شورت‌کد برگردد، نمایش می‌دهیم)
+        $score_html = do_shortcode('[bg_points_badge id=' . $id . ']');
+
+        /* ---------- CSS فقط برای چینش جدید (ستونی) ---------- */
         $style = '<style id="jbg-single-header-css">
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
@@ -61,21 +64,56 @@ class ViewBadge {
           .single-jbg_ad .post-title,
           .single-jbg_ad .elementor-heading-title{display:none!important;}
           .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
+
+          .jbg-player-wrapper .jbg-single-header{direction:rtl;width:100%;margin:10px 0 0}
+          .jbg-single-header .stack{display:flex;flex-direction:column;gap:8px;width:100%}
+
+          /* ردیف‌ها */
+          .jbg-single-header .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+          .jbg-single-header .row-meta{gap:12px}
+          .jbg-single-header .row-actions{gap:10px}
+
+          /* عنوان */
+          .jbg-single-header .title{
+            margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%
+          }
+
+          /* متا: امتیاز + بازدید + زمان */
+          .jbg-single-header .score{display:inline-flex;align-items:center}
+          .jbg-single-header .dot{opacity:.55}
+          .jbg-single-header .sub{color:#374151;font-size:14px;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
+
+          /* اکشن‌ها: لایک/دیس‌لایک + برند */
+          .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
+          .jbg-single-header .brand{
+            background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap
+          }
+
+          @media (max-width:640px){
+            .jbg-single-header .title{font-size:18px}
+            .jbg-single-header .sub{font-size:12.5px}
+          }
         </style>';
 
-        $right  = '<div class="col-right">'
-                . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
-                . '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>'
-                . '</div>';
+        /* ---------- HTML: خط به خط ---------- */
+        $row_title = '<div class="row row-title"><h1 class="title">'.esc_html(get_the_title($id)).'</h1></div>';
 
-        $left   = '<div class="col-left">'
-                . '<span class="ext-like">'.$like_shortcode.'</span>'
-                . ($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '')
-                . '</div>';
+        $meta_parts = '';
+        if ($score_html && strip_tags($score_html) !== '[bg_points_badge id='.$id.']') {
+            $meta_parts .= '<span class="score">'.$score_html.'</span>';
+        }
+        $meta_parts .= '<span class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></span>';
+        $row_meta = '<div class="row row-meta">'.$meta_parts.'</div>';
 
-        $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
+        $row_actions  = '<div class="row row-actions">';
+        $row_actions .=   '<span class="ext-like">'.$like_shortcode.'</span>';
+        if ($brand) $row_actions .= '<span class="brand">'.esc_html($brand).'</span>';
+        $row_actions .= '</div>';
 
-        // انتقال هدر به زیر پلیر
+        $header = '<div class="jbg-single-header"><div class="stack">'.$row_title.$row_meta.$row_actions.'</div></div>';
+
+        // انتقال هدر پایین پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");

@@ -1,96 +1,32 @@
-/* ===== هدر زیر پلیر ===== */
-.jbg-single-header{
-  direction: rtl;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-top:10px;
-}
-.jbg-single-header .row{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  flex-wrap:nowrap;              /* دسکتاپ: یک ردیف */
-  justify-content:flex-start;
-  width:100%;
+/* ===== هدر زیر پلیر: خط به خط ===== */
+.jbg-single-header{direction:rtl;margin-top:10px}
+.jbg-single-header .stack{display:flex;flex-direction:column;gap:8px;width:100%}
+
+/* هر ردیف */
+.jbg-single-header .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* عنوان */
+.jbg-single-header .row-title .title{
+  margin:0;font-size:24px;line-height:1.35;font-weight:800;color:#111827;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%
 }
 
-/* ستون راست: عنوان + متا */
-.jbg-single-header .col-right{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex:1 1 auto;
-  min-width:0;                   /* اجازه کوتاه‌شدن عنوان */
-}
-.jbg-single-header .title{
-  margin:0;
-  max-width:100%;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;        /* دسکتاپ: بریده‌نمایش */
-  font-size:24px;
-  line-height:1.35;
-  font-weight:800;
-  color:#111827;
-}
-.jbg-single-header .sub{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  white-space:nowrap;
-  color:#374151;
-  font-size:14px;
-}
+/* متا: امتیاز + بازدید + زمان */
+.jbg-single-header .row-meta{gap:12px}
+.jbg-single-header .score{display:inline-flex;align-items:center}
+.jbg-single-header .sub{color:#374151;font-size:14px;white-space:nowrap;display:inline-flex;gap:8px;align-items:center}
 .jbg-single-header .dot{opacity:.55}
 
-/* ستون چپ: لایک/دیس‌لایک و برند */
-.jbg-single-header .col-left{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex:0 0 auto;
-  justify-content:flex-end;
-  margin-inline-start:auto;      /* به گوشه چپ بچسبد */
-}
+/* اکشن‌ها: لایک/دیس‌لایک + برند */
+.jbg-single-header .row-actions{gap:10px}
 .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
 .jbg-single-header .brand{
-  background:#f1f5f9;
-  color:#111827;
-  border:1px solid #e5e7eb;
-  border-radius:999px;
-  padding:3px 10px;
-  font-weight:600;
-  white-space:nowrap;
+  background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;
+  border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap
 }
 
-/* ===== موبایل ===== */
-@media (max-width:768px){
-  .jbg-single-header .row{
-    flex-wrap:wrap;              /* اجازه رفتن به چند خط */
-    gap:8px;
-  }
-  /* عنوان تمام‌عرض و قابل‌نمایش */
-  .jbg-single-header .col-right{
-    flex:1 1 100%;
-    align-items:flex-start;
-  }
-  .jbg-single-header .title{
-    max-width:100%;
-    white-space:normal;          /* اجازه چند خطی شدن */
-    overflow:visible;
-    text-overflow:clip;
-    font-size:18px;
-  }
-  .jbg-single-header .sub{
-    margin-top:4px;
-    font-size:12.5px;
-  }
-
-  /* لایک/برند در خط بعدی و از راست به چپ طبق RTL */
-  .jbg-single-header .col-left{
-    order:2;
-    flex:1 1 100%;
-    justify-content:flex-start;  /* کنار هم زیر عنوان */
-  }
+/* موبایل */
+@media (max-width:640px){
+  .jbg-single-header .row-title .title{font-size:18px}
+  .jbg-single-header .sub{font-size:12.5px}
 }
