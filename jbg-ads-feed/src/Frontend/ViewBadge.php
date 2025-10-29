@@ -52,9 +52,7 @@ class ViewBadge
         $when   = self::relative_time($id);
         $like_shortcode = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        /* ------------------------ CSS ------------------------ */
         $style = '<style id="jbg-single-header-css">
-          /* مخفی کردن تیتر پیش‌فرض تم و watched% */
           .single-jbg_ad header.wd-single-post-header,
           .single-jbg_ad h1.wd-entities-title,
           .single-jbg_ad .entry-title,
@@ -63,22 +61,21 @@ class ViewBadge
           .single-jbg_ad .elementor-heading-title{display:none!important;}
           .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-          /* هدر سفارشی زیر پلیر */
           .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
           .jbg-single-header .row{
             display:flex;align-items:center;gap:12px;
-            flex-wrap:nowrap;                 /* همیشه یک ردیف */
-            justify-content:flex-start;
+            flex-wrap:nowrap!important;
+            justify-content:space-between!important;
+            width:100%;
           }
 
-          /* راست: عنوان + متا */
           .jbg-single-header .col-right{
             display:flex;align-items:center;gap:10px;
-            flex:1 1 auto;min-width:0;       /* اجازه کوتاه‌شدن عنوان */
+            flex:1 1 auto;min-width:0!important;
           }
           .jbg-single-header .title{
             margin:0;max-width:100%;
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis; /* بریده‌نمایش */
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
             font-size:24px;line-height:1.35;font-weight:800;color:#111827
           }
           .jbg-single-header .sub{
@@ -87,11 +84,9 @@ class ViewBadge
           }
           .jbg-single-header .dot{opacity:.55}
 
-          /* چپ: لایک/دیس‌لایک + برند؛ چسبیده به گوشه چپ */
           .jbg-single-header .col-left{
             display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;
-            justify-content:flex-end;
-            margin-inline-start:auto;        /* در RTL به چپ هل می‌دهد */
+            justify-content:flex-end;margin-inline-start:auto!important;
           }
           .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
           .jbg-single-header .brand{
@@ -99,28 +94,25 @@ class ViewBadge
             font-weight:600;white-space:nowrap
           }
 
-          /* موبایل: عنوان کوچک‌تر، ولی المان‌ها در همان ردیف */
           @media (max-width:640px){
             .jbg-single-header .row{gap:8px}
-            .jbg-single-header .title{font-size:18px;max-width:55vw}
+            .jbg-single-header .title{font-size:18px;max-width:55vw!important}
             .jbg-single-header .sub{font-size:12.5px}
           }
         </style>';
 
-        /* ------------------- HTML هدر ------------------- */
-        $right  = '<div class="col-right">';
-        $right .=   '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>';
-        $right .=   '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
-        $right .= '</div>';
+        $right  = '<div class="col-right">'
+                . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
+                . '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>'
+                . '</div>';
 
-        $left   = '<div class="col-left">';
-        $left  .=   '<span class="ext-like">'.$like_shortcode.'</span>';
-        if ($brand) $left .= '<span class="brand">'.esc_html($brand).'</span>';
-        $left  .= '</div>';
+        $left   = '<div class="col-left">'
+                . '<span class="ext-like">'.$like_shortcode.'</span>'
+                . ($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '')
+                . '</div>';
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
-        /* جابه‌جایی هدر به زیر پلیر */
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
