@@ -14,31 +14,41 @@
 .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
 .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
 
-/* ===== موبایل: اول عنوان تمام‌عرض، بعد زیرش متا + لایک/برند ===== */
-@media (max-width:640px){
+/* ===== موبایل: عنوان تمام‌عرض، بقیه زیرش ===== */
+@media (max-width: 640px){
   .jbg-single-header .row{
-    flex-wrap:wrap;
-    align-items:flex-start;
-    justify-content:space-between;  /* سطر دوم: متا راست، لایک/برند چپ */
-    gap:8px;
+    flex-direction: column;         /* هرکدام در ردیف جدا */
+    align-items: stretch;
+    gap: 6px;
   }
-  /* col-right به ظرف انعطاف‌پذیر تبدیل می‌شود */
+
+  /* ردیف عنوان */
   .jbg-single-header .col-right{
-    display:flex;flex-wrap:wrap;align-items:center;
-    flex:1 1 100%;                  /* کل عرض سطر اول */
-    min-width:0;
+    order: 1;
+    width: 100%;
+    justify-content: flex-start;
+    min-width: 0;
   }
-  .jbg-single-header .col-right .title{
-    order:1;flex:1 1 100%;
-    font-size:18px;line-height:1.4;
+  .jbg-single-header .title{
+    white-space: normal;            /* اجازهٔ رَپ شدن */
+    overflow: visible;
+    text-overflow: clip;
+    width: 100%;
+    line-height: 1.4;
   }
-  .jbg-single-header .col-right .sub{
-    order:2;flex:0 0 auto;          /* متا در سطر دوم، سمت راست */
-    font-size:12.5px;
+
+  /* متا (بازدید/زمان) زیر عنوان */
+  .jbg-single-header .sub{
+    margin-top: 2px;
+    font-size: 13px;
+    white-space: nowrap;
   }
+
+  /* ردیف لایک/دیس‌لایک و برند زیر متا */
   .jbg-single-header .col-left{
-    order:2;flex:0 0 auto;           /* کنار متا قرار بگیرد، سمت چپ */
-    margin-inline-start:0;
-    justify-content:flex-end;
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
   }
 }
