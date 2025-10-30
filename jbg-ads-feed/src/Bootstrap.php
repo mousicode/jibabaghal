@@ -106,6 +106,17 @@ class Bootstrap {
             }
         });
 
+        // شورت‌کد استعلام کد تخفیف (فقط UI؛ دسترسی را خود شورت‌کد کنترل می‌کند)
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Frontend/CouponCheckShortcode.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Frontend\\CouponCheckShortcode')) {
+                    \JBG\Ads\Frontend\CouponCheckShortcode::register();
+                }
+            }
+        });
+
         // صفحهٔ تکی ویدیو
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
@@ -226,12 +237,21 @@ class Bootstrap {
                 }
             }
 
-            // NEW: Points redeem API
+            // Points redeem API
             $pr = JBG_ADS_DIR . 'src/Rest/PointsRedeemController.php';
             if (file_exists($pr)) {
                 require_once $pr;
                 if (class_exists('\\JBG\\Ads\\Rest\\PointsRedeemController')) {
                     \JBG\Ads\Rest\PointsRedeemController::register_routes();
+                }
+            }
+
+            // NEW: Coupon check API برای استعلام کد تخفیف
+            $cc = JBG_ADS_DIR . 'src/Rest/CouponCheckController.php';
+            if (file_exists($cc)) {
+                require_once $cc;
+                if (class_exists('\\JBG\\Ads\\Rest\\CouponCheckController')) {
+                    \JBG\Ads\Rest\CouponCheckController::register_routes();
                 }
             }
         });
