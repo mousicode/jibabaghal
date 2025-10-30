@@ -61,7 +61,7 @@ class ViewBadge {
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* کارت هدر زیر پلیر، ستونی و قابل‌پیچش */
+/* کارت هدر زیر پلیر */
 .jbg-player-wrapper + .jbg-single-header,
 .jbg-player-wrapper .jbg-single-header{
   direction:rtl;
@@ -74,8 +74,10 @@ class ViewBadge {
   box-shadow:0 1px 2px rgba(0,0,0,.04);
   box-sizing:border-box;
   display:flex;
-  flex-direction:column;
   gap:10px;
+  /* موبایل: ستونی */
+  flex-direction:column !important;
+  align-items:stretch;
 }
 
 /* عنوان چندخطی فول‌عرض */
@@ -101,7 +103,6 @@ class ViewBadge {
   color:#6b7280;
   margin:0;
 }
-.jbg-single-header .hdr-meta .dot{opacity:.6}
 
 /* اکشن‌ها: لایک/دیس‌لایک + برند */
 .jbg-single-header .hdr-actions{
@@ -130,9 +131,18 @@ class ViewBadge {
   border-color:#e5e7eb;
 }
 
-/* ریسپانسیو */
+/* دسکتاپ: ردیفی بماند */
 @media (min-width:768px){
-  .jbg-single-header{padding:16px 18px; gap:12px}
+  .jbg-single-header{
+    padding:16px 18px; gap:12px;
+    flex-direction:row !important;
+    align-items:center;
+    flex-wrap:wrap; /* اگر جا کم شد روی خط بعدی بروند */
+    justify-content:space-between;
+  }
+  .jbg-single-header .hdr-title{flex:1 1 auto}
+  .jbg-single-header .hdr-meta{order:2}
+  .jbg-single-header .hdr-actions{order:3}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
 </style>';
