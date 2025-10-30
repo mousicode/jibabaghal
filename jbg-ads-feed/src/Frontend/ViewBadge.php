@@ -16,10 +16,10 @@ class ViewBadge {
     private static function relative_time(int $post_id): string {
         $t = get_post_time('U', true, $post_id);
         $d = time() - (int)$t;
-        if ($d < 60)        return 'لحظاتی پیش';
-        if ($d < 3600)      return floor($d/60) . ' دقیقه پیش';
-        if ($d < 86400)     return floor($d/3600) . ' ساعت پیش';
-        if ($d < 86400*30)  return floor($d/86400) . ' روز پیش';
+        if     ($d < 60)       return 'لحظاتی پیش';
+        elseif ($d < 3600)     return floor($d/60) . ' دقیقه پیش';
+        elseif ($d < 86400)    return floor($d/3600) . ' ساعت پیش';
+        elseif ($d < 86400*30) return floor($d/86400) . ' روز پیش';
         return get_the_date('', $post_id);
     }
 
@@ -51,7 +51,7 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // CSS درون‌خطی: دسکتاپ بدون تغییر؛ فقط در موبایل عنوان تمام‌عرض و بقیه المان‌ها زیر آن.
+        // استایل: دسکتاپ مثل قبل؛ موبایل: عنوان تمام‌عرض و کامل، سپس متا، سپس اکشن‌ها
 $style = '<style id="jbg-single-header-css">
   /* پنهان کردن تیترهای پیش‌فرض قالب */
   .single-jbg_ad header.wd-single-post-header,
@@ -62,57 +62,52 @@ $style = '<style id="jbg-single-header-css">
   .single-jbg_ad .elementor-heading-title{display:none!important;}
   .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-  /* بلاک هدر زیر پلیر */
+  /* کانتینر هدر زیر پلیر */
   .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
-  .jbg-single-header .row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;justify-content:space-between;width:100%}
-
-  /* دسکتاپ: عنوان یک‌سطر با ellipsis (بدون تغییر) */
-  .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
-  .jbg-single-header .title{
-    margin:0;max-width:100%;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    font-size:24px;line-height:1.35;font-weight:800;color:#111827;
-  }
-  .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
+  /* سه بلوک واضح: عنوان، متادیتا، اکشن‌ها */
+  .jbg-single-header .hdr-title{margin:0 0 6px 0}
+  .jbg-single-header .hdr-meta{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap;margin:0 0 8px 0}
+  .jbg-single-header .hdr-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+  .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
   .jbg-single-header .dot{opacity:.55}
 
-  .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;justify-content:flex-end;margin-inline-start:auto}
-  .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
-  .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
+  /* تایپوگرافی دسکتاپ و محدودیت یک‌سطر با ellipsis مثل قبل */
+  @media (min-width:641px){
+    .jbg-single-header{display:flex;align-items:center;gap:12px}
+    .jbg-single-header .hdr-title{flex:1 1 auto;min-width:0}
+    .jbg-single-header .hdr-title h1{
+      margin:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      font-size:24px;line-height:1.35;font-weight:800;color:#111827;
+    }
+    .jbg-single-header .hdr-meta{margin:0}
+    .jbg-single-header .hdr-actions{flex:0 0 auto;margin-inline-start:auto}
+  }
 
-  /* موبایل: عنوان تمام‌عرض و کامل؛ سپس متادیتا؛ سپس لایک/برند */
+  /* موبایل: ستون عمودی + عنوان تمام‌عرض و کامل */
   @media (max-width:640px){
-    .jbg-single-header .row{flex-direction:column!important;align-items:stretch!important;gap:6px;width:100%}
-    .jbg-single-header .col-right{order:1;width:100%!important;display:block}
-    /* خنثی‌سازی هر nowrap/ellipsis قالب روی عنوان */
-    .jbg-single-header .title{
+    .jbg-single-header{display:block;width:100%}
+    .jbg-single-header .hdr-title{order:1;width:100%}
+    .jbg-single-header .hdr-title h1{
       display:block!important;width:100%!important;
       white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+      word-break:break-word!important; /* اگر کلمات خیلی بلند باشند */
       font-size:20px;line-height:1.5;margin:0 0 4px 0;
     }
-    /* متادیتا زیر عنوان */
-    .jbg-single-header .sub{
-      order:2; width:100%; font-size:12.5px; white-space:nowrap; margin:0 0 6px 0
-    }
-    /* لایک و برند در سطر سوم */
-    .jbg-single-header .col-left{
-      order:3; width:100%; justify-content:flex-start; gap:10px
-    }
+    .jbg-single-header .hdr-meta{order:2;width:100%;font-size:12.5px;margin:0 0 8px 0}
+    .jbg-single-header .hdr-actions{order:3;width:100%;justify-content:flex-start}
+    /* خنثی‌سازی هر قانون global قالب روی h1 داخل رپّر پلیر */
+    .single-jbg_ad .jbg-player-wrapper .jbg-single-header h1{white-space:normal!important;overflow:visible!important;text-overflow:initial!important}
   }
 </style>';
 
-        $right  = '<div class="col-right">'
-                . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
-                . '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>'
-                . '</div>';
+        // مارک‌آپ جدید: سه بلوک واضح
+        $title  = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($id)).'</h1></div>';
+        $meta   = '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
+        $acts   = '<div class="hdr-actions"><span class="ext-like">'.$like.'</span>'.($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '').'</div>';
 
-        $left   = '<div class="col-left"><span class="ext-like">'.$like.'</span>'
-                . ($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '')
-                . '</div>';
+        $header = '<div class="jbg-single-header">'.$title.$meta.$acts.'</div>';
 
-        $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
-
-        // انتقال بلاک هدر به زیر پلیر فقط یک بار
+        // اطمینان از قرارگیری زیر پلیر
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
