@@ -5,12 +5,12 @@ if (!defined('ABSPATH')) exit;
 
 class ViewBadge {
     private static function compact_views(int $n): string {
-        if ($n >= 1000000000) { $v=$n/1000000000; $u=' میلیارد'; }
-        elseif ($n >= 1000000){ $v=$n/1000000;    $u=' میلیون'; }
-        elseif ($n >= 1000)   { $v=$n/1000;       $u=' هزار'; }
+        if ($n >= 1000000000) { $v = $n / 1000000000; $u = ' میلیارد'; }
+        elseif ($n >= 1000000) { $v = $n / 1000000;    $u = ' میلیون'; }
+        elseif ($n >= 1000)    { $v = $n / 1000;       $u = ' هزار'; }
         else return (string)$n;
-        $v = floor($v*10)/10;
-        return rtrim(rtrim(number_format($v,1,'.',''), '0'), '.') . $u;
+        $v = floor($v * 10) / 10;
+        return rtrim(rtrim(number_format($v, 1, '.', ''), '0'), '.') . $u;
     }
 
     private static function relative_time(int $post_id): string {
@@ -44,8 +44,8 @@ class ViewBadge {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
         $id     = get_the_ID();
-        $views  = self::views_count((int)$id);
-        $brandN = wp_get_post_terms($id, 'jbg_brand', ['fields'=>'names']);
+        $views  = self::views_count((int) $id);
+        $brandN = wp_get_post_terms($id, 'jbg_brand', ['fields' => 'names']);
         $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
         $viewsF = self::compact_views($views) . ' بازدید';
         $when   = self::relative_time($id);
@@ -131,13 +131,13 @@ class ViewBadge {
   border-color:#e5e7eb;
 }
 
-/* دسکتاپ: ردیفی بماند */
+/* دسکتاپ: ردیفی */
 @media (min-width:768px){
   .jbg-single-header{
     padding:16px 18px; gap:12px;
     flex-direction:row !important;
     align-items:center;
-    flex-wrap:wrap; /* اگر جا کم شد روی خط بعدی بروند */
+    flex-wrap:wrap;
     justify-content:space-between;
   }
   .jbg-single-header .hdr-title{flex:1 1 auto}
@@ -147,12 +147,12 @@ class ViewBadge {
 }
 </style>';
 
-        $title  = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($id)).'</h1></div>';
-        $meta   = '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
-        $acts   = '<div class="hdr-actions"><span class="ext-like">'.$like.'</span>'.($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '').'</div>';
-        $header = '<div class="jbg-single-header">'.$title.$meta.$acts.'</div>';
+        $title = '<div class="hdr-title"><h1 class="title">' . esc_html(get_the_title($id)) . '</h1></div>';
+        $meta  = '<div class="hdr-meta"><span>' . esc_html($viewsF) . '</span><span class="dot">•</span><span>' . esc_html($when) . '</span></div>';
+        $acts  = '<div class="hdr-actions"><span class="ext-like">' . $like . '</span>' . ($brand ? '<span class="brand">' . esc_html($brand) . '</span>' : '') . '</div>';
+        $header = '<div class="jbg-single-header">' . $title . $meta . $acts . '</div>';
 
-        // جابجا کردن هدر تا دقیقاً بعد از پلیر قرار بگیرد
+        // انتقال هدر به بلافاصله بعد از پلیر
         $script = '<script id="jbg-single-header-move">(function(){
   function move(){
     try{
@@ -170,8 +170,8 @@ class ViewBadge {
   else{move();}
 })();</script>';
 
-        static $once=false;
-        if(!$once){ $content = $style . $content; $once=true; }
+        static $once = false;
+        if (!$once) { $content = $style . $content; $once = true; }
         return $header . $script . $content;
     }
 }
