@@ -51,7 +51,7 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // CSS درون‌خطی: دسکتاپ مثل قبل. در موبایل: عنوان تمام‌عرض و سپس متا و سپس لایک/برند.
+        // CSS درون‌خطی: دسکتاپ بدون تغییر؛ فقط در موبایل عنوان تمام‌عرض و بقیه المان‌ها زیر آن.
 $style = '<style id="jbg-single-header-css">
   /* پنهان کردن تیترهای پیش‌فرض قالب */
   .single-jbg_ad header.wd-single-post-header,
@@ -66,7 +66,7 @@ $style = '<style id="jbg-single-header-css">
   .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
   .jbg-single-header .row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;justify-content:space-between;width:100%}
 
-  /* دسکتاپ: عنوان یک‌سطر با ellipsis */
+  /* دسکتاپ: عنوان یک‌سطر با ellipsis (بدون تغییر) */
   .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
   .jbg-single-header .title{
     margin:0;max-width:100%;
@@ -80,17 +80,17 @@ $style = '<style id="jbg-single-header-css">
   .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
   .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
 
-  /* موبایل: عنوان تمام‌عرض، سپس متا، سپس لایک/برند */
+  /* موبایل: عنوان تمام‌عرض و کامل؛ سپس متادیتا؛ سپس لایک/برند */
   @media (max-width:640px){
     .jbg-single-header .row{flex-direction:column!important;align-items:stretch!important;gap:6px;width:100%}
     .jbg-single-header .col-right{order:1;width:100%!important;display:block}
-    /* خنثی‌سازی کامل هر nowrap/ellipsis از قالب */
+    /* خنثی‌سازی هر nowrap/ellipsis قالب روی عنوان */
     .jbg-single-header .title{
       display:block!important;width:100%!important;
       white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
       font-size:20px;line-height:1.5;margin:0 0 4px 0;
     }
-    /* متا زیر عنوان */
+    /* متادیتا زیر عنوان */
     .jbg-single-header .sub{
       order:2; width:100%; font-size:12.5px; white-space:nowrap; margin:0 0 6px 0
     }
@@ -112,6 +112,7 @@ $style = '<style id="jbg-single-header-css">
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
+        // انتقال بلاک هدر به زیر پلیر فقط یک بار
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
