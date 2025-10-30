@@ -1,46 +1,4 @@
-<?php
-namespace JBG\Ads\Frontend;
-
-if (!defined('ABSPATH')) exit;
-
-class ViewBadge {
-    private static function compact_views(int $n): string {
-        if ($n >= 1000000000) { $v=$n/1000000000; $u=' میلیارد'; }
-        elseif ($n >= 1000000){ $v=$n/1000000;    $u=' میلیون'; }
-        elseif ($n >= 1000)   { $v=$n/1000;       $u=' هزار'; }
-        else return (string)$n;
-        $v = floor($v*10)/10;
-        return rtrim(rtrim(number_format($v,1,'.',''), '0'), '.') . $u;
-    }
-
-    private static function relative_time(int $post_id): string {
-        $t = get_post_time('U', true, $post_id);
-        $d = time() - (int)$t;
-        if ($d < 60)        return 'لحظاتی پیش';
-        if ($d < 3600)      return floor($d/60) . ' دقیقه پیش';
-        if ($d < 86400)     return floor($d/3600) . ' ساعت پیش';
-        if ($d < 86400*30)  return floor($d/86400) . ' روز پیش';
-        return get_the_date('', $post_id);
-    }
-
-    private static function views_count(int $ad_id): int {
-        $meta = (int) get_post_meta($ad_id, 'jbg_views_count', true);
-        if ($meta > 0) return $meta;
-        global $wpdb;
-        $table  = $wpdb->prefix . 'jbg_views';
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists !== $table) return 0;
-        $count = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE ad_id=%d", $ad_id));
-        update_post_meta($ad_id, 'jbg_views_count', $count);
-        wp_cache_delete($ad_id, 'post_meta');
-        return $count;
-    }
-
-    public static function register(): void {
-        add_filter('the_content', [self::class, 'inject'], 7);
-    }
-
-    public static function inject($content) {
+public static function inject($content) {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
         $id     = get_the_ID();
@@ -142,20 +100,18 @@ $style = '<style id="jbg-single-header-css">
   /* تنظیمات عنوان برای دسکتاپ */
   .jbg-single-header .hdr-title{
     flex-grow:1; /* اجازه می‌دهیم عنوان حداکثر فضای خالی را بگیرد */
+    order:1;     /* عنوان اولین آیتم است */
   }
   .jbg-single-header .hdr-title h1{font-size:22px}
 
   /* تنظیمات متا و اکشن‌ها برای دسکتاپ */
   .jbg-single-header .hdr-meta{
     flex-shrink:0; /* از جمع شدن جلوگیری می‌کنیم */
-    order:2; /* تغییر ترتیب: متا می‌رود سمت راست (در جهت RTL) */
+    order:2;     /* متا بعد از عنوان قرار می‌گیرد */
   }
   .jbg-single-header .hdr-actions{
     flex-shrink:0; /* از جمع شدن جلوگیری می‌کنیم */
-    order:3; /* اکشن‌ها می‌روند سمت چپ (در جهت RTL) */
-  }
-  .jbg-single-header .hdr-title{
-    order:1; /* عنوان در ابتدا باقی می‌ماند */
+    order:3;     /* اکشن‌ها در انتها قرار می‌گیرند */
   }
 
 }
@@ -181,4 +137,3 @@ $style = '<style id="jbg-single-header-css">
         if(!$once){ $content = $style . $content; $once=true; }
         return $header . $script . $content;
     }
-}
