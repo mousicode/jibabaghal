@@ -51,9 +51,9 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // CSS: دسکتاپ همان قبل؛ در موبایل با data-attr ساده و قطعی override می‌شود.
+        // استایل ساده و یکسان برای همه‌ی عرض‌ها: عنوان تمام‌عرض و کامل، سپس متا، سپس اکشن‌ها
 $style = '<style id="jbg-single-header-css">
-  /* پنهان کردن تیترهای پیش‌فرض قالب */
+  /* پنهان‌کردن تیترهای پیش‌فرض قالب */
   .single-jbg_ad header.wd-single-post-header,
   .single-jbg_ad h1.wd-entities-title,
   .single-jbg_ad .entry-title,
@@ -62,73 +62,46 @@ $style = '<style id="jbg-single-header-css">
   .single-jbg_ad .elementor-heading-title{display:none!important;}
   .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-  /* بلاک هدر زیر پلیر */
+  /* کانتینر هدر زیر پلیر */
   .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
-  .jbg-single-header .row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;justify-content:space-between;width:100%}
 
-  /* دسکتاپ: عنوان یک‌سطر با ellipsis (رفتار فعلی) */
-  .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
-  .jbg-single-header .title{
-    margin:0;max-width:100%;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    font-size:24px;line-height:1.35;font-weight:800;color:#111827;
+  /* سه بلاک ساده */
+  .jbg-single-header .hdr-title{margin:0 0 6px 0}
+  .jbg-single-header .hdr-title h1{
+    margin:0;
+    max-width:100%;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    word-break:break-word;
+    font-size:22px;
+    line-height:1.5;
+    font-weight:800;
+    color:#111827;
   }
-  .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
+  .jbg-single-header .hdr-meta{
+    display:flex; gap:8px; align-items:center;
+    color:#374151; font-size:14px; margin:0 0 8px 0
+  }
   .jbg-single-header .dot{opacity:.55}
-  .jbg-single-header .col-left{display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;justify-content:flex-end;margin-inline-start:auto}
-  .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
-  .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
-
-  /* حالت قطعی موبایل: وقتی data-mobile=\"1\" روی هدر باشد */
-  .jbg-single-header[data-mobile=\"1\"] .row{display:block!important;width:100%!important}
-  .jbg-single-header[data-mobile=\"1\"] .col-right,
-  .jbg-single-header[data-mobile=\"1\"] .col-left{width:100%!important;display:block!important}
-  .jbg-single-header[data-mobile=\"1\"] .title{
-    display:block!important;width:100%!important;
-    white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
-    word-break:break-word!important;font-size:20px;line-height:1.5;margin:0 0 6px 0!important;
-  }
-  .jbg-single-header[data-mobile=\"1\"] .sub{
-    display:block!important;width:100%!important;
-    margin:0 0 10px 0!important;font-size:13px;color:#6b7280;white-space:nowrap;
-  }
-  .jbg-single-header[data-mobile=\"1\"] .col-left{
-    display:flex!important;align-items:center!important;gap:10px!important;justify-content:flex-start!important;margin:0!important;
-  }
+  .jbg-single-header .hdr-actions{display:flex; gap:10px; align-items:center; justify-content:flex-start}
+  .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600}
 </style>';
 
-        // مارک‌آپ اصلی حفظ می‌شود
-        $right  = '<div class="col-right">'
-                . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
-                . '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>'
-                . '</div>';
+        // مارک‌آپ ساده و پایدار
+        $title  = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($id)).'</h1></div>';
+        $meta   = '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
+        $acts   = '<div class="hdr-actions"><span class="ext-like">'.$like.'</span>'.($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '').'</div>';
+        $header = '<div class="jbg-single-header">'.$title.$meta.$acts.'</div>';
 
-        $left   = '<div class="col-left"><span class="ext-like">'.$like.'</span>'
-                . ($brand ? '<span class="brand">'.esc_html($brand).'</span>' : '')
-                . '</div>';
-
-        $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
-
-        // انتقال هدر زیر پلیر و فعال‌سازی حالت موبایل با data-attr
+        // انتقال هدر به داخل wrapper پلیر تا هم‌عرض باشد
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
             var h=document.querySelector(".jbg-single-header");
             if(w&&h&&!w.contains(h)) w.appendChild(h);
           }catch(e){}}
-
-          function setMobileFlag(){try{
-            var h=document.querySelector(".jbg-single-header"); if(!h) return;
-            if (window.innerWidth <= 640) h.setAttribute("data-mobile","1");
-            else h.removeAttribute("data-mobile");
-          }catch(e){}}
-
-          if(document.readyState==="loading"){
-            document.addEventListener("DOMContentLoaded",function(){ move(); setMobileFlag(); });
-          }else{
-            move(); setMobileFlag();
-          }
-          window.addEventListener("resize", setMobileFlag);
+          if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",move);}else{move();}
         })();</script>';
 
         static $once=false;
