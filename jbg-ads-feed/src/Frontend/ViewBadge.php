@@ -52,7 +52,7 @@ class ViewBadge {
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
 $style = '<style id="jbg-single-header-css">
-/* مخفی‌سازی هدرهای پیش‌فرض قالب */
+/* مخفی‌سازی هدرهای پیش‌فرض */
 .single-jbg_ad header.wd-single-post-header,
 .single-jbg_ad h1.wd-entities-title,
 .single-jbg_ad .entry-title,
@@ -61,11 +61,11 @@ $style = '<style id="jbg-single-header-css">
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* کارت هدر شبیه اسکرین‌شات */
+/* کارت هدر */
 .jbg-player-wrapper .jbg-single-header{
   direction:rtl;
   width:100%;
-  margin:12px 0 0;
+  margin-top:10px;
   padding:14px 16px;
   background:#fff;
   border:1px solid #e5e7eb;
@@ -73,9 +73,9 @@ $style = '<style id="jbg-single-header-css">
   box-shadow:0 1px 2px rgba(0,0,0,.04);
   box-sizing:border-box;
 
-  /* نکتهٔ اصلی: ستونی و با فاصلهٔ یکنواخت */
   display:flex;
-  flex-direction:column;
+  flex-direction:column!important;   /* نکته اصلی */
+  align-items:stretch!important;     /* نه center */
   gap:10px;
 }
 
@@ -104,7 +104,7 @@ $style = '<style id="jbg-single-header-css">
 }
 .jbg-single-header .hdr-meta .dot{opacity:.6}
 
-/* اکشن‌ها به‌صورت چیپ، در یک ردیف قابل‌پیچش */
+/* اکشن‌ها به‌صورت چیپ در یک ردیف */
 .jbg-single-header .hdr-actions{
   display:flex;
   align-items:center;
@@ -126,17 +126,15 @@ $style = '<style id="jbg-single-header-css">
   font-weight:600;
   line-height:1;
 }
-.jbg-single-header .brand{
-  background:#eef2ff;
-  border-color:#e5e7eb;
-}
+.jbg-single-header .brand{background:#eef2ff; border-color:#e5e7eb}
 
-/* ریسپانسیو جزئی */
+/* ریسپانسیو */
 @media (min-width:768px){
   .jbg-player-wrapper .jbg-single-header{padding:16px 18px; gap:12px}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
 </style>';
+
 
 
         $title  = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($id)).'</h1></div>';
