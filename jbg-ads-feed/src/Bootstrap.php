@@ -62,7 +62,7 @@ class Bootstrap {
             }
         });
 
-        // NEW: Grid of latest ads (4 columns by default, newest first)
+        // Grid of latest ads
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/GridShortcode.php';
             if (file_exists($f)) {
@@ -73,7 +73,7 @@ class Bootstrap {
             }
         });
 
-        // نمایش امتیاز کاربر (در صورت وجود)
+        // نمایش امتیاز کاربر
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/PointsShortcode.php';
             if (file_exists($f)) {
@@ -84,7 +84,7 @@ class Bootstrap {
             }
         });
 
-        // NEW: کاربران برتر بر اساس مجموع امتیاز
+        // کاربران برتر
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/TopUsersShortcode.php';
             if (file_exists($f)) {
@@ -95,7 +95,7 @@ class Bootstrap {
             }
         });
 
-        // NEW: گزارش اسپانسر
+        // گزارش اسپانسر
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/SponsorReportShortcode.php';
             if (file_exists($f)) {
@@ -106,7 +106,7 @@ class Bootstrap {
             }
         });
 
-        // صفحهٔ تکی ویدیو (گارد + چینش بخش‌ها)
+        // صفحهٔ تکی ویدیو
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/SingleLayout.php';
             if (file_exists($f)) {
@@ -117,7 +117,7 @@ class Bootstrap {
             }
         });
 
-        // سرخط و متای زیر پلیر + پنهان‌سازی watched%
+        // سرخط و متای زیر پلیر
         add_action('init', function () {
             $vb = JBG_ADS_DIR . 'src/Frontend/ViewBadge.php';
             if (file_exists($vb)) {
@@ -128,7 +128,7 @@ class Bootstrap {
             }
         });
 
-        // enqueue استایل هدر ویدیو (همان فایلی که ساختی)
+        // enqueue استایل هدر ویدیو
         add_action('wp_enqueue_scripts', function () {
             if (is_singular('jbg_ad')) {
                 wp_enqueue_style(
@@ -144,7 +144,6 @@ class Bootstrap {
          * Progress / Gating / Points
          * ----------------------------------------------------------------- */
         add_action('init', function () {
-            // Legacy unlock (در صورت وجود)
             $unlock = JBG_ADS_DIR . 'src/Progress/Unlock.php';
             if (file_exists($unlock)) {
                 require_once $unlock;
@@ -153,7 +152,6 @@ class Bootstrap {
                 }
             }
 
-            // Access (گیت نهایی و مدیریت ترتیب)
             $access = JBG_ADS_DIR . 'src/Progress/Access.php';
             if (file_exists($access)) {
                 require_once $access;
@@ -162,7 +160,6 @@ class Bootstrap {
                 }
             }
 
-            // Points engine (امتیازدهی)
             $pts = JBG_ADS_DIR . 'src/Progress/Points.php';
             if (file_exists($pts)) {
                 require_once $pts;
@@ -185,7 +182,7 @@ class Bootstrap {
             }
         });
 
-        // NEW: انتساب برند به کاربر اسپانسر
+        // انتساب برند به کاربر اسپانسر
         add_action('admin_init', function () {
             $f = JBG_ADS_DIR . 'src/Admin/SponsorBrandAccess.php';
             if (file_exists($f)) {
@@ -197,7 +194,7 @@ class Bootstrap {
         });
 
         /* -----------------------------------------------------------------
-         * WALLET: سرویس، شورت‌کد و REST + اتصال به رخداد بیلینگ
+         * WALLET: سرویس، شورت‌کد و REST
          * ----------------------------------------------------------------- */
         add_action('init', function () {
             $w = JBG_ADS_DIR . 'src/Wallet/Wallet.php';
@@ -216,12 +213,25 @@ class Bootstrap {
             }
         });
 
+        /* -----------------------------------------------------------------
+         * REST API
+         * ----------------------------------------------------------------- */
         add_action('rest_api_init', function () {
+            // Wallet API
             $rc = JBG_ADS_DIR . 'src/Rest/WalletController.php';
             if (file_exists($rc)) {
                 require_once $rc;
                 if (class_exists('\\JBG\\Ads\\Rest\\WalletController')) {
                     \JBG\Ads\Rest\WalletController::register_routes();
+                }
+            }
+
+            // NEW: Points redeem API
+            $pr = JBG_ADS_DIR . 'src/Rest/PointsRedeemController.php';
+            if (file_exists($pr)) {
+                require_once $pr;
+                if (class_exists('\\JBG\\Ads\\Rest\\PointsRedeemController')) {
+                    \JBG\Ads\Rest\PointsRedeemController::register_routes();
                 }
             }
         });
