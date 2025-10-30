@@ -1,35 +1,35 @@
 <?php
 namespace JBG\Ads\Rest;
+
 if (!defined('ABSPATH')) exit;
 
+/**
+ * بررسی اعتبار کد تخفیف
+ * GET /wp-json/jbg/v1/coupon/check?code=JBG-XXXX
+ * دسترسی: هر کاربر لاگین (شورت‌کد فقط برای لاگین‌ها نمایش داده می‌شود)
+ */
 class CouponCheckController {
     public static function register_routes(): void {
         register_rest_route('jbg/v1', '/coupon/check', [
             'methods'  => 'GET',
             'callback' => [self::class, 'check'],
             'permission_callback' => function () {
-                if (!is_user_logged_in()) return false;
-                $u = wp_get_current_user();
-                return current_user_can('jbg_view_reports') || in_array('jbg_sponsor', (array)$u->roles, true);
+                return is_user_logged_in(); // قبلاً: فقط اسپانسر/قابلیت jbg_view_reports
             },
         ]);
     }
 
+    /** نرمال‌سازی کد: اعداد فارسی/عربی، dash، کاراکترهای RTL، فاصله‌ها */
     private static function normalize_code(string $raw): string {
         $s = trim($raw);
-        // حذف کاراکترهای نامرئی RTL/LTR/ZWNJ
-        $s = preg_replace('/[\x{200C}\x{200D}\x{200E}\x{200F}\x{061C}]/u', '', $s);
-        // یکسان‌سازی dash
-        $s = strtr($s, ['–'=>'-','—'=>'-','−'=>'-','-'=>'-']);
-        // ارقام فارسی/عربی → لاتین
+        $s = preg_replace('/[\x{200C}\x{200D}\x{200E}\x{200F}\x{061C}]/u', '', $s); // ZWNJ/ZWB/LRM/RLM/ALM
+        $s = strtr($s, ['–'=>'-','—'=>'-','−'=>'-','-'=>'-']); // انواع dash
         $fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
         $ar = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
         $en = ['0','1','2','3','4','5','6','7','8','9'];
         $s = str_replace($fa, $en, $s);
         $s = str_replace($ar, $en, $s);
-        // حذف فاصله‌ها
         $s = preg_replace('/\s+/', '', $s);
-        // نرمال ووکامرس
         return function_exists('wc_format_coupon_code') ? wc_format_coupon_code($s) : strtolower($s);
     }
 
@@ -50,7 +50,7 @@ class CouponCheckController {
 
         $usage_limit = (int) $coupon->get_usage_limit();
         $usage_count = (int) $coupon->get_usage_count();
-        $used_up = ($usage_limit > 0 && $usage_count >= $usage_limit);
+        $used_up     = ($usage_limit > 0 && $usage_count >= $usage_limit);
 
         return new \WP_REST_Response([
             'ok'          => ($status === 'publish') && !$expired && !$used_up,
