@@ -14,8 +14,6 @@ class PointsShortcode {
 
     public static function enqueue(): void {
         if (!is_user_logged_in()) return;
-        $post = get_post();
-        if (!$post || stripos((string)$post->post_content, '[jbg_points') === false) return;
 
         wp_register_script('jbg-points-redeem', '', [], '1.2.1', true);
         $nonce = wp_create_nonce('wp_rest');
