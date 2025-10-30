@@ -61,21 +61,26 @@ $style = '<style id="jbg-single-header-css">
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* کانتینر کارت شبیه اسکرین‌شات */
+/* کارت هدر شبیه اسکرین‌شات */
 .jbg-player-wrapper .jbg-single-header{
   direction:rtl;
   width:100%;
   margin:12px 0 0;
-  padding:14px;
+  padding:14px 16px;
   background:#fff;
   border:1px solid #e5e7eb;
   border-radius:12px;
   box-shadow:0 1px 2px rgba(0,0,0,.04);
   box-sizing:border-box;
+
+  /* نکتهٔ اصلی: ستونی و با فاصلهٔ یکنواخت */
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
 /* عنوان */
-.jbg-single-header .hdr-title{margin:0 0 8px}
+.jbg-single-header .hdr-title{margin:0}
 .jbg-single-header .hdr-title h1{
   margin:0;
   font-size:20px;
@@ -90,43 +95,49 @@ $style = '<style id="jbg-single-header-css">
 
 /* ردیف متا: بازدید • زمان */
 .jbg-single-header .hdr-meta{
-  display:flex; align-items:center; gap:8px;
-  margin:0 0 10px;
-  font-size:13px; color:#6b7280;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  color:#6b7280;
+  margin:0;
 }
 .jbg-single-header .hdr-meta .dot{opacity:.6}
 
-/* نوار اکشن‌ها: شبیه دکمه‌های ریز */
+/* اکشن‌ها به‌صورت چیپ، در یک ردیف قابل‌پیچش */
 .jbg-single-header .hdr-actions{
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:0;
 }
 .jbg-single-header .hdr-actions > *{
-  display:inline-flex; align-items:center; gap:6px;
-  height:32px; padding:0 12px;
-  background:#f8fafc; color:#111827;
-  border:1px solid #e5e7eb; border-radius:999px;
-  font-size:13px; font-weight:600;
-  line-height:1; box-sizing:border-box;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  height:32px;
+  padding:0 12px;
+  background:#f8fafc;
+  color:#111827;
+  border:1px solid #e5e7eb;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:600;
+  line-height:1;
 }
-
-/* دکمه برند به‌صورت چیپ */
 .jbg-single-header .brand{
-  background:#eef2ff; color:#111827; border-color:#e5e7eb;
+  background:#eef2ff;
+  border-color:#e5e7eb;
 }
 
-/* لایک‌ها داخل چیپ اکشن قرار بگیرد */
-.jbg-single-header .ext-like{white-space:nowrap}
-
-/* فاصله از پلیر یا باکس بالایی */
-.jbg-player-wrapper{display:block}
+/* ریسپانسیو جزئی */
 @media (min-width:768px){
-  .jbg-player-wrapper .jbg-single-header{padding:16px 18px}
+  .jbg-player-wrapper .jbg-single-header{padding:16px 18px; gap:12px}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
-
-/* حذف حاشیه‌های تکراری وقتی چند بار این بلاک تزریق شد */
-#jbg-single-header-css+style#jbg-single-header-css{display:none}
 </style>';
+
 
         $title  = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($id)).'</h1></div>';
         $meta   = '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
