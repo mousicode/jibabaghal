@@ -74,7 +74,7 @@ class PointsRedeemController {
         }
 
         // کسر امتیاز
-        Points::deduct($uid, $points_to_deduct, 'redeem');
+        Points::deduct($uid, $points_to_deduct, 'تبدیل به کد تخفیف');
 
         // تاریخ انقضا (به‌وقت سایت)
         try {
