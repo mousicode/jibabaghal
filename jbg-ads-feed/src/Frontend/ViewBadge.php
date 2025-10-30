@@ -61,7 +61,7 @@ $style = '<style id="jbg-single-header-css">
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* کارت هدر */
+/* کارت هدر (تنظیمات موبایل: Column) */
 .jbg-player-wrapper .jbg-single-header{
   direction:rtl;
   width:100%;
@@ -74,8 +74,8 @@ $style = '<style id="jbg-single-header-css">
   box-sizing:border-box;
 
   display:flex;
-  flex-direction:column!important;   /* نکته اصلی */
-  align-items:stretch!important;     /* نه center */
+  flex-direction:column;     /* پیش‌فرض: Column برای موبایل */
+  align-items:stretch;       /* محتوا کامل کشیده شود */
   gap:10px;
 }
 
@@ -128,10 +128,36 @@ $style = '<style id="jbg-single-header-css">
 }
 .jbg-single-header .brand{background:#eef2ff; border-color:#e5e7eb}
 
-/* ریسپانسیو */
+/* ریسپانسیو (تنظیمات دسکتاپ: Row) */
 @media (min-width:768px){
-  .jbg-player-wrapper .jbg-single-header{padding:16px 18px; gap:12px}
+  .jbg-player-wrapper .jbg-single-header{
+    /* تبدیل به Row برای دسکتاپ */
+    flex-direction:row;
+    align-items:center; /* همه‌چیز در وسط عمودی ردیف قرار گیرد */
+    justify-content:space-between; /* پخش شدن آیتم‌ها در طول ردیف */
+    padding:16px 18px;
+    gap:16px; /* فاصله بین آیتم‌های اصلی را افزایش می‌دهیم */
+  }
+  
+  /* تنظیمات عنوان برای دسکتاپ */
+  .jbg-single-header .hdr-title{
+    flex-grow:1; /* اجازه می‌دهیم عنوان حداکثر فضای خالی را بگیرد */
+  }
   .jbg-single-header .hdr-title h1{font-size:22px}
+
+  /* تنظیمات متا و اکشن‌ها برای دسکتاپ */
+  .jbg-single-header .hdr-meta{
+    flex-shrink:0; /* از جمع شدن جلوگیری می‌کنیم */
+    order:2; /* تغییر ترتیب: متا می‌رود سمت راست (در جهت RTL) */
+  }
+  .jbg-single-header .hdr-actions{
+    flex-shrink:0; /* از جمع شدن جلوگیری می‌کنیم */
+    order:3; /* اکشن‌ها می‌روند سمت چپ (در جهت RTL) */
+  }
+  .jbg-single-header .hdr-title{
+    order:1; /* عنوان در ابتدا باقی می‌ماند */
+  }
+
 }
 </style>';
 
