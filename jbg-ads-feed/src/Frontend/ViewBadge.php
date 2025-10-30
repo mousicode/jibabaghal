@@ -51,7 +51,7 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // CSS: دسکتاپ مثل قبل. موبایل بسیار ساده و صریح.
+        // CSS: دسکتاپ همان قبل؛ در موبایل با data-attr ساده و قطعی override می‌شود.
 $style = '<style id="jbg-single-header-css">
   /* پنهان کردن تیترهای پیش‌فرض قالب */
   .single-jbg_ad header.wd-single-post-header,
@@ -62,11 +62,11 @@ $style = '<style id="jbg-single-header-css">
   .single-jbg_ad .elementor-heading-title{display:none!important;}
   .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-  /* بلاک هدر کنار پلیر */
+  /* بلاک هدر زیر پلیر */
   .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
   .jbg-single-header .row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;justify-content:space-between;width:100%}
 
-  /* دسکتاپ: یک‌سطر با ellipsis (رفتار قبلی) */
+  /* دسکتاپ: عنوان یک‌سطر با ellipsis (رفتار فعلی) */
   .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
   .jbg-single-header .title{
     margin:0;max-width:100%;
@@ -79,35 +79,25 @@ $style = '<style id="jbg-single-header-css">
   .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
   .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
 
-  /* موبایل: چینش ساده بر اساس نمونه‌ی مرجع */
-  @media (max-width:640px){
-    .jbg-single-header .row{display:block!important;width:100%}
-    .jbg-single-header .col-right,
-    .jbg-single-header .col-left{width:100%!important;display:block}
-
-    /* عنوان: تمام‌عرض و کامل */
-    .jbg-single-header .title{
-      display:block!important;width:100%!important;
-      white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
-      word-break:break-word!important;
-      font-size:20px;line-height:1.5;font-weight:800;margin:0 0 6px 0;
-    }
-
-    /* متادیتا زیر عنوان */
-    .jbg-single-header .sub{
-      display:block!important;width:100%!important;
-      margin:0 0 10px 0; font-size:13px; color:#6b7280; white-space:nowrap;
-    }
-
-    /* اکشن‌ها بعد از متادیتا */
-    .jbg-single-header .col-left{
-      display:flex!important; align-items:center; gap:10px;
-      justify-content:flex-start; margin:0;
-    }
+  /* حالت قطعی موبایل: وقتی data-mobile=\"1\" روی هدر باشد */
+  .jbg-single-header[data-mobile=\"1\"] .row{display:block!important;width:100%!important}
+  .jbg-single-header[data-mobile=\"1\"] .col-right,
+  .jbg-single-header[data-mobile=\"1\"] .col-left{width:100%!important;display:block!important}
+  .jbg-single-header[data-mobile=\"1\"] .title{
+    display:block!important;width:100%!important;
+    white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+    word-break:break-word!important;font-size:20px;line-height:1.5;margin:0 0 6px 0!important;
+  }
+  .jbg-single-header[data-mobile=\"1\"] .sub{
+    display:block!important;width:100%!important;
+    margin:0 0 10px 0!important;font-size:13px;color:#6b7280;white-space:nowrap;
+  }
+  .jbg-single-header[data-mobile=\"1\"] .col-left{
+    display:flex!important;align-items:center!important;gap:10px!important;justify-content:flex-start!important;margin:0!important;
   }
 </style>';
 
-        // مارک‌آپ موجود را حفظ می‌کنیم
+        // مارک‌آپ اصلی حفظ می‌شود
         $right  = '<div class="col-right">'
                 . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
                 . '<div class="sub"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>'
@@ -119,14 +109,26 @@ $style = '<style id="jbg-single-header-css">
 
         $header = '<div class="jbg-single-header"><div class="row">'.$right.$left.'</div></div>';
 
-        // جابه‌جایی زیر پلیر
+        // انتقال هدر زیر پلیر و فعال‌سازی حالت موبایل با data-attr
         $script = '<script id="jbg-single-header-move">(function(){
           function move(){try{
             var w=document.querySelector(".jbg-player-wrapper");
             var h=document.querySelector(".jbg-single-header");
             if(w&&h&&!w.contains(h)) w.appendChild(h);
           }catch(e){}}
-          if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",move);}else{move();}
+
+          function setMobileFlag(){try{
+            var h=document.querySelector(".jbg-single-header"); if(!h) return;
+            if (window.innerWidth <= 640) h.setAttribute("data-mobile","1");
+            else h.removeAttribute("data-mobile");
+          }catch(e){}}
+
+          if(document.readyState==="loading"){
+            document.addEventListener("DOMContentLoaded",function(){ move(); setMobileFlag(); });
+          }else{
+            move(); setMobileFlag();
+          }
+          window.addEventListener("resize", setMobileFlag);
         })();</script>';
 
         static $once=false;
