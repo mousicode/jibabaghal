@@ -84,6 +84,17 @@ class Bootstrap {
             }
         });
 
+        // NEW: کاربران برتر بر اساس مجموع امتیاز
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Frontend/TopUsersShortcode.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Frontend\\TopUsersShortcode')) {
+                    \JBG\Ads\Frontend\TopUsersShortcode::register();
+                }
+            }
+        });
+
         // NEW: گزارش اسپانسر
         add_action('init', function () {
             $f = JBG_ADS_DIR . 'src/Frontend/SponsorReportShortcode.php';
