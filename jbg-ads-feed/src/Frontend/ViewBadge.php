@@ -51,7 +51,8 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        // CSS درون‌خطی (دسکتاپ: مثل قبل. موبایل: عنوان تمام‌عرض و چندخطی، سپس متا، سپس لایک/برند)
+        // CSS درون‌خطی: عنوان چندخطی با line-clamp در همه‌ی نماها.
+        // موبایل: ترتیب ستون‌ها و اندازه‌ها بهینه.
 $style = '<style id="jbg-single-header-css">
   /* پنهان کردن تیترهای پیش‌فرض قالب */
   .single-jbg_ad header.wd-single-post-header,
@@ -66,11 +67,13 @@ $style = '<style id="jbg-single-header-css">
   .jbg-player-wrapper .jbg-single-header{width:100%;margin:10px 0 0;padding:0;direction:rtl}
   .jbg-single-header .row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;justify-content:space-between;width:100%}
 
-  /* دسکتاپ: عنوان یک‌سطر با ellipsis */
+  /* دسکتاپ: عنوان چندخطی ایمن با ellipsis خط‌دوم */
   .jbg-single-header .col-right{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
   .jbg-single-header .title{
     margin:0;max-width:100%;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    /* تغییر اصلی: حذف nowrap و استفاده از line-clamp */
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+    overflow:hidden;white-space:normal;text-overflow:ellipsis;
     font-size:24px;line-height:1.35;font-weight:800;color:#111827;
   }
   .jbg-single-header .sub{display:flex;gap:8px;align-items:center;color:#374151;font-size:14px;white-space:nowrap}
@@ -80,21 +83,20 @@ $style = '<style id="jbg-single-header-css">
   .jbg-single-header .ext-like{display:inline-flex;align-items:center;gap:6px}
   .jbg-single-header .brand{background:#f1f5f9;color:#111827;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
 
-  /* موبایل: عنوان تمام‌عرض و چندخطی، سپس متا، سپس لایک/برند */
+  /* موبایل: عنوان تمام‌عرض و سه‌خطی، سپس متا، سپس لایک/برند */
   @media (max-width:640px){
     .jbg-single-header .row{flex-direction:column!important;align-items:stretch!important;gap:6px}
     .jbg-single-header .col-right{order:1;width:100%;display:block}
-    /* خنثی‌سازی هر قانون قالب روی h1 (nowrap/ellipsis و …) */
+    /* خنثی‌سازی هر قانون قالب روی h1 و اجازه چندخطی */
     .jbg-single-header .title{
-      display:block!important;width:100%!important;
-      white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+      display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+      width:100%!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;
       font-size:20px;line-height:1.5;margin:0 0 2px 0;
     }
     .jbg-single-header .sub{font-size:12.5px;white-space:nowrap;margin:0 0 4px 0}
     .jbg-single-header .col-left{order:3;width:100%;justify-content:flex-start;gap:10px}
   }
 </style>';
-
 
         $right  = '<div class="col-right">'
                 . '<h1 class="title">'.esc_html(get_the_title($id)).'</h1>'
