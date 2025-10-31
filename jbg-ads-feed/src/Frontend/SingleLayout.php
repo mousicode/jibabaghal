@@ -7,18 +7,21 @@ use JBG\Ads\Progress\Access;
 class SingleLayout {
 
     public static function register(): void {
-        // ابتدا هر تزریق قدیمی ViewBadge را برای صفحه‌ی تکی ویدیو غیرفعال کن
+        // هر نوع تزریق قدیمی هدر را برای صفحهٔ تکی ویدیو غیرفعال کن
         add_action('wp', [self::class, 'detach_viewbadge'], 1);
+
         // گارد دسترسی/لاک
         add_action('template_redirect', [self::class, 'guard'], 1);
-        // محتوای صفحه
+
+        // خروجی صفحه
         add_filter('the_content', [self::class, 'wrap'], 4);
     }
 
     public static function detach_viewbadge(): void {
         if (is_singular('jbg_ad') && class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
-            // فلگ سراسری برای توقف inject در ViewBadge (ایمن در هر قالبی)
+            // فلگ جهانی تا ViewBadge چیزی تزریق نکند
             $GLOBALS['JBG_DISABLE_VIEWBADGE'] = true;
+            // و اگر فیلتر اضافه شده باشد حذف شود
             remove_filter('the_content', ['\\JBG\\Ads\\Frontend\\ViewBadge','inject'], 7);
         }
     }
@@ -28,13 +31,13 @@ class SingleLayout {
         $user_id = get_current_user_id();
         $ad_id   = (int) get_queried_object_id();
         if (!Access::is_unlocked($user_id, $ad_id)) {
-            // هر فیلتر the_content با priority=5 (پلیر) را بردار
+            // پلیرهایی که با priority=5 تزریق می‌شوند
             remove_all_filters('the_content', 5);
             $GLOBALS['JBG_LOCKED_AD'] = true;
         }
     }
 
-    // --- کمک‌کننده‌ها (کپی امن از ViewBadge) ---
+    /* ----------------- کمک‌کننده‌ها: از ViewBadge کپی امن ----------------- */
     private static function compact_views(int $n): string {
         if ($n >= 1000000000) { $v = $n / 1000000000; $u = ' میلیارد'; }
         elseif ($n >= 1000000) { $v = $n / 1000000;    $u = ' میلیون'; }
@@ -66,31 +69,19 @@ class SingleLayout {
         wp_cache_delete($ad_id, 'post_meta');
         return $count;
     }
-    // ---------------------------------------------
+    /* -------------------------------------------------------------------- */
 
-    public static function wrap($content) {
-        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
+    /** ساخت هدر یکپارچه زیر پلیر */
+    private static function build_header(int $post_id): string {
+        $views  = self::views_count($post_id);
+        $brandN = wp_get_post_terms($post_id, 'jbg_brand', ['fields' => 'names']);
+        $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
+        $viewsF = self::compact_views($views) . ' بازدید';
+        $when   = self::relative_time($post_id);
+        $like   = do_shortcode('[posts_like_dislike id='.$post_id.']');
 
-        $user_id = get_current_user_id();
-        $ad_id   = get_the_ID();
-        $is_open = Access::is_unlocked($user_id, $ad_id);
-        $points  = (int) get_post_meta($ad_id, 'jbg_points', true);
-
-        // استایل کل صفحه + استایل هدر یکپارچه (موبایل ردیفی)
-        $style = '<style id="jbg-single-styles">
-/* کارت‌های عمومی صفحه */
-.single-jbg_ad .jbg-main-stack{display:block;direction:rtl;}
-.single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
-.jbg-locked{background:#fff;border:1px dashed #9ca3af;border-radius:12px;padding:18px;margin-top:16px;color:#374151}
-.jbg-locked .title{font-weight:800;margin-bottom:8px}
-.jbg-locked .note{font-size:13px;color:#6b7280}
-
-/* نشان امتیاز کنار عنوان قالب */
-.jbg-points-badge{display:inline-flex;align-items:center;gap:6px;margin-inline-start:8px;
-  padding:2px 8px;border-radius:9999px;background:#EEF2FF;color:#3730A3;font-weight:700;font-size:12px;border:1px solid #E0E7FF}
-.jbg-points-badge .pt-val{font-weight:800}
-
-/* پنهان‌سازی هدرهای پیش‌فرض قالب وقتی هدر ما حاضر است */
+        $css = '<style id="jbg-single-header-inline">
+/* مخفی‌سازی هدرهای قالب وقتی هدر ما حاضر است */
 .single-jbg_ad header.wd-single-post-header,
 .single-jbg_ad h1.wd-entities-title,
 .single-jbg_ad .entry-title,
@@ -103,15 +94,12 @@ class SingleLayout {
 .jbg-single-header{
   direction:rtl;width:100%;margin:12px 0 0;padding:14px 16px;background:#fff;
   border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
-  box-sizing:border-box;
-  display:flex;align-items:center;gap:10px;
-  flex-direction:row;         /* مهم: ردیفی روی موبایل */
-  flex-wrap:wrap;             /* کمبود عرض → گروه بعدی خط بعد */
+  box-sizing:border-box;display:flex;align-items:center;gap:10px;
+  flex-direction:row;flex-wrap:wrap;
 }
-.jbg-single-header .hdr-meta,
-.jbg-single-header .hdr-actions{
-  display:flex;align-items:center;gap:8px;margin:0;
-  white-space:nowrap;flex-wrap:nowrap;order:1;
+/* متا و اکشن‌ها کنار هم و بدون شکست داخلی */
+.jbg-single-header .hdr-meta,.jbg-single-header .hdr-actions{
+  display:flex;align-items:center;gap:8px;margin:0;white-space:nowrap;flex-wrap:nowrap;order:1
 }
 /* عنوان: در موبایل یک ردیف کامل زیر اکشن‌ها */
 .jbg-single-header .hdr-title{margin:0;order:2;flex:1 1 100%}
@@ -127,74 +115,83 @@ class SingleLayout {
 .jbg-single-header .chip.brand{background:#eef2ff}
 /* لایک/دیس‌لایک بدون پس‌زمینه */
 .jbg-single-header .hdr-actions .ext-like{background:transparent;border:none;padding:0;height:auto}
-.jbg-single-header .hdr-actions .ext-like > *{margin:0}
+.jbg-single-header .hdr-actions .ext-like>*{margin:0}
 /* دسکتاپ: عنوان کنار اکشن‌ها */
 @media (min-width:768px){
   .jbg-single-header{padding:16px 18px;gap:12px}
   .jbg-single-header .hdr-title{order:0;flex:1 1 auto}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
+
+/* کارت‌های عمومی صفحه و نشان امتیاز */
+.single-jbg_ad .jbg-main-stack{display:block;direction:rtl;}
+.single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
+.jbg-locked{background:#fff;border:1px dashed #9ca3af;border-radius:12px;padding:18px;margin-top:16px;color:#374151}
+.jbg-locked .title{font-weight:800;margin-bottom:8px}
+.jbg-locked .note{font-size:13px;color:#6b7280}
+.jbg-points-badge{display:inline-flex;align-items:center;gap:6px;margin-inline-start:8px;
+  padding:2px 8px;border-radius:9999px;background:#EEF2FF;color:#3730A3;font-weight:700;font-size:12px;border:1px solid #E0E7FF}
+.jbg-points-badge .pt-val{font-weight:800}
 </style>';
 
-        // ساخت هدر (بدون وابستگی به ViewBadge)
-        $views  = self::views_count((int) $ad_id);
-        $brandN = wp_get_post_terms($ad_id, 'jbg_brand', ['fields' => 'names']);
-        $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
-        $viewsF = self::compact_views($views) . ' بازدید';
-        $when   = self::relative_time($ad_id);
-        $like   = do_shortcode('[posts_like_dislike id=' . $ad_id . ']');
+        $html  = $css;
+        $html .= '<div class="jbg-single-header">';
+        $html .=   '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span>•</span><span>'.esc_html($when).'</span></div>';
+        $html .=   '<div class="hdr-actions"><span class="ext-like">'.$like.'</span>'
+                .   ($brand ? '<span class="chip brand">'.esc_html($brand).'</span>' : '')
+                .   '</div>';
+        $html .=   '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($post_id)).'</h1></div>';
+        $html .= '</div>';
 
-        $header  = '<div class="jbg-single-header">';
-        $header .=   '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span>•</span><span>'.esc_html($when).'</span></div>';
-        $header .=   '<div class="hdr-actions"><span class="ext-like">'.$like.'</span>'
-                  .   ($brand ? '<span class="chip brand">'.esc_html($brand).'</span>' : '')
-                  .   '</div>';
-        $header .=   '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($ad_id)).'</h1></div>';
-        $header .= '</div>';
+        return $html;
+    }
 
-        $html = '<div class="jbg-main-stack">';
+    public static function wrap($content) {
+        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
+
+        $user_id = get_current_user_id();
+        $ad_id   = get_the_ID();
+        $is_open = Access::is_unlocked($user_id, $ad_id);
+        $points  = (int) get_post_meta($ad_id, 'jbg_points', true);
+
+        $out = '<div class="jbg-main-stack">';
 
         if ($is_open) {
-            // اول پلیر/محتوای اصلی، بعد هدر جدید (یک بار)
-            $html .= $content . $header;
+            // پلیر
+            $out .= $content;
+            // هدر یکپارچه زیر پلیر
+            $out .= self::build_header($ad_id);
 
-            // نشان امتیاز کنار عنوان (در صورت تعریف)
+            // نشان امتیاز کنار عنوان
             if ($points > 0) {
-                $badge = '<span id="jbg-points-badge" class="jbg-points-badge" data-points="'.esc_attr($points).'"><span class="pt-val">'.
-                         esc_html($points).'</span> امتیاز</span>';
-                $html .= $badge;
-                $html .= '<script>(function(){try{
-                  var b=document.getElementById("jbg-points-badge"); if(!b) return;
-                  var sels=[".jbg-single-header h1",".jbg-single-header .title",".entry-title",".jbg-title",".single-title","h1"];
-                  var t=null; for(var i=0;i<sels.length;i++){ t=document.querySelector(sels[i]); if(t) break; }
-                  if(t){ t.insertAdjacentElement("beforeend", b); }
+                $out .= '<span id="jbg-points-badge" class="jbg-points-badge"><span class="pt-val">'.
+                        esc_html($points).'</span> امتیاز</span>';
+                $out .= '<script>(function(){try{
+                    var b=document.getElementById("jbg-points-badge"); if(!b) return;
+                    var t=document.querySelector(".jbg-single-header h1"); if(t){ t.insertAdjacentElement("beforeend", b); }
                 }catch(e){}})();</script>';
             }
 
             // آزمون
-            $quiz_html = do_shortcode('[jbg_quiz]');
-            if (trim($quiz_html)!=='') $html .= '<div class="jbg-section">'.$quiz_html.'</div>';
+            $quiz = do_shortcode('[jbg_quiz]');
+            if (trim($quiz)!=='') $out .= '<div class="jbg-section">'.$quiz.'</div>';
 
             // مرتبط‌ها
-            $rel_html = do_shortcode('[jbg_related limit="10"]');
-            if (trim($rel_html)!=='') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            $rel = do_shortcode('[jbg_related limit="10"]');
+            if (trim($rel)!=='') $out .= '<div class="jbg-section">'.$rel.'</div>';
 
         } else {
             // پیام قفل + مرتبط‌ها
             $seq = Access::seq($ad_id);
-            $html .= '<div class="jbg-locked"><div class="title">این ویدیو هنوز برای شما باز نیست</div>'
-                   . '<div class="note">برای دسترسی، ابتدا ویدیوی مرحلهٔ <strong>'.esc_html(max(1,$seq-1)).'</strong> را کامل ببینید و آزمونش را درست پاسخ دهید.'
-                   . ($user_id>0 ? '' : ' (لطفاً ابتدا وارد شوید)')
-                   . '</div></div>';
+            $out .= '<div class="jbg-locked"><div class="title">این ویدیو هنوز برای شما باز نیست</div>'
+                  . '<div class="note">برای دسترسی، ابتدا ویدیوی مرحلهٔ <strong>'.esc_html(max(1,$seq-1)).'</strong> را کامل ببینید و آزمونش را درست پاسخ دهید.'
+                  . ($user_id>0 ? '' : ' (لطفاً ابتدا وارد شوید)') . '</div></div>';
 
-            $rel_html = do_shortcode('[jbg_related limit="10"]');
-            if (trim($rel_html)!=='') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            $rel = do_shortcode('[jbg_related limit="10"]');
+            if (trim($rel)!=='') $out .= '<div class="jbg-section">'.$rel.'</div>';
         }
 
-        $html .= '</div>';
-
-        static $once = false;
-        if (!$once) { $html = $style . $html; $once = true; }
-        return $html;
+        $out .= '</div>';
+        return $out;
     }
 }
