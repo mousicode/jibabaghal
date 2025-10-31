@@ -17,7 +17,7 @@ class CouponCheckShortcode {
         <style>
             .jbg-coupon-check{display:flex;flex-direction:column;gap:10px;max-width:350px;margin:20px 0}
             .jbg-coupon-check input{padding:8px 10px;border:1px solid #ccc;border-radius:8px}
-            .jbg-coupon-check button{background:#111827;color:#fff;border:none;padding:10px 16px;border-radius:9999px;cursor:pointer;transition:background .2s}
+            .jbg-coupon-check button{background:#f3a01f;color:#fff;border:none;padding:10px 16px;border-radius:9999px;cursor:pointer;transition:background .2s}
             .jbg-coupon-check button:hover{background:#1f2937}
             #jbg_coupon_result{margin-top:10px;font-weight:600}
             #jbg_coupon_result .ok{color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;padding:8px;border-radius:8px}
