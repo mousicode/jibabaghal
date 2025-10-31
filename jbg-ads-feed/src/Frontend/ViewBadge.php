@@ -41,7 +41,6 @@ class ViewBadge {
         add_filter('the_content', [self::class, 'inject'], 7);
     }
 
-    /** ساخت هدر برای استفاده مستقیم در SingleLayout */
     public static function build(int $post_id): array {
         $views  = self::views_count((int) $post_id);
         $brandN = wp_get_post_terms($post_id, 'jbg_brand', ['fields' => 'names']);
@@ -51,7 +50,6 @@ class ViewBadge {
         $like   = do_shortcode('[posts_like_dislike id=' . $post_id . ']');
 
         $style = '<style id="jbg-single-header-css">
-/* پنهان‌سازی هدرهای قالب */
 .single-jbg_ad header.wd-single-post-header,
 .single-jbg_ad h1.wd-entities-title,
 .single-jbg_ad .entry-title,
@@ -60,42 +58,27 @@ class ViewBadge {
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* هدر زیر پلیر: ردیفی حتی در موبایل */
 .jbg-single-header{
   direction:rtl;width:100%;margin:12px 0 0;padding:14px 16px;background:#fff;
   border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
-  box-sizing:border-box;
-  display:flex;align-items:center;gap:10px;
-  flex-direction:row !important;   /* ردیفی از ابتدا */
-  flex-wrap:wrap;                   /* اگر جا کم شد کل گروه برود خط بعد */
+  box-sizing:border-box;display:flex;align-items:center;gap:10px;
+  flex-direction:row;flex-wrap:wrap;
 }
-
-/* متا و اکشن‌ها کنار هم و بدون شکست داخلی */
-.jbg-single-header .hdr-meta,
-.jbg-single-header .hdr-actions{
-  display:flex;align-items:center;gap:8px;margin:0;
-  white-space:nowrap;flex-wrap:nowrap;order:1
+.jbg-single-header .hdr-meta,.jbg-single-header .hdr-actions{
+  display:flex;align-items:center;gap:8px;margin:0;white-space:nowrap;flex-wrap:nowrap;order:1
 }
-
-/* عنوان: در موبایل یک ردیف کامل زیر اکشن‌ها */
 .jbg-single-header .hdr-title{margin:0;order:2;flex:1 1 100%}
 .jbg-single-header .hdr-title h1{
   margin:0;font-size:20px;line-height:1.6;font-weight:800;color:#0f172a;
   word-break:break-word;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
 }
-
-/* فقط برند به شکل چیپ بماند */
 .jbg-single-header .chip{
   display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;
   background:#f8fafc;color:#111827;border:1px solid #e5e7eb;border-radius:999px;font-size:13px;font-weight:600;line-height:1
 }
 .jbg-single-header .chip.brand{background:#eef2ff}
-
-/* لایک/دیس‌لایک بدون پس‌زمینه */
 .jbg-single-header .hdr-actions .ext-like{background:transparent;border:none;padding:0;height:auto}
 .jbg-single-header .hdr-actions .ext-like > *{margin:0}
-
-/* دسکتاپ: عنوان کنار اکشن‌ها */
 @media (min-width:768px){
   .jbg-single-header{padding:16px 18px;gap:12px}
   .jbg-single-header .hdr-title{order:0;flex:1 1 auto}
@@ -112,10 +95,11 @@ class ViewBadge {
         return ['style'=>$style, 'html'=>'<div class="jbg-single-header">'.$title.$meta.$acts.'</div>'];
     }
 
-    /** تزریق قدیمی برای سازگاری با گذشته */
     public static function inject($content) {
-        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
+        // اگر SingleLayout فلگ را گذاشته باشد، هیچ چیزی تزریق نکن
+        if (!empty($GLOBALS['JBG_DISABLE_VIEWBADGE'])) return $content;
 
+        if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
         $built  = self::build(get_the_ID());
         $style  = $built['style'];
         $header = $built['html'];
