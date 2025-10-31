@@ -1,6 +1,5 @@
 <?php
 namespace JBG\Ads\Frontend;
-
 if (!defined('ABSPATH')) exit;
 
 class CouponCheckShortcode {
@@ -10,6 +9,10 @@ class CouponCheckShortcode {
 
     public static function render(): string {
         if (!is_user_logged_in()) return '<p>برای استعلام وارد شوید.</p>';
+
+        // Nonce برای احراز هویت REST
+        $nonce = wp_create_nonce('wp_rest');
+
         ob_start(); ?>
         <style>
             .jbg-coupon-check{display:flex;flex-direction:column;gap:10px;max-width:350px;margin:20px 0}
@@ -31,12 +34,15 @@ class CouponCheckShortcode {
           const btn  = document.getElementById('jbg_coupon_btn');
           const code = document.getElementById('jbg_coupon_code');
           const box  = document.getElementById('jbg_coupon_result');
+          const NONCE = "<?php echo esc_js($nonce); ?>";
           function fmt(s){return (s||'').trim().toLowerCase();}
+
           btn.onclick = async function(){
             const c = fmt(code.value);
             if(!c){alert('کد را وارد کنید'); return;}
             try{
-              const res = await fetch(`/wp-json/jbg/v1/coupon/check?code=${encodeURIComponent(c)}`);
+              const url = `/wp-json/jbg/v1/coupon/check?code=${encodeURIComponent(c)}&_wpnonce=${encodeURIComponent(NONCE)}`;
+              const res = await fetch(url, { headers: { 'X-WP-Nonce': NONCE } });
               const d = await res.json();
               if(d.ok){
                 box.innerHTML = `<div class="ok">✅ معتبر است. مبلغ: ${d.amount} تومان${d.expiry ? `، انقضا: ${d.expiry}` : ''}${d.used_up ? ' (استفاده‌شده)' : ''}</div>`;
