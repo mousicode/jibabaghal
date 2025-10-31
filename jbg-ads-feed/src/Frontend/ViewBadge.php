@@ -60,45 +60,45 @@ class ViewBadge {
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* هدر زیر پلیر: موبایل هم رِدیفی */
+/* هدر زیر پلیر: ردیفی حتی در موبایل */
 .jbg-single-header{
-  direction:rtl; width:100%; margin:12px 0 0; padding:14px 16px; background:#fff;
-  border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+  direction:rtl;width:100%;margin:12px 0 0;padding:14px 16px;background:#fff;
+  border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
   box-sizing:border-box;
-  display:flex; align-items:center; gap:10px;
-  flex-direction:row;             /* ردیفی از ابتدا (موبایل) */
-  flex-wrap:wrap;                 /* کمبود عرض → رفتن کل گروه به خط بعد */
+  display:flex;align-items:center;gap:10px;
+  flex-direction:row !important;   /* ردیفی از ابتدا */
+  flex-wrap:wrap;                   /* اگر جا کم شد کل گروه برود خط بعد */
+}
+
+/* متا و اکشن‌ها کنار هم و بدون شکست داخلی */
+.jbg-single-header .hdr-meta,
+.jbg-single-header .hdr-actions{
+  display:flex;align-items:center;gap:8px;margin:0;
+  white-space:nowrap;flex-wrap:nowrap;order:1
 }
 
 /* عنوان: در موبایل یک ردیف کامل زیر اکشن‌ها */
-.jbg-single-header .hdr-title{margin:0; order:2; flex:1 1 100%}
+.jbg-single-header .hdr-title{margin:0;order:2;flex:1 1 100%}
 .jbg-single-header .hdr-title h1{
-  margin:0; font-size:20px; line-height:1.6; font-weight:800; color:#0f172a;
-  word-break:break-word; white-space:normal!important; overflow:visible!important; text-overflow:clip!important;
+  margin:0;font-size:20px;line-height:1.6;font-weight:800;color:#0f172a;
+  word-break:break-word;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
 }
 
-/* متا و اکشن‌ها در یک ردیف و بدون شکست داخلی */
-.jbg-single-header .hdr-meta,
-.jbg-single-header .hdr-actions{
-  display:flex; align-items:center; gap:8px; margin:0;
-  flex-wrap:nowrap; white-space:nowrap; order:1;
+/* فقط برند به شکل چیپ بماند */
+.jbg-single-header .chip{
+  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;
+  background:#f8fafc;color:#111827;border:1px solid #e5e7eb;border-radius:999px;font-size:13px;font-weight:600;line-height:1
 }
+.jbg-single-header .chip.brand{background:#eef2ff}
 
 /* لایک/دیس‌لایک بدون پس‌زمینه */
 .jbg-single-header .hdr-actions .ext-like{background:transparent;border:none;padding:0;height:auto}
 .jbg-single-header .hdr-actions .ext-like > *{margin:0}
 
-/* فقط برند به شکل چیپ بماند */
-.jbg-single-header .chip{
-  display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px;
-  background:#f8fafc; color:#111827; border:1px solid #e5e7eb; border-radius:999px; font-size:13px; font-weight:600; line-height:1
-}
-.jbg-single-header .chip.brand{background:#eef2ff}
-
-/* دسکتاپ: عنوان در همان ردیف کنار اکشن‌ها */
+/* دسکتاپ: عنوان کنار اکشن‌ها */
 @media (min-width:768px){
-  .jbg-single-header{padding:16px 18px; gap:12px}
-  .jbg-single-header .hdr-title{order:0; flex:1 1 auto} /* عنوان برگردد کنار اکشن‌ها */
+  .jbg-single-header{padding:16px 18px;gap:12px}
+  .jbg-single-header .hdr-title{order:0;flex:1 1 auto}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
 </style>';
