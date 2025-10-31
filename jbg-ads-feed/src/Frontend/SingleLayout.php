@@ -7,8 +7,19 @@ use JBG\Ads\Progress\Access;
 class SingleLayout {
 
     public static function register(): void {
+        // گارد قبل از رندر
         add_action('template_redirect', [self::class, 'guard'], 1);
+        // جدا کردن تزریق قدیمی ViewBadge زودتر از فیلتر محتوا
+        add_action('wp', [self::class, 'detach_viewbadge'], 1);
+        // محتوا
         add_filter('the_content', [self::class, 'wrap'], 4);
+    }
+
+    // حذف مطمئن تزریق ViewBadge فقط در صفحهٔ تکی jbg_ad
+    public static function detach_viewbadge(): void {
+        if (is_singular('jbg_ad') && class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
+            remove_filter('the_content', ['\\JBG\\Ads\\Frontend\\ViewBadge','inject'], 7);
+        }
     }
 
     public static function guard(): void {
@@ -43,13 +54,12 @@ class SingleLayout {
         $html = '<div class="jbg-main-stack">';
 
         if ($is_open) {
-            // جلوگیری از رندرِ دوباره ViewBadge و درج هدر سفارشی بعد از پلیر
+            // هدر سفارشی بعد از پلیر (بدون تکرار)
             if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
-                remove_filter('the_content', ['\\JBG\\Ads\\Frontend\\ViewBadge','inject'], 7);
                 $vb = \JBG\Ads\Frontend\ViewBadge::build($ad_id);
                 $html .= $vb['style'];   // CSS هدر
                 $html .= $content;       // پلیر
-                $html .= $vb['html'];    // هدر یک‌بار
+                $html .= $vb['html'];    // هدر
             } else {
                 $html .= $content;
             }
