@@ -7,23 +7,30 @@ use JBG\Ads\Progress\Access;
 class SingleLayout {
 
     public static function register(): void {
-        // هر نوع تزریق قدیمی هدر را برای صفحهٔ تکی ویدیو غیرفعال کن
-        add_action('wp', [self::class, 'detach_viewbadge'], 1);
+        // 1) جلوی تزریق قدیمی ViewBadge + استایل خارجی را بگیر
+        add_action('wp', [self::class, 'detach_viewbadge_and_css'], 1);
 
-        // گارد دسترسی/لاک
+        // 2) گارد دسترسی
         add_action('template_redirect', [self::class, 'guard'], 1);
 
-        // خروجی صفحه
+        // 3) خروجی صفحه
         add_filter('the_content', [self::class, 'wrap'], 4);
     }
 
-    public static function detach_viewbadge(): void {
-        if (is_singular('jbg_ad') && class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
-            // فلگ جهانی تا ViewBadge چیزی تزریق نکند
+    public static function detach_viewbadge_and_css(): void {
+        if (!is_singular('jbg_ad')) return;
+
+        // غیرفعال‌سازی خروجی ViewBadge
+        if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
             $GLOBALS['JBG_DISABLE_VIEWBADGE'] = true;
-            // و اگر فیلتر اضافه شده باشد حذف شود
             remove_filter('the_content', ['\\JBG\\Ads\\Frontend\\ViewBadge','inject'], 7);
         }
+
+        // حذف CSS خارجی که ممکن است override کند
+        add_action('wp_enqueue_scripts', function () {
+            wp_dequeue_style('jbg-video-header');
+            wp_deregister_style('jbg-video-header');
+        }, 999);
     }
 
     public static function guard(): void {
@@ -31,13 +38,12 @@ class SingleLayout {
         $user_id = get_current_user_id();
         $ad_id   = (int) get_queried_object_id();
         if (!Access::is_unlocked($user_id, $ad_id)) {
-            // پلیرهایی که با priority=5 تزریق می‌شوند
             remove_all_filters('the_content', 5);
             $GLOBALS['JBG_LOCKED_AD'] = true;
         }
     }
 
-    /* ----------------- کمک‌کننده‌ها: از ViewBadge کپی امن ----------------- */
+    // ===== helpers (from ViewBadge) =====
     private static function compact_views(int $n): string {
         if ($n >= 1000000000) { $v = $n / 1000000000; $u = ' میلیارد'; }
         elseif ($n >= 1000000) { $v = $n / 1000000;    $u = ' میلیون'; }
@@ -46,17 +52,15 @@ class SingleLayout {
         $v = floor($v * 10) / 10;
         return rtrim(rtrim(number_format($v, 1, '.', ''), '0'), '.') . $u;
     }
-
     private static function relative_time(int $post_id): string {
         $t = get_post_time('U', true, $post_id);
         $d = time() - (int)$t;
-        if ($d < 60)        return 'لحظاتی پیش';
-        if ($d < 3600)      return floor($d/60) . ' دقیقه پیش';
-        if ($d < 86400)     return floor($d/3600) . ' ساعت پیش';
-        if ($d < 86400*30)  return floor($d/86400) . ' روز پیش';
+        if ($d < 60) return 'لحظاتی پیش';
+        if ($d < 3600) return floor($d/60) . ' دقیقه پیش';
+        if ($d < 86400) return floor($d/3600) . ' ساعت پیش';
+        if ($d < 86400*30) return floor($d/86400) . ' روز پیش';
         return get_the_date('', $post_id);
     }
-
     private static function views_count(int $ad_id): int {
         $meta = (int) get_post_meta($ad_id, 'jbg_views_count', true);
         if ($meta > 0) return $meta;
@@ -69,9 +73,8 @@ class SingleLayout {
         wp_cache_delete($ad_id, 'post_meta');
         return $count;
     }
-    /* -------------------------------------------------------------------- */
+    // ====================================
 
-    /** ساخت هدر یکپارچه زیر پلیر */
     private static function build_header(int $post_id): string {
         $views  = self::views_count($post_id);
         $brandN = wp_get_post_terms($post_id, 'jbg_brand', ['fields' => 'names']);
@@ -81,7 +84,7 @@ class SingleLayout {
         $like   = do_shortcode('[posts_like_dislike id='.$post_id.']');
 
         $css = '<style id="jbg-single-header-inline">
-/* مخفی‌سازی هدرهای قالب وقتی هدر ما حاضر است */
+/* مخفی‌سازی هدرهای قالب */
 .single-jbg_ad header.wd-single-post-header,
 .single-jbg_ad h1.wd-entities-title,
 .single-jbg_ad .entry-title,
@@ -90,19 +93,21 @@ class SingleLayout {
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* هدر زیر پلیر: ردیفی حتی در موبایل */
+/* هدر: ردیفی حتی در موبایل */
 .jbg-single-header{
   direction:rtl;width:100%;margin:12px 0 0;padding:14px 16px;background:#fff;
   border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
   box-sizing:border-box;display:flex;align-items:center;gap:10px;
-  flex-direction:row;flex-wrap:wrap;
+  flex-direction:row !important; /* اجباری */
+  flex-wrap:wrap !important;
 }
-/* متا و اکشن‌ها کنار هم و بدون شکست داخلی */
-.jbg-single-header .hdr-meta,.jbg-single-header .hdr-actions{
-  display:flex;align-items:center;gap:8px;margin:0;white-space:nowrap;flex-wrap:nowrap;order:1
+.jbg-single-header .hdr-meta,
+.jbg-single-header .hdr-actions{
+  display:flex;align-items:center;gap:8px;margin:0;
+  white-space:nowrap;flex-wrap:nowrap;order:1;flex:0 0 auto !important;
 }
-/* عنوان: در موبایل یک ردیف کامل زیر اکشن‌ها */
-.jbg-single-header .hdr-title{margin:0;order:2;flex:1 1 100%}
+/* عنوان: یک ردیف کامل زیر اکشن‌ها در موبایل */
+.jbg-single-header .hdr-title{margin:0;order:2;flex:1 1 100% !important}
 .jbg-single-header .hdr-title h1{
   margin:0;font-size:20px;line-height:1.6;font-weight:800;color:#0f172a;
   word-break:break-word;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
@@ -116,14 +121,7 @@ class SingleLayout {
 /* لایک/دیس‌لایک بدون پس‌زمینه */
 .jbg-single-header .hdr-actions .ext-like{background:transparent;border:none;padding:0;height:auto}
 .jbg-single-header .hdr-actions .ext-like>*{margin:0}
-/* دسکتاپ: عنوان کنار اکشن‌ها */
-@media (min-width:768px){
-  .jbg-single-header{padding:16px 18px;gap:12px}
-  .jbg-single-header .hdr-title{order:0;flex:1 1 auto}
-  .jbg-single-header .hdr-title h1{font-size:22px}
-}
-
-/* کارت‌های عمومی صفحه و نشان امتیاز */
+/* کارت‌ها + نشان امتیاز */
 .single-jbg_ad .jbg-main-stack{display:block;direction:rtl;}
 .single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
 .jbg-locked{background:#fff;border:1px dashed #9ca3af;border-radius:12px;padding:18px;margin-top:16px;color:#374151}
@@ -132,6 +130,12 @@ class SingleLayout {
 .jbg-points-badge{display:inline-flex;align-items:center;gap:6px;margin-inline-start:8px;
   padding:2px 8px;border-radius:9999px;background:#EEF2FF;color:#3730A3;font-weight:700;font-size:12px;border:1px solid #E0E7FF}
 .jbg-points-badge .pt-val{font-weight:800}
+/* دسکتاپ */
+@media (min-width:768px){
+  .jbg-single-header{padding:16px 18px;gap:12px}
+  .jbg-single-header .hdr-title{order:0;flex:1 1 auto !important}
+  .jbg-single-header .hdr-title h1{font-size:22px}
+}
 </style>';
 
         $html  = $css;
@@ -159,7 +163,7 @@ class SingleLayout {
         if ($is_open) {
             // پلیر
             $out .= $content;
-            // هدر یکپارچه زیر پلیر
+            // هدر یکپارچه
             $out .= self::build_header($ad_id);
 
             // نشان امتیاز کنار عنوان
