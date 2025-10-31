@@ -7,23 +7,47 @@ use JBG\Ads\Progress\Access;
 class SingleLayout {
 
     public static function register(): void {
-        // ViewBadge دیگر چیزی تزریق نکند
-        add_action('wp', [self::class, 'disable_viewbadge'], 1);
+        // 1) غیرفعال‌سازی تزریق قدیمی ViewBadge + حذف قطعی CSS خارجی
+        add_action('wp', [self::class, 'disable_viewbadge_and_css'], 1);
 
-        // گارد دسترسی به ویدیو
+        // 2) گارد دسترسی
         add_action('template_redirect', [self::class, 'guard'], 1);
 
-        // محتوای صفحه
+        // 3) خروجی صفحه
         add_filter('the_content', [self::class, 'wrap'], 4);
     }
 
-    public static function disable_viewbadge(): void {
+    /**
+     * ViewBadge را بی‌اثر می‌کند و هر CSS خارجی مرتبط را حذف می‌کند
+     * نکته: 'wp' بعد از wp_enqueue_scripts اجرا می‌شود، پس همین‌جا مستقیم dequeue می‌کنیم.
+     */
+    public static function disable_viewbadge_and_css(): void {
         if (!is_singular('jbg_ad')) return;
 
-        // اگر کلاس وجود دارد، تزریقش را غیرفعال کن
+        // الف) غیرفعال کردن ViewBadge
         if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
             $GLOBALS['JBG_DISABLE_VIEWBADGE'] = true;
-            remove_filter('the_content', ['\\JBG\\Ads\\Frontend\\ViewBadge','inject'], 7);
+            remove_filter('the_content', ['\\JBG\\Ads\\Frontend\\ViewBadge', 'inject'], 7);
+        }
+
+        // ب) حذف CSS خارجی با handle یا با پیدا کردن src
+        if (function_exists('wp_styles')) {
+            $wp_styles = wp_styles();
+
+            // تلاش با هندل معروف
+            wp_dequeue_style('jbg-video-header');
+            wp_deregister_style('jbg-video-header');
+
+            // اگر باندل/مینیفای شده باشد، src را بررسی کن
+            if ($wp_styles && !empty($wp_styles->registered)) {
+                foreach ($wp_styles->registered as $handle => $obj) {
+                    $src = isset($obj->src) ? (string)$obj->src : '';
+                    if ($src && (strpos($src, 'jbg-video-header.css') !== false)) {
+                        wp_dequeue_style($handle);
+                        wp_deregister_style($handle);
+                    }
+                }
+            }
         }
     }
 
@@ -32,13 +56,12 @@ class SingleLayout {
         $user_id = get_current_user_id();
         $ad_id   = (int) get_queried_object_id();
         if (!Access::is_unlocked($user_id, $ad_id)) {
-            // پلیرهایی که با priority=5 تزریق می‌شوند
             remove_all_filters('the_content', 5);
             $GLOBALS['JBG_LOCKED_AD'] = true;
         }
     }
 
-    /* ----------------- Helpers (منتقل‌شده از ViewBadge) ----------------- */
+    /* ----------------- Helpers: منتقل‌شده از ViewBadge ----------------- */
     private static function compact_views(int $n): string {
         if ($n >= 1000000000) { $v = $n / 1000000000; $u = ' میلیارد'; }
         elseif ($n >= 1000000) { $v = $n / 1000000;    $u = ' میلیون'; }
@@ -72,7 +95,7 @@ class SingleLayout {
     }
     /* -------------------------------------------------------------------- */
 
-    /** هدر یکپارچه زیر پلیر (انتقال کامل از ViewBadge) */
+    /** هدر یکپارچه زیر پلیر */
     private static function build_header(int $post_id): string {
         $views  = self::views_count($post_id);
         $brandN = wp_get_post_terms($post_id, 'jbg_brand', ['fields' => 'names']);
@@ -81,9 +104,8 @@ class SingleLayout {
         $when   = self::relative_time($post_id);
         $like   = do_shortcode('[posts_like_dislike id=' . $post_id . ']');
 
-        // استایل هدر + صفحه
         $css = '<style id="jbg-single-inline">
-/* پنهان‌سازی هدرهای قالب وقتی هدر ما حاضر است */
+/* پنهان‌سازی هدرهای قالب */
 .single-jbg_ad header.wd-single-post-header,
 .single-jbg_ad h1.wd-entities-title,
 .single-jbg_ad .entry-title,
@@ -92,23 +114,24 @@ class SingleLayout {
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
-/* هدر زیر پلیر: ردیفی حتی در موبایل */
+/* هدر: ردیفی حتی در موبایل. با !important جلوی CSS خارجی گرفته می‌شود */
 .jbg-single-header{
   direction:rtl;width:100%;margin:12px 0 0;padding:14px 16px;background:#fff;
   border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
   box-sizing:border-box;display:flex;align-items:center;gap:10px;
-  flex-direction:row;flex-wrap:wrap;
+  flex-direction:row !important;   /* کلید حل مشکل */
+  flex-wrap:wrap !important;
 }
-/* عنوان */
-.jbg-single-header .hdr-title{margin:0;order:2;flex:1 1 100%}
+.jbg-single-header .hdr-meta,
+.jbg-single-header .hdr-actions{
+  display:flex;align-items:center;gap:8px;margin:0;
+  white-space:nowrap;flex-wrap:nowrap;order:1;flex:0 0 auto !important;
+}
+/* عنوان: یک ردیف کامل زیر اکشن‌ها در موبایل */
+.jbg-single-header .hdr-title{margin:0;order:2;flex:1 1 100% !important}
 .jbg-single-header .hdr-title h1{
   margin:0;font-size:20px;line-height:1.6;font-weight:800;color:#0f172a;
   word-break:break-word;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
-}
-/* متا و اکشن‌ها */
-.jbg-single-header .hdr-meta,
-.jbg-single-header .hdr-actions{
-  display:flex;align-items:center;gap:8px;margin:0;white-space:nowrap;flex-wrap:nowrap;order:1
 }
 /* چیپ برند */
 .jbg-single-header .chip{
@@ -120,7 +143,7 @@ class SingleLayout {
 .jbg-single-header .hdr-actions .ext-like{background:transparent;border:none;padding:0;height:auto}
 .jbg-single-header .hdr-actions .ext-like>*{margin:0}
 
-/* کارت‌های عمومی و نشان امتیاز */
+/* کارت‌ها و نشان امتیاز */
 .single-jbg_ad .jbg-main-stack{display:block;direction:rtl;}
 .single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
 .jbg-locked{background:#fff;border:1px dashed #9ca3af;border-radius:12px;padding:18px;margin-top:16px;color:#374151}
@@ -133,7 +156,7 @@ class SingleLayout {
 /* دسکتاپ */
 @media (min-width:768px){
   .jbg-single-header{padding:16px 18px;gap:12px}
-  .jbg-single-header .hdr-title{order:0;flex:1 1 auto}
+  .jbg-single-header .hdr-title{order:0;flex:1 1 auto !important}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
 </style>';
@@ -144,7 +167,6 @@ class SingleLayout {
                . ($brand ? '<span class="chip brand">'.esc_html($brand).'</span>' : '')
                . '</div>';
 
-        // هدر کامل
         return $css . '<div class="jbg-single-header">'.$title.$meta.$acts.'</div>';
     }
 
@@ -159,13 +181,13 @@ class SingleLayout {
         $html = '<div class="jbg-main-stack">';
 
         if ($is_open) {
-            // پلیر/بدنه
+            // پلیر
             $html .= $content;
 
-            // هدر زیر پلیر از همین فایل
+            // هدر زیر پلیر
             $html .= self::build_header((int)$ad_id);
 
-            // نشان امتیاز کنار عنوان اگر تعریف شده
+            // نشان امتیاز کنار عنوان
             if ($points > 0) {
                 $badge = '<span id="jbg-points-badge" class="jbg-points-badge"><span class="pt-val">'.
                          esc_html($points).'</span> امتیاز</span>';
@@ -177,12 +199,12 @@ class SingleLayout {
             }
 
             // آزمون
-            $quiz_html = do_shortcode('[jbg_quiz]');
-            if (trim($quiz_html)!=='') $html .= '<div class="jbg-section">'.$quiz_html.'</div>';
+            $quiz = do_shortcode('[jbg_quiz]');
+            if (trim($quiz)!=='') $html .= '<div class="jbg-section">'.$quiz.'</div>';
 
             // مرتبط‌ها
-            $rel_html = do_shortcode('[jbg_related limit="10"]');
-            if (trim($rel_html)!=='') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            $rel = do_shortcode('[jbg_related limit="10"]');
+            if (trim($rel)!=='') $html .= '<div class="jbg-section">'.$rel.'</div>';
 
         } else {
             // پیام قفل + مرتبط‌ها
@@ -191,8 +213,8 @@ class SingleLayout {
                    . '<div class="note">برای دسترسی، ابتدا ویدیوی مرحلهٔ <strong>'.esc_html(max(1,$seq-1)).'</strong> را کامل ببینید و آزمونش را درست پاسخ دهید.'
                    . ($user_id>0 ? '' : ' (لطفاً ابتدا وارد شوید)') . '</div></div>';
 
-            $rel_html = do_shortcode('[jbg_related limit="10"]');
-            if (trim($rel_html)!=='') $html .= '<div class="jbg-section">'.$rel_html.'</div>';
+            $rel = do_shortcode('[jbg_related limit="10"]');
+            if (trim($rel)!=='') $html .= '<div class="jbg-section">'.$rel.'</div>';
         }
 
         $html .= '</div>';
