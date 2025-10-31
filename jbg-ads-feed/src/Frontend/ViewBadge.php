@@ -38,14 +38,10 @@ class ViewBadge {
     }
 
     public static function register(): void {
-        // سازگاری با گذشته: اگر SingleLayout مستقیماً صدا نزند، تزریق قدیمی فعال می‌ماند
         add_filter('the_content', [self::class, 'inject'], 7);
     }
 
-    /**
-     * سازندهٔ خالص هدر برای استفاده در SingleLayout
-     * @return array ['style'=>string,'html'=>string]
-     */
+    /** ساخت هدر برای استفاده مستقیم در SingleLayout */
     public static function build(int $post_id): array {
         $views  = self::views_count((int) $post_id);
         $brandN = wp_get_post_terms($post_id, 'jbg_brand', ['fields' => 'names']);
@@ -66,26 +62,31 @@ class ViewBadge {
 
 /* هدر زیر پلیر */
 .jbg-single-header{
-  direction:rtl; width:100%; margin:12px 0 0; padding:14px 16px; background:#fff;
-  border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.04);
-  box-sizing:border-box; display:flex; gap:10px; flex-direction:column; align-items:stretch;
+  direction:rtl;width:100%;margin:12px 0 0;padding:14px 16px;background:#fff;
+  border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
+  box-sizing:border-box;display:flex;gap:10px;flex-direction:column;align-items:stretch;
 }
-/* عنوان چندخطی */
+/* عنوان */
 .jbg-single-header .hdr-title{margin:0}
 .jbg-single-header .hdr-title h1{
-  margin:0; font-size:20px; line-height:1.6; font-weight:800; color:#0f172a;
-  word-break:break-word; white-space:normal!important; overflow:visible!important; text-overflow:clip!important;
+  margin:0;font-size:20px;line-height:1.6;font-weight:800;color:#0f172a;
+  word-break:break-word;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
 }
 /* متا */
 .jbg-single-header .hdr-meta{display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7280;margin:0}
-/* اکشن‌ها شبیه چیپ */
+/* اکشن‌ها */
 .jbg-single-header .hdr-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0}
 .jbg-single-header .chip{
   display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;background:#f8fafc;color:#111827;
   border:1px solid #e5e7eb;border-radius:999px;font-size:13px;font-weight:600;line-height:1
 }
+/* فقط برند به شکل چیپ بماند */
 .jbg-single-header .chip.brand{background:#eef2ff}
-.jbg-single-header .chip.more{background:#fff}
+/* لایک/دیس‌لایک بدون پس‌زمینه */
+.jbg-single-header .hdr-actions .ext-like{background:transparent;border:none;padding:0;height:auto}
+.jbg-single-header .hdr-actions .ext-like > *{margin:0}
+
+/* دسکتاپ */
 @media (min-width:768px){
   .jbg-single-header{padding:16px 18px;gap:12px;flex-direction:row;align-items:center;flex-wrap:wrap;justify-content:space-between}
   .jbg-single-header .hdr-title{flex:1 1 auto}
@@ -95,20 +96,16 @@ class ViewBadge {
 }
 </style>';
 
-        // دکمه‌های نمونه برای شباهت به طرح: اشتراک‌گذاری و ذخیره فقط UI هستند
-        $share  = '<button type="button" class="chip more" aria-label="اشتراک‌گذاری">اشتراک</button>';
-        $save   = '<button type="button" class="chip more" aria-label="ذخیره">ذخیره</button>';
-
-        $title  = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($post_id)).'</h1></div>';
-        $meta   = '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span>•</span><span>'.esc_html($when).'</span></div>';
-        $acts   = '<div class="hdr-actions"><span class="chip ext-like">'.$like.'</span>'
-                . ($brand ? '<span class="chip brand">'.esc_html($brand).'</span>' : '')
-                . $share . $save . '</div>';
+        $title = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($post_id)).'</h1></div>';
+        $meta  = '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span>•</span><span>'.esc_html($when).'</span></div>';
+        $acts  = '<div class="hdr-actions"><span class="ext-like">'.$like.'</span>'
+               . ($brand ? '<span class="chip brand">'.esc_html($brand).'</span>' : '')
+               . '</div>';
 
         return ['style'=>$style, 'html'=>'<div class="jbg-single-header">'.$title.$meta.$acts.'</div>'];
     }
 
-    /** تزریق قدیمی برای سازگاری */
+    /** تزریق قدیمی برای سازگاری با گذشته */
     public static function inject($content) {
         if (!is_singular('jbg_ad') || !in_the_loop() || !is_main_query()) return $content;
 
@@ -116,7 +113,6 @@ class ViewBadge {
         $style  = $built['style'];
         $header = $built['html'];
 
-        // انتقال به بعد از پلیر فقط در حالت inject
         $script = '<script id="jbg-single-header-move">(function(){
   function move(){
     try{

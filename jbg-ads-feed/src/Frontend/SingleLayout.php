@@ -43,13 +43,13 @@ class SingleLayout {
         $html = '<div class="jbg-main-stack">';
 
         if ($is_open) {
-            // از تزریق قدیمی ViewBadge جلوگیری کن و خودمان رندر کنیم
+            // جلوگیری از رندرِ دوباره ViewBadge و درج هدر سفارشی بعد از پلیر
             if (class_exists('\\JBG\\Ads\\Frontend\\ViewBadge')) {
                 remove_filter('the_content', ['\\JBG\\Ads\\Frontend\\ViewBadge','inject'], 7);
                 $vb = \JBG\Ads\Frontend\ViewBadge::build($ad_id);
-                $html .= $vb['style'];           // CSS هدر
-                $html .= $content;               // پلیر
-                $html .= $vb['html'];            // هدر جدید بعد از پلیر
+                $html .= $vb['style'];   // CSS هدر
+                $html .= $content;       // پلیر
+                $html .= $vb['html'];    // هدر یک‌بار
             } else {
                 $html .= $content;
             }
