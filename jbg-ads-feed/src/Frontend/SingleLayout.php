@@ -66,14 +66,16 @@ class SingleLayout {
     }
     /* ============================================ */
 
-    /** هدر: موبایل ستونی، دسکتاپ ردیفی (عنوان راست، بقیه چپ) */
+    /** هدر: موبایل ستونی، دسکتاپ ردیفی. امتیاز کنار عنوان. */
     private static function build_header(int $post_id): string {
-        $views  = self::views_count($post_id);
-        $brandN = wp_get_post_terms($post_id, 'jbg_brand', ['fields' => 'names']);
-        $brand  = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
-        $viewsF = self::compact_views($views) . ' بازدید';
-        $when   = self::relative_time($post_id);
-        $like   = do_shortcode('[posts_like_dislike id='.$post_id.']');
+        $views   = self::views_count($post_id);
+        $brandN  = wp_get_post_terms($post_id, 'jbg_brand', ['fields' => 'names']);
+        $brand   = (!is_wp_error($brandN) && !empty($brandN)) ? $brandN[0] : '';
+        $viewsF  = self::compact_views($views) . ' بازدید';
+        $when    = self::relative_time($post_id);
+        $like    = do_shortcode('[posts_like_dislike id='.$post_id.']');
+        $points  = (int) get_post_meta($post_id, 'jbg_points', true); // امتیازِ تعیین‌شده توسط ادمین
+        $ptsHTML = $points > 0 ? '<span class="pts-inline">امتیاز '.esc_html(number_format_i18n($points)).'</span>' : '';
 
         $css = '<style id="jbg-single-inline">
 /* پنهان‌سازی عنوان‌های قالب */
@@ -91,10 +93,12 @@ class SingleLayout {
   border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
   box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:10px;
 }
-/* عنوان */
+/* عنوان + امتیاز */
 .jbg-single-header .hdr-title{margin:0}
 .jbg-single-header .hdr-title h1{margin:0;font-size:20px;line-height:1.6;font-weight:800;color:#0f172a;word-break:break-word;}
-/* گروه چپ (اکشن‌ها + متا) */
+.jbg-single-header .hdr-title .pts-inline{font-weight:800;margin-inline-start:8px;color:#0f172a}
+
+/* گروه چپ: اکشن‌ها + متا */
 .jbg-single-header .hdr-left{display:flex;flex-direction:column;gap:6px;align-items:flex-start;width:100%}
 .jbg-single-header .hdr-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0}
 .jbg-single-header .hdr-actions .ext-like{background:transparent;border:none;padding:0;height:auto}
@@ -103,11 +107,6 @@ class SingleLayout {
 .jbg-single-header .hdr-meta{display:flex;align-items:center;gap:6px;margin:0;color:#6b7280;font-size:13px}
 .jbg-single-header .hdr-meta .dot{opacity:.6}
 
-/* نشان امتیاز کنار عنوان */
-.jbg-points-badge{display:inline-flex;align-items:center;gap:6px;margin-inline-start:8px;
-  padding:2px 8px;border-radius:9999px;background:#EEF2FF;color:#3730A3;font-weight:700;font-size:12px;border:1px solid #E0E7FF}
-.jbg-points-badge .pt-val{font-weight:800}
-
 /* کارت‌های پایین صفحه */
 .single-jbg_ad .jbg-main-stack{display:block;direction:rtl;}
 .single-jbg_ad .jbg-main-stack .jbg-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:16px}
@@ -115,23 +114,21 @@ class SingleLayout {
 .jbg-locked .title{font-weight:800;margin-bottom:8px}
 .jbg-locked .note{font-size:13px;color:#6b7280}
 
-/* دسکتاپ: ردیفی با عنوان راست و گروه چپ */
+/* دسکتاپ: ردیفی با عنوان+امتیاز راست و بقیه چپ */
 @media (min-width:992px){
-  .jbg-single-header{flex-direction:row;align-items:center;gap:12px}
+  .jbg-single-header{flex-direction:row;align-items:center;gap:12px;justify-content:space-between}
   .jbg-single-header .hdr-title{order:1;flex:1 1 auto}
   .jbg-single-header .hdr-left{order:2;flex-direction:row;align-items:center;gap:12px;width:auto;margin-inline-start:auto}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
 </style>';
 
-        $title   = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($post_id)).'</h1></div>';
+        $title   = '<div class="hdr-title"><h1 class="title">'.esc_html(get_the_title($post_id)). $ptsHTML .'</h1></div>';
         $actions = '<div class="hdr-actions"><span class="ext-like">'.$like.'</span>'
                  . ($brand ? '<span class="chip">'.esc_html($brand).'</span>' : '')
                  . '</div>';
         $meta    = '<div class="hdr-meta"><span>'.esc_html($viewsF).'</span><span class="dot">•</span><span>'.esc_html($when).'</span></div>';
-
-        // گروه سمت چپ: اکشن‌ها + متا
-        $left = '<div class="hdr-left">'.$actions.$meta.'</div>';
+        $left    = '<div class="hdr-left">'.$actions.$meta.'</div>';
 
         return $css.'<div class="jbg-single-header">'.$title.$left.'</div>';
     }
@@ -142,7 +139,6 @@ class SingleLayout {
         $user_id = get_current_user_id();
         $ad_id   = get_the_ID();
         $is_open = Access::is_unlocked($user_id, $ad_id);
-        $points  = (int) get_post_meta($ad_id, 'jbg_points', true);
 
         $out = '<div class="jbg-main-stack">';
 
@@ -150,18 +146,11 @@ class SingleLayout {
             $out .= $content;
             $out .= self::build_header($ad_id);
 
-            if ($points > 0) {
-                $out .= '<span id="jbg-points-badge" class="jbg-points-badge"><span class="pt-val">'.
-                        esc_html($points).'</span> امتیاز</span>';
-                $out .= '<script>(function(){try{
-                    var b=document.getElementById("jbg-points-badge"); if(!b) return;
-                    var t=document.querySelector(".jbg-single-header .hdr-title h1"); if(t){ t.insertAdjacentElement("beforeend", b); }
-                }catch(e){}})();</script>';
-            }
-
+            // آزمون
             $quiz = do_shortcode('[jbg_quiz]');
             if (trim($quiz)!=='') $out .= '<div class="jbg-section">'.$quiz.'</div>';
 
+            // مرتبط‌ها
             $rel  = do_shortcode('[jbg_related limit="10"]');
             if (trim($rel)!=='') $out .= '<div class="jbg-section">'.$rel.'</div>';
 
