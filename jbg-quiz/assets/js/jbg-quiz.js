@@ -2,7 +2,7 @@
  * JBG Quiz Controller
  * - گِیتِ نمایش آزمون بر اساس تماشای کامل ویدیو
  * - ارسال پاسخ و نمایش دکمۀ «ویدئوی بعدی» در صورت پاسخ صحیح
- * - نمایش خودکار آزمون پس از unlock + پنهان‌سازی ویدیو (fallback)
+ * - Fallback: اگر player.js باکس را جابه‌جا نکرد، همین‌جا آزمون را «جای باکس پلیر» می‌بریم
  */
 (function(){
   if (typeof JBG_QUIZ === 'undefined') return;
@@ -20,7 +20,7 @@
     var nextBtn = document.getElementById('jbg-next-btn');     // ← دکمه ویدیوی بعدی
     var adId    = (JBG_QUIZ && JBG_QUIZ.adId) ? String(JBG_QUIZ.adId) : '';
 
-    // پیام وضعیت در بالای آزمون
+    // پیام وضعیت
     function gateMsg(txt, cls){
       if (!result) return;
       result.textContent = txt;
@@ -47,7 +47,7 @@
       gateMsg('', '');
     }
 
-    // بررسی اینکه ویدیو قبلاً کامل دیده شده یا خیر (فلگ‌های سراسری/لوکال)
+    // بررسی unlock (فلگ‌های سراسری/لوکال)
     function isUnlocked(){
       try{ if (window.JBG_WATCHED_OK === true) return true; }catch(_){}
       try{ if (document.body.getAttribute('data-jbg-watched') === '1') return true; }catch(_){}
@@ -69,16 +69,16 @@
       }
     }
 
-    // حالت اولیه: اگر unlock بود، آزمون را نشان بده؛ وگرنه فقط قفل کن
+    // حالت اولیه
     if (!isUnlocked()){
       disableQuiz();
-      if (box) box.style.display = (box.style.display || ''); // ← پنهان نکن، فقط ورودی‌ها قفل باشند
+      if (box) box.style.display = (box.style.display || '');
     } else {
       enableQuiz();
-      if (box) box.style.display = 'block'; // ← نمایش فوری آزمون
+      if (box) box.style.display = 'block';
     }
 
-    // وقتی پلیر سیگنال «تماشای کامل» داد، آزمون را باز و قابل‌مشاهده کن
+    // سیگنال «تماشای کامل» از پلیر
     document.addEventListener('jbg:watched_ok', function(ev){
       var ok = true;
       try{
@@ -88,24 +88,24 @@
 
       enableQuiz();
 
-      /* تغییرات درخواستی: نمایش باکس آزمون و پنهان‌سازی ویدیو (fallback اگر player.js این کار را نکرده باشد) */
+      /* Fallback جابه‌جایی آزمون به جای باکس پلیر (اگر player.js این کار را نکرده باشد) */
       try{
         if (box){
+          var wrap = document.querySelector('.jbg-player-wrapper');
+          if (wrap && wrap.style.display !== 'none' && wrap.parentNode){
+            wrap.parentNode.insertBefore(box, wrap);   // ← آزمون را قبل از wrap قرار بده
+            wrap.style.display = 'none';               // ← و خود wrap را پنهان کن
+          }
           box.style.display = 'block';
           try{ box.scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
-        }
-        var v = document.getElementById('jbg-player');
-        if (v){
-          try{ v.pause(); }catch(_){}
-          v.style.display = 'none';
-        }
-        var w = document.querySelector('.jbg-player-wrapper');
-        if (w){
-          var acts = w.querySelector('.jbg-actions');
-          if (acts) acts.style.display = 'none';
+        } else {
+          // اگر باکس آزمون پیدا نشد، حداقل خود ویدیو و اکشن‌ها را پنهان کنیم
+          var v = document.getElementById('jbg-player');
+          if (v){ try{ v.pause(); }catch(_){} v.style.display = 'none'; }
+          var w = document.querySelector('.jbg-player-wrapper');
+          if (w){ var acts = w.querySelector('.jbg-actions'); if (acts) acts.style.display = 'none'; }
         }
       }catch(_){}
-      /* پایان تغییرات */
     }, false);
 
     // ارسال پاسخ آزمون
@@ -113,7 +113,6 @@
       form.addEventListener('submit', function(e){
         e.preventDefault();
 
-        // ایمنی: اگر هنوز unlock نشده، جلوی ارسال را می‌گیریم
         if (!isUnlocked()){
           disableQuiz();
           return;
@@ -141,7 +140,7 @@
         .then(function(r){ return r.json().catch(function(){ return {}; }); })
         .then(function(data){
           if (data && data.correct){
-            // پیام امتیاز (در صورت تعریف امتیاز برای این ویدیو)
+            // پیام امتیاز (در صورت تعریف)
             var pts = 0;
             try { if (JBG_QUIZ && +JBG_QUIZ.points > 0) pts = parseInt(JBG_QUIZ.points, 10) || 0; } catch(_){}
             if (pts > 0){
@@ -153,10 +152,10 @@
             // جلوگیری از ارسال دوباره
             disableInputs();
 
-            // دکمۀ «ویدئوی بعدی»
+            // نمایش دکمه «ویدئوی بعدی»
             showNextIfAny();
 
-            // ایونت سفارشی برای استفاده‌های دیگر (بیلینگ/آنلاک مرحله بعد و…)
+            // ایونت سفارشی برای استفاده‌های دیگر
             try{
               document.dispatchEvent(new CustomEvent('jbg:quiz_passed', { detail: { adId: adId, points: pts }}));
             }catch(_){}

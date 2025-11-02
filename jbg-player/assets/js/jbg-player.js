@@ -3,7 +3,7 @@
  * - کنترل Plyr/HLS
  * - جلوگیری از جلو زدن
  * - سیگنال unlock وقتی ویدیو کامل شد
- * - پنهان‌سازی ویدیو و نمایش آزمون پس از اتمام
+ * - پس از اتمام: «پنهان‌سازی کل باکس پلیر» و «جابجایی باکس آزمون به جای آن»
  */
 (function(){
   if (typeof JBG_PLAYER === 'undefined') return;
@@ -15,11 +15,11 @@
   }
 
   onReady(function(){
-    var wrap  = document.querySelector('.jbg-player-wrapper');   // ← رَپِر پلیر
-    var video = document.getElementById('jbg-player');           // ← خود ویدیو
+    var wrap  = document.querySelector('.jbg-player-wrapper');   // ← باکس/رَپِرِ پلیر (کل چیزی که باید جابه‌جا/پنهان شود)
+    var video = document.getElementById('jbg-player');           // ← خود <video>
     if (!wrap || !video) return;
 
-    // هدر ViewBadge را داخل wrapper بیاور تا هم‌عرض پلیر باشد (سازگاری با تم‌ها)
+    // (سازگاری) هدر ViewBadge را داخل wrap منتقل می‌کنیم تا زیر پلیر رندر شود
     (function(){
       var header = document.querySelector('.jbg-single-header, .jbg-single-shell');
       if (header && header.parentElement!==wrap) wrap.appendChild(header);
@@ -57,7 +57,7 @@
       var q=document.getElementById('jbg-quiz');
       if (q){
         if (q.style.display==='none') q.style.display='block';
-        // q.scrollIntoView({behavior:'smooth',block:'start'}); // ← در صورت نیاز
+        // q.scrollIntoView({behavior:'smooth',block:'start'});
       }
     });
 
@@ -129,7 +129,7 @@
       try{ document.dispatchEvent(new CustomEvent('jbg:watched_ok',{detail:{adId:getAdId(),pct:1}})); }catch(_){}
     }
 
-    // ثبت «بازدید روزانه» پس از کامل‌دیدن (هر ۲۴ ساعت یک‌بار، اگر از سرور فعال شود)
+    // ثبت «بازدید روزانه» (در صورت فعال بودن سمت سرور)
     var dailyTracked = false;
     function trackDailyView(){
       try{
@@ -148,25 +148,31 @@
       if (unlocked) return;
       unlocked = true;
 
-      /* تغییرات درخواستی: پنهان کردن ویدیو + نمایش آزمون */
+      /* تغییرات درخواستی:
+         1) باکس آزمون را دقیقاً «جای باکس پلیر» ببریم
+         2) خود باکس پلیر (wrap) را به‌طور کامل پنهان کنیم
+         3) اگر باکس آزمون نبود، حداقل ویدیو/اکشن‌ها را مخفی کنیم (fallback) */
       try{
-        // مخفی کردن خود ویدیو
-        try{ video.pause(); }catch(_){}
-        video.style.display = 'none';
-
-        // مخفی کردن اکشن‌های زیر پلیر (مثل دکمه Start Quiz)
-        var actions = wrap && wrap.querySelector('.jbg-actions');
-        if (actions) actions.style.display = 'none';
-
-        // نمایش باکس آزمون
         var quizBox = document.getElementById('jbg-quiz');
-        if (quizBox){
+
+        if (quizBox && wrap.parentNode){
+          // ۱) انتقال آزمون به «قبلِ wrap» تا دقیقاً جای همان باکس قرار بگیرد
+          wrap.parentNode.insertBefore(quizBox, wrap);
           quizBox.style.display = 'block';
           try{ quizBox.scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
+
+          // ۲) پنهان‌سازی کامل باکس پلیر (هرچه داخلش هست: ویدیو، هدر، اکشن‌ها)
+          wrap.style.display = 'none';
+        } else {
+          // ۳) fallback: فقط خود ویدیو و اکشن‌ها را مخفی کن
+          try{ video.pause(); }catch(_){}
+          video.style.display = 'none';
+          var actions = wrap && wrap.querySelector('.jbg-actions');
+          if (actions) actions.style.display = 'none';
         }
       }catch(_){}
 
-      showQuiz();        // ← اگر دکمه آزمون داریم، آن را فعال نگه می‌داریم
+      showQuiz();        // ← اگر دکمه آزمون داریم، فعال بماند
       markUnlocked();    // ← سیگنال برای سایر بخش‌ها (آزمون/بیلینگ/امتیاز)
       trackDailyView();  // ← ثبت بازدید روزانه
       if (statusEl) statusEl.textContent = '100% watched';
