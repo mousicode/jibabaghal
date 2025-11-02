@@ -1,13 +1,13 @@
 /*!
  * JBG Quiz Controller
- * - گِیتِ نمایش آزمون بر اساس تماشای کامل ویدیو
- * - ارسال پاسخ و نمایش دکمۀ «ویدئوی بعدی» در صورت پاسخ صحیح
- * - Fallback: اگر player.js باکس را جابه‌جا نکرد، همین‌جا آزمون را «جای باکس پلیر» می‌بریم
+ * - قبل از تکمیل ویدیو: آزمون مخفی
+ * - بعد از تکمیل: آزمون «جای باکس پلیر» ظاهر می‌شود (با انیمیشن ملایم)
+ * - ارسال پاسخ و نمایش دکمۀ «ویدئوی بعدی» پس از پاسخ صحیح
  */
 (function(){
   if (typeof JBG_QUIZ === 'undefined') return;
 
-  // ــ ابزار آماده‌سازی DOM ــ
+  // آماده‌سازی DOM
   function onReady(fn){
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn);
     else fn();
@@ -20,6 +20,17 @@
     var nextBtn = document.getElementById('jbg-next-btn');     // ← دکمه ویدیوی بعدی
     var adId    = (JBG_QUIZ && JBG_QUIZ.adId) ? String(JBG_QUIZ.adId) : '';
 
+    // استایل‌های انیمیشن (یک‌بار)
+    function injectAnimStyles(){
+      if (document.getElementById('jbg-anim-styles')) return;
+      var css = [
+        '.jbg-enter{opacity:0;transform:translateY(8px)}',
+        '.jbg-enter-active{opacity:1;transform:none;transition:opacity .35s ease,transform .35s ease}'
+      ].join('');
+      var st=document.createElement('style'); st.id='jbg-anim-styles'; st.type='text/css'; st.appendChild(document.createTextNode(css));
+      document.head.appendChild(st);
+    }
+
     // پیام وضعیت
     function gateMsg(txt, cls){
       if (!result) return;
@@ -27,7 +38,7 @@
       result.className = 'jbg-quiz-result' + (cls ? ' ' + cls : '');
     }
 
-    // دی‌اکتیو/اکتیو کردن ورودی‌های فرم
+    // دی‌اکتیو/اکتیو کردن فرم
     function disableInputs(){
       if (!form) return;
       form.querySelectorAll('input,button,select,textarea').forEach(function(el){ el.disabled = true; });
@@ -37,7 +48,7 @@
       form.querySelectorAll('input,button,select,textarea').forEach(function(el){ el.disabled = false; });
     }
 
-    // قفل/بازبودن آزمون
+    // قفل/باز بودن آزمون
     function disableQuiz(){
       disableInputs();
       gateMsg('ابتدا ویدیو را کامل تماشا کنید 🔔', 'jbg-quiz-result--warn');
@@ -47,7 +58,7 @@
       gateMsg('', '');
     }
 
-    // بررسی unlock (فلگ‌های سراسری/لوکال)
+    // بررسی وضعیت تکمیل ویدیو
     function isUnlocked(){
       try{ if (window.JBG_WATCHED_OK === true) return true; }catch(_){}
       try{ if (document.body.getAttribute('data-jbg-watched') === '1') return true; }catch(_){}
@@ -69,16 +80,18 @@
       }
     }
 
-    // حالت اولیه
-    if (!isUnlocked()){
-      disableQuiz();
-      if (box) box.style.display = (box.style.display || '');
-    } else {
-      enableQuiz();
-      if (box) box.style.display = 'block';
+    // حالت اولیه: آزمون را قبل از unlock پنهان نگه‌دار
+    if (box){
+      if (!isUnlocked()){
+        box.style.display = 'none';     // ← پنهان تا زمان تکمیل ویدیو
+        disableQuiz();
+      } else {
+        box.style.display = 'block';
+        enableQuiz();
+      }
     }
 
-    // سیگنال «تماشای کامل» از پلیر
+    // رویداد «ویدیو کامل شد» از پلیر
     document.addEventListener('jbg:watched_ok', function(ev){
       var ok = true;
       try{
@@ -88,23 +101,49 @@
 
       enableQuiz();
 
-      /* Fallback جابه‌جایی آزمون به جای باکس پلیر (اگر player.js این کار را نکرده باشد) */
       try{
-        if (box){
-          var wrap = document.querySelector('.jbg-player-wrapper');
-          if (wrap && wrap.style.display !== 'none' && wrap.parentNode){
-            wrap.parentNode.insertBefore(box, wrap);   // ← آزمون را قبل از wrap قرار بده
-            wrap.style.display = 'none';               // ← و خود wrap را پنهان کن
-          }
-          box.style.display = 'block';
-          try{ box.scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
-        } else {
-          // اگر باکس آزمون پیدا نشد، حداقل خود ویدیو و اکشن‌ها را پنهان کنیم
-          var v = document.getElementById('jbg-player');
-          if (v){ try{ v.pause(); }catch(_){} v.style.display = 'none'; }
-          var w = document.querySelector('.jbg-player-wrapper');
-          if (w){ var acts = w.querySelector('.jbg-actions'); if (acts) acts.style.display = 'none'; }
+        // آزمون را دقیقاً «جای باکس پلیر» بیاوریم، اگر player.js این کار را نکرده بود
+        var wrap = document.querySelector('.jbg-player-wrapper');
+        if (box && wrap && wrap.parentNode && wrap.style.display !== 'none'){
+          wrap.parentNode.insertBefore(box, wrap);
+          // پنهان‌سازی نرم wrap (اگر هنوز پنهان نشده باشد)
+          var h = wrap.offsetHeight;
+          wrap.style.height = h + 'px';
+          wrap.style.opacity = '1';
+          wrap.style.overflow = 'hidden';
+          wrap.style.transition = 'height .4s ease, opacity .25s ease, margin .4s ease';
+          wrap.getBoundingClientRect();
+          requestAnimationFrame(function(){
+            wrap.style.height = '0px';
+            wrap.style.opacity = '0';
+            wrap.style.marginTop = '0';
+            wrap.style.marginBottom = '0';
+          });
+          wrap.addEventListener('transitionend', function te(){
+            wrap.removeEventListener('transitionend', te);
+            wrap.style.display = 'none';
+            wrap.style.height = '';
+            wrap.style.opacity = '';
+            wrap.style.overflow = '';
+            wrap.style.transition = '';
+            wrap.style.marginTop = '';
+            wrap.style.marginBottom = '';
+          });
         }
+
+        // نمایش نرم آزمون
+        injectAnimStyles();
+        box.style.display = 'block';
+        box.classList.add('jbg-enter');
+        box.getBoundingClientRect();
+        box.classList.add('jbg-enter-active');
+        setTimeout(function(){ box.classList.remove('jbg-enter','jbg-enter-active'); }, 400);
+
+        try{ box.scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
+
+        // توقف ویدیو (ایمنی)
+        var v = document.getElementById('jbg-player');
+        if (v){ try{ v.pause(); }catch(_){ } }
       }catch(_){}
     }, false);
 
@@ -152,7 +191,7 @@
             // جلوگیری از ارسال دوباره
             disableInputs();
 
-            // نمایش دکمه «ویدئوی بعدی»
+            // نمایش دکمۀ «ویدئوی بعدی»
             showNextIfAny();
 
             // ایونت سفارشی برای استفاده‌های دیگر
