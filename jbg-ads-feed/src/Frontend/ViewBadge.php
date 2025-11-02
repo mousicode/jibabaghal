@@ -17,7 +17,7 @@ class ViewBadge {
         $t = get_post_time('U', true, $post_id);
         $d = time() - (int)$t;
         if ($d < 60)        return 'لحظاتی پیش';
-        if ($د < 3600)      return floor($d/60) . ' دقیقه پیش';
+        if ($d < 3600)      return floor($d/60) . ' دقیقه پیش';
         if ($d < 86400)     return floor($d/3600) . ' ساعت پیش';
         if ($d < 86400*30)  return floor($d/86400) . ' روز پیش';
         return get_the_date('', $post_id);
@@ -51,12 +51,8 @@ class ViewBadge {
         $when   = self::relative_time($id);
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
-        /* ─────────────────────────────────────────────────────────────────────────
-         * CSS: حذف پس‌زمینهٔ ext-like/brand و «مرکزچین عمودی» همهٔ آیتم‌ها
-         * نکته: برخی پلاگین‌های لایک، عناصر داخلی مثل <p> یا .pld-like-dislike-wrap
-         *       با margin/height ناهم‌تراز می‌سازند؛ در اینجا ریست/هم‌تراز می‌کنیم.
-         * ───────────────────────────────────────────────────────────────────────── */
         $style = '<style id="jbg-single-header-css">
+/* مخفی‌سازی هدرهای پیش‌فرض قالب (سازگاری با پوسته‌ها) */
 .single-jbg_ad header.wd-single-post-header,
 .single-jbg_ad h1.wd-entities-title,
 .single-jbg_ad .entry-title,
@@ -65,63 +61,97 @@ class ViewBadge {
 .single-jbg_ad .elementor-heading-title{display:none!important;}
 .single-jbg_ad .jbg-status,.single-jbg_ad .jbg-watched,.single-jbg_ad .watched{display:none!important;}
 
+/* کارت هدر زیر پلیر */
 .jbg-player-wrapper + .jbg-single-header,
 .jbg-player-wrapper .jbg-single-header{
-  direction:rtl; width:100%; margin:12px 0 0; padding:14px 16px;
-  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
-  box-shadow:0 1px 2px rgba(0,0,0,.04); box-sizing:border-box;
-  display:flex; gap:10px; flex-direction:column!important; align-items:stretch;
+  direction:rtl;
+  width:100%;
+  margin:12px 0 0;
+  padding:14px 16px;
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+  box-sizing:border-box;
+  display:flex;
+  gap:10px;
+  /* موبایل: ستونی */
+  flex-direction:column !important;
+  align-items:stretch;
 }
 
-/* عنوان */
+/* عنوان چندخطی فول‌عرض */
 .jbg-single-header .hdr-title{margin:0}
 .jbg-single-header .hdr-title h1{
-  margin:0; font-size:20px; line-height:1.6; font-weight:800; color:#0f172a;
-  word-break:break-word; white-space:normal!important; overflow:visible!important; text-overflow:clip!important;
+  margin:0;
+  font-size:20px;
+  line-height:1.6;
+  font-weight:800;
+  color:#0f172a;
+  word-break:break-word;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
 }
 
-/* متا */
+/* متا: بازدید • زمان */
 .jbg-single-header .hdr-meta{
-  display:flex; align-items:center; gap:8px; font-size:13px; color:#6b7280; margin:0;
+  display:flex;
+  align-items:center; /* ← تراز عمودی وسط */
+  gap:8px;
+  font-size:13px;
+  color:#6b7280;
+  margin:0;
 }
 
-/* اکشن‌ها */
+/* اکشن‌ها: لایک/دیس‌لایک + برند */
 .jbg-single-header .hdr-actions{
-  display:flex; align-items:center; justify-content:flex-start; gap:8px; flex-wrap:wrap; margin:0;
+  display:flex;
+  align-items:center; /* ← تراز عمودی وسط همه آیتم‌ها */
+  justify-content:flex-start;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:0;
 }
 
-/* آیتم‌های اکشن (بدون پس‌زمینه/بوردر و هم‌تراز وسط) */
+/* آیتم‌های اکشن (ext-like و brand و …) بدون پس‌زمینه و بدون بوردر */
 .jbg-single-header .hdr-actions > *{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:6px; height:32px; padding:0 10px; line-height:1;
-  background:transparent!important; border:none!important; border-radius:999px;
-  color:#111827; font-size:13px; font-weight:600; vertical-align:middle;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  height:32px;
+  padding:0 10px;
+  background:transparent!important; /* ← حذف پس‌زمینه */
+  color:#111827;
+  border:none!important;            /* ← حذف بوردر */
+  border-radius:999px;
+  font-size:13px;
+  font-weight:600;
+  line-height:1;
+  vertical-align:middle;            /* ← هم‌تراز شدن با سایر عناصر */
 }
 
-/* ریست داخلی پلاگین لایک: تراز عمودی کامل */
-.jbg-single-header .hdr-actions .ext-like{ display:flex; align-items:center; gap:8px; }
-.jbg-single-header .hdr-actions .ext-like > p{ margin:0!important; line-height:1!important; } /* ← حذف فاصلهٔ ناخواستهٔ <p> */
-.jbg-single-header .hdr-actions .pld-like-dislike-wrap,
-.jbg-single-header .hdr-actions .pld-custom,
-.jbg-single-header .hdr-actions .pld-common-wrap{
-  display:flex!important; align-items:center!important; gap:6px; height:32px;
+/* خودِ ظرف لایک/دیس‌لایک نیز وسط‌چین شود (اگر پلاگین داخلی ارتفاع متفاوت داشت) */
+.jbg-single-header .hdr-actions .ext-like{
+  display:flex; align-items:center; gap:6px;
 }
-.jbg-single-header .hdr-actions .pld-common-wrap a,
-.jbg-single-header .hdr-actions .pld-common-wrap button{
-  display:inline-flex; align-items:center; justify-content:center; height:28px; line-height:28px; padding:0 8px;
-}
-.jbg-single-header .hdr-actions svg,
-.jbg-single-header .hdr-actions i{ vertical-align:middle; }
 
-/* برند شفاف و تراز وسط */
+/* برند شفاف و فقط با رنگ (بدون پس‌زمینه) */
 .jbg-single-header .hdr-actions .brand{
-  background:transparent!important; border:none!important; color:#4f46e5; display:inline-flex; align-items:center;
+  background:transparent!important; /* ← حذف پس‌زمینه بنفش قبلی */
+  border:none!important;
+  color:#4f46e5; /* در صورت نیاز رنگ برند */
 }
 
-/* دسکتاپ */
+/* دسکتاپ: ردیفی و وسط‌چین عمودی */
 @media (min-width:768px){
   .jbg-single-header{
-    padding:16px 18px; gap:12px; flex-direction:row!important; align-items:center; flex-wrap:wrap; justify-content:space-between;
+    padding:16px 18px; gap:12px;
+    flex-direction:row !important;
+    align-items:center;            /* ← تراز عمودی مرکز کل هدر */
+    flex-wrap:wrap;
+    justify-content:space-between;
   }
   .jbg-single-header .hdr-title{flex:1 1 auto}
   .jbg-single-header .hdr-meta{order:2}
@@ -132,10 +162,17 @@ class ViewBadge {
 
         $title = '<div class="hdr-title"><h1 class="title">' . esc_html(get_the_title($id)) . '</h1></div>';
         $meta  = '<div class="hdr-meta"><span>' . esc_html($viewsF) . '</span><span class="dot">•</span><span>' . esc_html($when) . '</span></div>';
+
+        /* 
+         * اکشن‌ها: خروجی شورتکد لایک/دیس‌لایک داخل ext-like می‌آید
+         * و نام برند (اگر موجود باشد) در کنار آن می‌نشیند.
+         * با CSS بالا پس‌زمینه‌های پیش‌فرض حذف و تراز عمودی وسط اعمال شده است.
+         */
         $acts  = '<div class="hdr-actions"><span class="ext-like">' . $like . '</span>' . ($brand ? '<span class="brand">' . esc_html($brand) . '</span>' : '') . '</div>';
+
         $header = '<div class="jbg-single-header">' . $title . $meta . $acts . '</div>';
 
-        // انتقال هدر به بعد از پلیر
+        // انتقال هدر به بلافاصله بعد از پلیر (در صورت جابه‌جایی DOM توسط قالب)
         $script = '<script id="jbg-single-header-move">(function(){
   function move(){
     try{
