@@ -1,30 +1,42 @@
+/*!
+ * JBG Player Controller
+ * - کنترل Plyr/HLS
+ * - جلوگیری از جلو زدن
+ * - سیگنال unlock وقتی ویدیو کامل شد
+ * - پنهان‌سازی ویدیو و نمایش آزمون پس از اتمام
+ */
 (function(){
   if (typeof JBG_PLAYER === 'undefined') return;
 
-  function onReady(fn){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn); else fn(); }
+  // ــ ابزار آماده‌سازی DOM ــ
+  function onReady(fn){
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn);
+    else fn();
+  }
 
   onReady(function(){
-    var wrap  = document.querySelector('.jbg-player-wrapper');
-    var video = document.getElementById('jbg-player');
+    var wrap  = document.querySelector('.jbg-player-wrapper');   // ← رَپِر پلیر
+    var video = document.getElementById('jbg-player');           // ← خود ویدیو
     if (!wrap || !video) return;
 
-    // هدر را داخل wrapper بیاور تا هم‌عرض پلیر باشد
+    // هدر ViewBadge را داخل wrapper بیاور تا هم‌عرض پلیر باشد (سازگاری با تم‌ها)
     (function(){
       var header = document.querySelector('.jbg-single-header, .jbg-single-shell');
       if (header && header.parentElement!==wrap) wrap.appendChild(header);
     })();
 
-    // ابزار
-    function adId(){
+    // شناسه آگهی برای فلگ‌های محلی/رویدادها
+    function getAdId(){
       if (window.JBG_PLAYER && JBG_PLAYER.adId) return String(JBG_PLAYER.adId);
       var d = wrap.getAttribute('data-ad-id');
       return d ? String(d) : String(document.body.getAttribute('data-ad-id')||'');
     }
 
-    // دکمه آزمون
+    // پیدا کردن/ساخت دکمه‌های آزمون زیر پلیر
     function quizBtns(){
-      var a=[]; var b=document.getElementById('jbg-quiz-btn'); if(b)a.push(b);
-      a=a.concat([].slice.call(document.querySelectorAll('.jbg-quiz-trigger,[data-jbg-quiz-trigger]')));
+      var a = [];
+      var b = document.getElementById('jbg-quiz-btn'); if(b) a.push(b);
+      a = a.concat([].slice.call(document.querySelectorAll('.jbg-quiz-trigger,[data-jbg-quiz-trigger]')));
       return a;
     }
     function ensureQuizBtn(){
@@ -38,18 +50,18 @@
     function showQuiz(){ quizBtns().forEach(function(el){ el.setAttribute('data-jbg-visible','1'); el.style.display='inline-block'; el.disabled=false; }); }
     ensureQuizBtn(); hideQuiz();
 
+    // کلیک روی دکمه آزمون → باکس آزمون را نشان بده (fallback دستی)
     document.addEventListener('click', function(e){
       var t=e.target && e.target.closest && e.target.closest('#jbg-quiz-btn,.jbg-quiz-trigger,[data-jbg-quiz-trigger]');
       if (!t) return;
       var q=document.getElementById('jbg-quiz');
       if (q){
         if (q.style.display==='none') q.style.display='block';
-        // حذف اسکرول خودکار به باکس آزمون:
-        // q.scrollIntoView({behavior:'smooth',block:'start'});
+        // q.scrollIntoView({behavior:'smooth',block:'start'}); // ← در صورت نیاز
       }
     });
 
-    // منبع و Plyr
+    // بارگذاری منبع و Plyr/HLS
     var src = wrap.getAttribute('data-src') || video.currentSrc || video.src || '';
     try{
       if (window.Hls && window.Hls.isSupported() && /\.m3u8(\?|$)/i.test(src)){
@@ -63,13 +75,12 @@
       });
     }catch(_){}
 
-    // فقط عقب آزاد؛ جلو ممنوع
-    var maxAllowed = 0; // بیشترین زمان واقعاً دیده‌شده
+    // جلوگیری از جلو زدن (عقب آزاد)
+    var maxAllowed = 0; // ← بیشترین زمان واقعی دیده‌شده
     var fixing = false;
-
     function clampForward(){
       if (fixing) return;
-      var tol = 0.25;
+      var tol = 0.25; // ← تلورانس پرش جزئی
       if (video.currentTime > maxAllowed + tol){
         fixing = true;
         video.currentTime = maxAllowed;
@@ -79,7 +90,7 @@
     video.addEventListener('seeking', clampForward);
     video.addEventListener('seeked',  clampForward);
 
-    // نگهبان اسلایدر Plyr (max=1 یا 100 هر دو پوشش داده می‌شود)
+    // نگهبان اسلایدر Plyr (max=1 یا 100)
     function guardSlider(el){
       if (!el || el.__jbg_guarded) return;
       el.__jbg_guarded = true;
@@ -87,7 +98,7 @@
         var d = video.duration || 0; if (!d) return;
         var maxAttr = parseFloat(el.max || '100'); if (!isFinite(maxAttr) || maxAttr<=0) maxAttr = 100;
         var val = parseFloat(el.value || '0'); if (!isFinite(val)) val = 0;
-        var target = (val / maxAttr) * d; // زمان هدف
+        var target = (val / maxAttr) * d; // ← زمان هدف
         if (target > maxAllowed + 0.25){
           e.preventDefault(); e.stopImmediatePropagation && e.stopImmediatePropagation();
           var back = (maxAllowed / d) * maxAttr;
@@ -107,44 +118,61 @@
     setTimeout(bindSliders, 300);
     try{ new MutationObserver(bindSliders).observe(wrap, {childList:true,subtree:true}); }catch(_){}
 
-    // Unlock در ۱۰۰٪
+    // وضعیت unlock در ۱۰۰٪
     var unlocked = false, UNLOCK_AT = 0.999, statusEl = document.getElementById('jbg-status');
 
+    // علامت‌گذاری سراسری «ویدیو کامل دیده شد»
     function markUnlocked(){
       try{ window.JBG_WATCHED_OK = true; }catch(_){}
       try{ document.body.setAttribute('data-jbg-watched','1'); }catch(_){}
-      try{ localStorage.setItem('jbg_watched_'+adId(),'1'); }catch(_){}
-      try{ document.dispatchEvent(new CustomEvent('jbg:watched_ok',{detail:{adId:adId(),pct:1}})); }catch(_){}
+      try{ localStorage.setItem('jbg_watched_'+getAdId(),'1'); }catch(_){}
+      try{ document.dispatchEvent(new CustomEvent('jbg:watched_ok',{detail:{adId:getAdId(),pct:1}})); }catch(_){}
     }
 
-    // --- ثبت «بازدید روزانه» پس از کامل‌دیدن (هر ۲۴ ساعت یک‌بار) ---
+    // ثبت «بازدید روزانه» پس از کامل‌دیدن (هر ۲۴ ساعت یک‌بار، اگر از سرور فعال شود)
     var dailyTracked = false;
     function trackDailyView(){
-      // نیازمند لوکالایز سرور: JBG_PLAYER.track = { url, nonce, adId, enabled:1 }
       try{
         if (!JBG_PLAYER || !JBG_PLAYER.track || !JBG_PLAYER.track.enabled || dailyTracked) return;
         dailyTracked = true;
         fetch(JBG_PLAYER.track.url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-WP-Nonce': JBG_PLAYER.track.nonce
-          },
+          headers: {'Content-Type': 'application/json','X-WP-Nonce': JBG_PLAYER.track.nonce},
           body: JSON.stringify({ ad_id: JBG_PLAYER.track.adId })
         }).catch(function(){ /* silent */ });
       }catch(_){}
     }
-    // ---------------------------------------------------------------
 
+    // ــ منطق Unlock ــ
     function unlock(){
       if (unlocked) return;
       unlocked = true;
-      showQuiz();
-      markUnlocked();
-      trackDailyView(); // ← پس از کامل‌دیدن ویدیو
+
+      /* تغییرات درخواستی: پنهان کردن ویدیو + نمایش آزمون */
+      try{
+        // مخفی کردن خود ویدیو
+        try{ video.pause(); }catch(_){}
+        video.style.display = 'none';
+
+        // مخفی کردن اکشن‌های زیر پلیر (مثل دکمه Start Quiz)
+        var actions = wrap && wrap.querySelector('.jbg-actions');
+        if (actions) actions.style.display = 'none';
+
+        // نمایش باکس آزمون
+        var quizBox = document.getElementById('jbg-quiz');
+        if (quizBox){
+          quizBox.style.display = 'block';
+          try{ quizBox.scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
+        }
+      }catch(_){}
+
+      showQuiz();        // ← اگر دکمه آزمون داریم، آن را فعال نگه می‌داریم
+      markUnlocked();    // ← سیگنال برای سایر بخش‌ها (آزمون/بیلینگ/امتیاز)
+      trackDailyView();  // ← ثبت بازدید روزانه
       if (statusEl) statusEl.textContent = '100% watched';
     }
 
+    // تیکِ زمان برای محاسبۀ بیشینه و تشخیص تکمیل‌شدن
     function tick(){
       var d = video.duration;
       if (isFinite(d) && d>0){
