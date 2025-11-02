@@ -2,6 +2,8 @@
  * JBG Player Controller
  * - کنترل Plyr/HLS و جلوگیری از جلو زدن
  * - پس از اتمام: «پنهان‌سازی نرمِ کل باکس پلیر» و «جابجایی/نمایش نرم باکس آزمون»
+ * - نکته مهم این نسخه: «همیشه» در شروع صفحه، اول باکس ویدیو نمایش داده می‌شود
+ *   حتی اگر کاربر قبلاً این ویدیو را کامل دیده/آزمون را پاس کرده باشد.
  */
 (function(){
   if (typeof JBG_PLAYER === 'undefined') return;
@@ -16,6 +18,21 @@
     var wrap  = document.querySelector('.jbg-player-wrapper');   // ← کل باکس پلیر (همان چیزی که باید پنهان شود)
     var video = document.getElementById('jbg-player');           // ← تگ <video>
     if (!wrap || !video) return;
+
+    /* ـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+     * اطمینان از «نمایش پلیر در بدو ورود»:
+     * ممکن است در بازدید قبلی wrap با display:none پنهان شده باشد؛
+     * در هر بار بارگذاری صفحه، تمام استایل‌های inline قبلی را پاک می‌کنیم تا پلیر دیده شود.
+     * ـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ */
+    try{
+      wrap.style.display   = '';   // ← نمایش مجدد باکس پلیر
+      wrap.style.height    = '';   // ← پاکسازی آثار انیمیشن قبلی
+      wrap.style.opacity   = '';
+      wrap.style.overflow  = '';
+      wrap.style.transition= '';
+      wrap.style.marginTop = '';
+      wrap.style.marginBottom = '';
+    }catch(_){}
 
     // (سازگاری) هدر ViewBadge را داخل wrap منتقل می‌کنیم تا زیر پلیر رندر شود
     (function(){
@@ -112,11 +129,12 @@
     setTimeout(bindSliders, 300);
     try{ new MutationObserver(bindSliders).observe(wrap, {childList:true,subtree:true}); }catch(_){}
 
-    // وضعیت تکمیل
+    // وضعیت تکمیل (این جلسه)
     var unlocked = false, UNLOCK_AT = 0.999, statusEl = document.getElementById('jbg-status');
 
     // فلگ سراسری «ویدیو کامل دیده شد»
     function markUnlocked(){
+      // ⚠️ فقط پس از کامل دیدن «همین بار» ست می‌شود (localStorage فقط برای استفاده‌های بعدی)
       try{ window.JBG_WATCHED_OK = true; }catch(_){}
       try{ document.body.setAttribute('data-jbg-watched','1'); }catch(_){}
       try{ localStorage.setItem('jbg_watched_'+getAdId(),'1'); }catch(_){}
@@ -137,41 +155,43 @@
       }catch(_){}
     }
 
-    // ← انیمیشن نرم: جمع‌شدن wrap و ظاهرشدن آزمون
+    // استایل‌های انیمیشن (یک‌بار تزریق شود)
+    function injectAnimStyles(){
+      if (document.getElementById('jbg-anim-styles')) return;
+      var css = [
+        '.jbg-enter{opacity:0;transform:translateY(8px)}',
+        '.jbg-enter-active{opacity:1;transform:none;transition:opacity .35s ease,transform .35s ease}'
+      ].join('');
+      var st=document.createElement('style'); st.id='jbg-anim-styles'; st.type='text/css'; st.appendChild(document.createTextNode(css));
+      document.head.appendChild(st);
+    }
+
+    // انیمیشن: جمع‌شدن wrap و ظاهرشدن آزمون
     function collapseAndSwapWithQuiz(){
       var quizBox = document.getElementById('jbg-quiz');
 
-      // اگر آزمون موجود است، آن را دقیقاً جای wrap بیاور
       if (quizBox && wrap.parentNode){
-        wrap.parentNode.insertBefore(quizBox, wrap);
+        wrap.parentNode.insertBefore(quizBox, wrap); // ← آزمون دقیقاً جای باکس پلیر
       }
 
-      // ۱) نمایش نرم آزمون
       if (quizBox){
         quizBox.style.display = 'block';
-        // افزودن کلاس‌های انیمیشن ظاهر شدن
         try{
           injectAnimStyles();
           quizBox.classList.add('jbg-enter');
-          // تریگر رندر
-          quizBox.getBoundingClientRect();
+          quizBox.getBoundingClientRect(); // ← تریگر
           quizBox.classList.add('jbg-enter-active');
-          setTimeout(function(){
-            quizBox.classList.remove('jbg-enter','jbg-enter-active');
-          }, 400);
+          setTimeout(function(){ quizBox.classList.remove('jbg-enter','jbg-enter-active'); }, 400);
         }catch(_){}
       }
 
-      // ۲) جمع‌شدن نرمِ wrap (قد و شفافیت)
       try{
-        injectAnimStyles();
         var h = wrap.offsetHeight;
         wrap.style.height = h + 'px';
         wrap.style.opacity = '1';
         wrap.style.overflow = 'hidden';
         wrap.style.transition = 'height .4s ease, opacity .25s ease, margin .4s ease';
-        // تریگر رندر
-        wrap.getBoundingClientRect();
+        wrap.getBoundingClientRect(); // ← تریگر
         requestAnimationFrame(function(){
           wrap.style.height = '0px';
           wrap.style.opacity = '0';
@@ -191,34 +211,16 @@
       }catch(_){}
     }
 
-    // استایل‌های انیمیشن (یک‌بار تزریق شود)
-    function injectAnimStyles(){
-      if (document.getElementById('jbg-anim-styles')) return;
-      var css = [
-        '.jbg-enter{opacity:0;transform:translateY(8px)}',
-        '.jbg-enter-active{opacity:1;transform:none;transition:opacity .35s ease,transform .35s ease}'
-      ].join('');
-      var st=document.createElement('style'); st.id='jbg-anim-styles'; st.type='text/css'; st.appendChild(document.createTextNode(css));
-      document.head.appendChild(st);
-    }
-
-    // Unlock در ۱۰۰٪
+    // Unlock در ۱۰۰٪ (فقط با تماشای مجدد همین بار)
     function unlock(){
       if (unlocked) return;
       unlocked = true;
 
-      // توقف ویدیو برای قطع صدا
       try{ video.pause(); }catch(_){}
-
-      // جابجایی/نمایش آزمون و پنهان‌سازی نرم باکس پلیر
-      collapseAndSwapWithQuiz();
-
-      // فعال ماندن دکمه‌های آزمون (در صورت وجود)
-      showQuiz();
-
-      // فلگ‌ها و ثبت
-      markUnlocked();
-      trackDailyView();
+      collapseAndSwapWithQuiz(); // ← جابجایی/پنهان‌سازی نرم
+      showQuiz();                // ← اگر دکمه آزمون وجود دارد، فعال بماند
+      markUnlocked();            // ← ایونت و فلگ‌ها
+      trackDailyView();          // ← ثبت بازدید روزانه
       if (statusEl) statusEl.textContent = '100% watched';
     }
 

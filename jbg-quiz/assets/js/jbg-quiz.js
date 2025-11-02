@@ -1,7 +1,7 @@
 /*!
  * JBG Quiz Controller
- * - قبل از تکمیل ویدیو: آزمون مخفی
- * - بعد از تکمیل: آزمون «جای باکس پلیر» ظاهر می‌شود (با انیمیشن ملایم)
+ * - قبل از تکمیل ویدیو: آزمون «همیشه» مخفی است (حتی اگر قبلاً پاس شده باشد)
+ * - بعد از تکمیل همین‌بار: آزمون «جای باکس پلیر» ظاهر می‌شود (با انیمیشن ملایم)
  * - ارسال پاسخ و نمایش دکمۀ «ویدئوی بعدی» پس از پاسخ صحیح
  */
 (function(){
@@ -48,24 +48,6 @@
       form.querySelectorAll('input,button,select,textarea').forEach(function(el){ el.disabled = false; });
     }
 
-    // قفل/باز بودن آزمون
-    function disableQuiz(){
-      disableInputs();
-      gateMsg('ابتدا ویدیو را کامل تماشا کنید 🔔', 'jbg-quiz-result--warn');
-    }
-    function enableQuiz(){
-      enableInputs();
-      gateMsg('', '');
-    }
-
-    // بررسی وضعیت تکمیل ویدیو
-    function isUnlocked(){
-      try{ if (window.JBG_WATCHED_OK === true) return true; }catch(_){}
-      try{ if (document.body.getAttribute('data-jbg-watched') === '1') return true; }catch(_){}
-      try{ if (adId && localStorage.getItem('jbg_watched_' + adId) === '1') return true; }catch(_){}
-      return false;
-    }
-
     // نمایش دکمه «ویدئوی بعدی» (در صورت وجود)
     function showNextIfAny(){
       if (!nextBtn) return;
@@ -80,32 +62,25 @@
       }
     }
 
-    // حالت اولیه: آزمون را قبل از unlock پنهان نگه‌دار
+    /* ـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+     * حالت اولیه جدید:
+     *   - آزمون «همیشه» مخفی است و ورودی‌های آن غیرفعال است.
+     *   - حتی اگر کاربر قبلاً این ویدیو را دیده/پاس کرده، تا وقتی همین‌بار ویدیو را کامل نبیند، آزمون نشان داده نمی‌شود.
+     * ـــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ */
     if (box){
-      if (!isUnlocked()){
-        box.style.display = 'none';     // ← پنهان تا زمان تکمیل ویدیو
-        disableQuiz();
-      } else {
-        box.style.display = 'block';
-        enableQuiz();
-      }
+      box.style.display = 'none'; // ← پنهان تا رویداد unlock برسد
+      disableInputs();            // ← قفل ورودی‌ها
+      gateMsg('ابتدا ویدیو را کامل تماشا کنید 🔔', 'jbg-quiz-result--warn');
     }
 
-    // رویداد «ویدیو کامل شد» از پلیر
+    // رویداد «ویدیو کامل شد» از پلیرِ همین بار
     document.addEventListener('jbg:watched_ok', function(ev){
-      var ok = true;
+      // (در صورت نیاز می‌توانید adId را چک کنید؛ اینجا ساده نگه‌داشتیم)
+      enableInputs();
       try{
-        if (adId && ev && ev.detail && ev.detail.adId && String(ev.detail.adId) !== adId) ok = false;
-      }catch(_){}
-      if (!ok) return;
-
-      enableQuiz();
-
-      try{
-        // آزمون را دقیقاً «جای باکس پلیر» بیاوریم، اگر player.js این کار را نکرده بود
         var wrap = document.querySelector('.jbg-player-wrapper');
         if (box && wrap && wrap.parentNode && wrap.style.display !== 'none'){
-          wrap.parentNode.insertBefore(box, wrap);
+          wrap.parentNode.insertBefore(box, wrap); // ← آزمون دقیقاً جای باکس پلیر
           // پنهان‌سازی نرم wrap (اگر هنوز پنهان نشده باشد)
           var h = wrap.offsetHeight;
           wrap.style.height = h + 'px';
@@ -140,10 +115,6 @@
         setTimeout(function(){ box.classList.remove('jbg-enter','jbg-enter-active'); }, 400);
 
         try{ box.scrollIntoView({behavior:'smooth', block:'start'}); }catch(_){}
-
-        // توقف ویدیو (ایمنی)
-        var v = document.getElementById('jbg-player');
-        if (v){ try{ v.pause(); }catch(_){ } }
       }catch(_){}
     }, false);
 
@@ -151,11 +122,6 @@
     if (form){
       form.addEventListener('submit', function(e){
         e.preventDefault();
-
-        if (!isUnlocked()){
-          disableQuiz();
-          return;
-        }
 
         var answerEl = form.querySelector('input[name="jbg_answer"]:checked');
         if (!answerEl){
@@ -179,26 +145,13 @@
         .then(function(r){ return r.json().catch(function(){ return {}; }); })
         .then(function(data){
           if (data && data.correct){
-            // پیام امتیاز (در صورت تعریف)
-            var pts = 0;
-            try { if (JBG_QUIZ && +JBG_QUIZ.points > 0) pts = parseInt(JBG_QUIZ.points, 10) || 0; } catch(_){}
-            if (pts > 0){
-              gateMsg('تبریک! ' + pts + ' امتیاز دریافت شد.', 'jbg-quiz-result--ok');
-            } else {
-              gateMsg('✔ پاسخ صحیح بود!', 'jbg-quiz-result--ok');
-            }
-
-            // جلوگیری از ارسال دوباره
+            // پیام موفقیت + دکمه ویدیوی بعدی
+            gateMsg('✔ پاسخ صحیح بود!', 'jbg-quiz-result--ok');
             disableInputs();
-
-            // نمایش دکمۀ «ویدئوی بعدی»
             showNextIfAny();
 
             // ایونت سفارشی برای استفاده‌های دیگر
-            try{
-              document.dispatchEvent(new CustomEvent('jbg:quiz_passed', { detail: { adId: adId, points: pts }}));
-            }catch(_){}
-
+            try{ document.dispatchEvent(new CustomEvent('jbg:quiz_passed', { detail: { adId: adId }})); }catch(_){}
           } else if (data && data.message){
             gateMsg('✖ ' + data.message, 'jbg-quiz-result--err');
           } else {
