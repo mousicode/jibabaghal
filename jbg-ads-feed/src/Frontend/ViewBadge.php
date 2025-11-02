@@ -52,7 +52,7 @@ class ViewBadge {
         $like   = do_shortcode('[posts_like_dislike id=' . $id . ']');
 
         $style = '<style id="jbg-single-header-css">
-/* مخفی‌سازی هدرهای پیش‌فرض قالب */
+/* مخفی‌سازی هدرهای پیش‌فرض قالب (سازگاری با پوسته‌ها) */
 .single-jbg_ad header.wd-single-post-header,
 .single-jbg_ad h1.wd-entities-title,
 .single-jbg_ad .entry-title,
@@ -97,7 +97,7 @@ class ViewBadge {
 /* متا: بازدید • زمان */
 .jbg-single-header .hdr-meta{
   display:flex;
-  align-items:center;
+  align-items:center; /* ← تراز عمودی وسط */
   gap:8px;
   font-size:13px;
   color:#6b7280;
@@ -107,52 +107,72 @@ class ViewBadge {
 /* اکشن‌ها: لایک/دیس‌لایک + برند */
 .jbg-single-header .hdr-actions{
   display:flex;
-  align-items:center;
+  align-items:center; /* ← تراز عمودی وسط همه آیتم‌ها */
+  justify-content:flex-start;
   gap:8px;
   flex-wrap:wrap;
   margin:0;
 }
+
+/* آیتم‌های اکشن (ext-like و brand و …) بدون پس‌زمینه و بدون بوردر */
 .jbg-single-header .hdr-actions > *{
   display:inline-flex;
   align-items:center;
+  justify-content:center;
   gap:6px;
   height:32px;
-  padding:0 12px;
-  background:#f8fafc;
+  padding:0 10px;
+  background:transparent!important; /* ← حذف پس‌زمینه */
   color:#111827;
-  border:1px solid #e5e7eb;
+  border:none!important;            /* ← حذف بوردر */
   border-radius:999px;
   font-size:13px;
   font-weight:600;
   line-height:1;
-}
-.jbg-single-header .brand{
-  background:#eef2ff;
-  border-color:#e5e7eb;
+  vertical-align:middle;            /* ← هم‌تراز شدن با سایر عناصر */
 }
 
-/* دسکتاپ: ردیفی */
+/* خودِ ظرف لایک/دیس‌لایک نیز وسط‌چین شود (اگر پلاگین داخلی ارتفاع متفاوت داشت) */
+.jbg-single-header .hdr-actions .ext-like{
+  display:flex; align-items:center; gap:6px;
+}
+
+/* برند شفاف و فقط با رنگ (بدون پس‌زمینه) */
+.jbg-single-header .hdr-actions .brand{
+  background:transparent!important; /* ← حذف پس‌زمینه بنفش قبلی */
+  border:none!important;
+  color:#4f46e5; /* در صورت نیاز رنگ برند */
+}
+
+/* دسکتاپ: ردیفی و وسط‌چین عمودی */
 @media (min-width:768px){
   .jbg-single-header{
     padding:16px 18px; gap:12px;
     flex-direction:row !important;
-    align-items:center;
+    align-items:center;            /* ← تراز عمودی مرکز کل هدر */
     flex-wrap:wrap;
     justify-content:space-between;
   }
   .jbg-single-header .hdr-title{flex:1 1 auto}
   .jbg-single-header .hdr-meta{order:2}
-  .jbg-single-header .hdr-actions{order:3}
+  .jbg-single-header .hdr-actions{order:3; align-items:center;}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
 </style>';
 
         $title = '<div class="hdr-title"><h1 class="title">' . esc_html(get_the_title($id)) . '</h1></div>';
         $meta  = '<div class="hdr-meta"><span>' . esc_html($viewsF) . '</span><span class="dot">•</span><span>' . esc_html($when) . '</span></div>';
+
+        /* 
+         * اکشن‌ها: خروجی شورتکد لایک/دیس‌لایک داخل ext-like می‌آید
+         * و نام برند (اگر موجود باشد) در کنار آن می‌نشیند.
+         * با CSS بالا پس‌زمینه‌های پیش‌فرض حذف و تراز عمودی وسط اعمال شده است.
+         */
         $acts  = '<div class="hdr-actions"><span class="ext-like">' . $like . '</span>' . ($brand ? '<span class="brand">' . esc_html($brand) . '</span>' : '') . '</div>';
+
         $header = '<div class="jbg-single-header">' . $title . $meta . $acts . '</div>';
 
-        // انتقال هدر به بلافاصله بعد از پلیر
+        // انتقال هدر به بلافاصله بعد از پلیر (در صورت جابه‌جایی DOM توسط قالب)
         $script = '<script id="jbg-single-header-move">(function(){
   function move(){
     try{
