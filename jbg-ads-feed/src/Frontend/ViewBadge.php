@@ -17,7 +17,7 @@ class ViewBadge {
         $t = get_post_time('U', true, $post_id);
         $d = time() - (int)$t;
         if ($d < 60)        return 'لحظاتی پیش';
-        if ($د < 3600)      return floor($d/60) . ' دقیقه پیش';
+        if ($d < 3600)      return floor($d/60) . ' دقیقه پیش'; // ← رفع ایراد: تایپ اشتباه ($د) به ($d)
         if ($d < 86400)     return floor($d/3600) . ' ساعت پیش';
         if ($d < 86400*30)  return floor($d/86400) . ' روز پیش';
         return get_the_date('', $post_id);
