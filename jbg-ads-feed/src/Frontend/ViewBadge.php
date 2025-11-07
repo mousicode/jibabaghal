@@ -128,6 +128,16 @@ class ViewBadge {
   .jbg-single-header .hdr-actions{order:3; align-items:center;}
   .jbg-single-header .hdr-title h1{font-size:22px}
 }
+  /* موبایل: جهت عمودی و چپ‌چین */
+@media (max-width:767px){
+  .jbg-single-header{
+    flex-direction:column!important; /* ← چیدمان عمودی */
+    align-items:flex-start!important; /* ← تراز افقی به چپ (در RTL یعنی راست) */
+    justify-content:flex-start;
+    gap:10px;
+  }
+}
+
 </style>';
 
         $title = '<div class="hdr-title"><h1 class="title">' . esc_html(get_the_title($id)) . '</h1></div>';
