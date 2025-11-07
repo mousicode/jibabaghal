@@ -63,11 +63,11 @@
 
 /* Base button (kept for compatibility; theme may override) */
 .jbg-btn{
-  background:#2563eb;
+  background:#016f87;
   color:#fff;
   border:none;
   padding:10px 14px;
-  border-radius:8px;
+  border: radius 999px;
   font-weight:500;
   transition:background .2s ease, transform .05s ease;
 }
@@ -78,9 +78,9 @@
 .jbg-btn:not(:disabled){
   cursor:pointer;
 }
-.jbg-btn:not(:disabled):hover{ background:#1e4fd7; }
+/* .jbg-btn:not(:disabled):hover{ background:#1e4fd7; }
 .jbg-btn:not(:disabled):active{ transform:translateY(1px); }
-.jbg-btn:focus{ outline:2px solid #93c5fd; outline-offset:2px; }
+.jbg-btn:focus{ outline:2px solid #93c5fd; outline-offset:2px; } */
 
 /* Mobile tweaks */
 @media (max-width:640px){
