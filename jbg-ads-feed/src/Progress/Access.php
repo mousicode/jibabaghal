@@ -4,6 +4,24 @@ if (!defined('ABSPATH')) exit;
 
 class Access {
 
+    /* ───────────────────── غیرفعال‌سازی موقت قفل‌ها ─────────────────────
+     * اگر یکی از شرایط زیر برقرار باشد، کاربر بدون رعایت ترتیب به همه ویدیوها دسترسی دارد:
+     *  1) در wp-config.php مقدار ثابت زیر تعریف شده باشد:
+     *       define('JBG_PROGRESS_DISABLE', true);
+     *  2) گزینه‌ی jbg_progress_disabled در جدول options مقدار '1' داشته باشد.
+     *  3) فیلتر jbg_progress_disabled مقدار true برگرداند (برای نقش/شرایط خاص).
+     * این سوییچ دیتای کاربر را تغییر نمی‌دهد و صرفاً گیت دسترسی را موقتاً باز می‌کند.
+     * ─────────────────────────────────────────────────────────────────── */
+    private static function disabled(): bool {
+        // ۱) کانستنت سراسری
+        if (defined('JBG_PROGRESS_DISABLE') && JBG_PROGRESS_DISABLE) return true;
+        // ۲) گزینه‌ی دیتابیس
+        $opt = get_option('jbg_progress_disabled', '0');
+        $off = ($opt === '1' || $opt === 1 || $opt === true);
+        // ۳) فیلتر توسعه‌پذیر
+        return (bool) apply_filters('jbg_progress_disabled', $off);
+    }
+
     /* ---------------------- Signature & ordering ---------------------- */
 
     public static function content_sig(): string {
@@ -138,6 +156,9 @@ class Access {
      *    کاربری که N آیتم را قبلاً پاس کرده، تمام آیتم‌های رتبه ≤ N+1 را می‌تواند ببیند.
      */
     public static function is_unlocked(int $user_id, int $ad_id): bool {
+        /* اگر قفل‌ها موقتاً غیرفعال باشند، همه‌ی ویدیوها باز هستند */
+        if (self::disabled()) return true;
+
         $seq = self::seq($ad_id);
         if ($seq <= 0) return false;      // خارج از ترتیب
 
@@ -156,6 +177,9 @@ class Access {
 
     /** برای سازگاری با کدهای دیگر: مقدار «مرحلهٔ باز» را برمی‌گرداند. */
     public static function unlocked_max(int $user_id): int {
+        /* در حالت غیرفعال بودن قفل‌ها، «مرحله‌ی باز» را مساوی تعداد کل می‌گیریم */
+        if (self::disabled()) return self::max_seq();
+
         if ($user_id <= 0) return 1;
 
         $cur_sig = self::content_sig();
