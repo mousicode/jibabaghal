@@ -5,21 +5,11 @@ if (!defined('ABSPATH')) exit;
 class Access {
 
     /* ───────────────────── غیرفعال‌سازی موقت قفل‌ها ─────────────────────
-     * اگر یکی از شرایط زیر برقرار باشد، کاربر بدون رعایت ترتیب به همه ویدیوها دسترسی دارد:
-     *  1) در wp-config.php مقدار ثابت زیر تعریف شده باشد:
-     *       define('JBG_PROGRESS_DISABLE', true);
-     *  2) گزینه‌ی jbg_progress_disabled در جدول options مقدار '1' داشته باشد.
-     *  3) فیلتر jbg_progress_disabled مقدار true برگرداند (برای نقش/شرایط خاص).
-     * این سوییچ دیتای کاربر را تغییر نمی‌دهد و صرفاً گیت دسترسی را موقتاً باز می‌کند.
-     * ─────────────────────────────────────────────────────────────────── */
+     * ⚠️ نسخه‌ی موقت: قفل‌ها «کاملاً» غیرفعال هستند و همهٔ ویدیوها بازند.
+     * برای بازگردانی حالت عادی، مقدار بازگشتی این تابع را false کنید.
+     */
     private static function disabled(): bool {
-        // ۱) کانستنت سراسری
-        if (defined('JBG_PROGRESS_DISABLE') && JBG_PROGRESS_DISABLE) return true;
-        // ۲) گزینه‌ی دیتابیس
-        $opt = get_option('jbg_progress_disabled', '0');
-        $off = ($opt === '1' || $opt === 1 || $opt === true);
-        // ۳) فیلتر توسعه‌پذیر
-        return (bool) apply_filters('jbg_progress_disabled', $off);
+        return true; // ← موقتاً همه چیز باز است
     }
 
     /* ---------------------- Signature & ordering ---------------------- */
@@ -150,13 +140,11 @@ class Access {
 
     /**
      * گیت نهایی:
-     *  - اگر قبلاً پاس شده → باز
-     *  - در غیر این صورت، هر آیتمی که «رتبهٔ آن ≤ (تعداد پاس‌شده‌ها + ۱)» باشد باز است.
-     *    با این قانون، اگر ویدیوی جدید با CPV بالاتر وارد ابتدای صف شود،
-     *    کاربری که N آیتم را قبلاً پاس کرده، تمام آیتم‌های رتبه ≤ N+1 را می‌تواند ببیند.
+     *  - حالت موقت: قفل‌ها خاموش → همیشه true
+     *  - حالت عادی: اگر قبلاً پاس شده یا رتبهٔ موردنظر ≤ allowed_rank باشد → true
      */
     public static function is_unlocked(int $user_id, int $ad_id): bool {
-        /* اگر قفل‌ها موقتاً غیرفعال باشند، همه‌ی ویدیوها باز هستند */
+        // ★ موقت: همهٔ ویدیوها باز هستند
         if (self::disabled()) return true;
 
         $seq = self::seq($ad_id);
@@ -177,7 +165,7 @@ class Access {
 
     /** برای سازگاری با کدهای دیگر: مقدار «مرحلهٔ باز» را برمی‌گرداند. */
     public static function unlocked_max(int $user_id): int {
-        /* در حالت غیرفعال بودن قفل‌ها، «مرحله‌ی باز» را مساوی تعداد کل می‌گیریم */
+        // ★ موقت: در حالت خاموش بودن قفل‌ها، همهٔ مراحل باز فرض می‌شود
         if (self::disabled()) return self::max_seq();
 
         if ($user_id <= 0) return 1;
@@ -218,6 +206,22 @@ class Access {
         update_user_meta($user_id, 'jbg_progress_sig', self::content_sig());
     }
 
+    /* ---------------------- Head CSS (پنهان‌سازی ظاهر قفل) ---------------------- */
+
+    /** 
+     * چاپ یک CSS سبک در <head> تا هر «نشان/باکس قفل» پنهان شود.
+     * با این کار هم badge «قفل» در کارت‌ها مخفی می‌شود، هم باکس هشدار در صفحهٔ تکی.
+     */
+    public static function print_global_css(): void {
+        if (is_admin()) return;
+        echo '<style id="jbg-hide-lock-ui">
+        /* پنهان‌سازی نشان قفل در همهٔ صفحات/کارت‌ها */
+        .jbg-badge.lock{display:none!important;visibility:hidden!important;opacity:0!important}
+        /* پنهان‌سازی باکس اطلاع‌رسانی قفل در صفحهٔ تکی (لاین نقطه‌چین) */
+        .jbg-locked{display:none!important;visibility:hidden!important;opacity:0!important}
+        </style>';
+    }
+
     /* ---------------------- Bootstrapping ---------------------- */
 
     public static function bootstrap(): void {
@@ -233,5 +237,8 @@ class Access {
         add_action('jbg_billed', function($user_id, $ad_id){
             self::promote_after_pass((int)$user_id, (int)$ad_id);
         }, 10, 2);
+
+        // ★ تزریق CSS سراسری برای پنهان‌سازی UI مربوط به قفل
+        add_action('wp_head', [self::class, 'print_global_css'], 5);
     }
 }
