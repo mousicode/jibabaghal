@@ -151,6 +151,21 @@ class Bootstrap {
             }
         });
 
+        /* =================================================================
+         * ثبت‌نام اختصاصی «اسپانسر/برند» (بدون تغییر در ثبت‌نام معمولی Digits)
+         * - شورت‌کد: [jbg_sponsor_register]
+         * - مسیر کلاس: src/Onboarding/SponsorRegister.php
+         * ================================================================= */
+        add_action('init', function () {
+            $f = JBG_ADS_DIR . 'src/Onboarding/SponsorRegister.php';
+            if (file_exists($f)) {
+                require_once $f;
+                if (class_exists('\\JBG\\Ads\\Onboarding\\SponsorRegister')) {
+                    \JBG\Ads\Onboarding\SponsorRegister::register(); // ← رجیستر شورت‌کد و نقش
+                }
+            }
+        });
+
         /* -----------------------------------------------------------------
          * Progress / Gating / Points
          * ----------------------------------------------------------------- */
