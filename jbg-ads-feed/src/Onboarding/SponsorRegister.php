@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
 class SponsorRegister {
 
     /** آدرس صفحه‌ی لاگین/ثبت‌نام Digits (اسلاگ یا مسیر نسبی) */
-    private const DIGITS_LOGIN_URL = '/login/'; // *** این را با URL صفحه‌ی واقعی لاگین Digits خودت عوض کن
+    private const DIGITS_LOGIN_URL = '/my-account/'; // *** این را با URL صفحه‌ی واقعی لاگین Digits خودت عوض کن
 
     /** پیشوند ترنزینت برای نگه‌داری موقت داده‌ها */
     private const TRANSIENT_PREFIX = 'jbg_sponsor_reg_';
