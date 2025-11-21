@@ -29,7 +29,7 @@ class SponsorRegister {
     private const DIGITS_LOGIN_URL = '/my-account/'; // ← اگر اسلاگ صفحه ورود چیز دیگری است این را عوض کن
 
     /** اسلاگ صفحه انتخاب پلن (جایی که شورتکد [jbg_sponsor_plans] را می‌گذاری) */
-    private const PLANS_PAGE_SLUG  = '/brands-plans/'; // ← صفحه «پلن‌ها» را با این اسلاگ بساز یا این مقدار را با اسلاگ واقعی هماهنگ کن
+    private const PLANS_PAGE_SLUG  = '/brands-plans/'; // ← با پیوند یکتای برگه «پلن‌ها» هماهنگ باشد
 
     /** پیشوند ترنزینت برای نگه‌داری موقت دیتا */
     private const TRANSIENT_PREFIX = 'jbg_sponsor_reg_';
@@ -172,22 +172,21 @@ class SponsorRegister {
         // آدرس صفحه لاگین/ثبت‌نام Digits
         $digits_login = home_url(self::DIGITS_LOGIN_URL);
 
-        // برای هر پلن یک redirect_to جداگانه می‌سازیم
-$plans = [
-    'free'   => [
-        'title' => 'پلن رایگان',
-        'desc'  => 'شروع همکاری با حداقل امکانات، مناسب تست و آشنایی اولیه.',
-    ],
-    'eco'    => [
-        'title' => 'پلن اقتصادی',
-        'desc'  => '۱۰۰ تومان برای هر بازدید ویدیو',
-    ],
-    'corp'   => [
-        'title' => 'پلن سازمانی',
-        'desc'  => 'برای اطلاعات بیشتر با ما تماس بگیرید',
-    ],
-];
-
+        // تعریف پلن‌ها
+        $plans = [
+            'free'   => [
+                'title' => 'پلن رایگان',
+                'desc'  => 'شروع همکاری با حداقل امکانات، مناسب تست و آشنایی اولیه.',
+            ],
+            'eco'    => [
+                'title' => 'پلن اقتصادی',
+                'desc'  => '۱۰۰ تومان برای هر بازدید ویدیو',
+            ],
+            'corp'   => [
+                'title' => 'پلن سازمانی',
+                'desc'  => 'برای اطلاعات بیشتر با ما تماس بگیرید',
+            ],
+        ];
 
         // استایل ساده برای گرید پلن‌ها
         ob_start();
@@ -254,6 +253,8 @@ $plans = [
      *  - روی user_meta ذخیره می‌کنیم
      *  - نقش jbg_sponsor را اضافه می‌کنیم
      *  - پلن انتخابی را هم ثبت می‌کنیم
+     *  - نام کامل را در فیلدهای استاندارد پروفایل (first_name, display_name, nickname) نیز ست می‌کنیم
+     *    تا در صفحه «کاربران → ویرایش کاربر» دیده شود.
      */
     private static function complete_for_logged_user(string $token, string $plan): string {
         $data = get_transient(self::TRANSIENT_PREFIX . $token);
@@ -266,17 +267,47 @@ $plans = [
             return self::msg('ابتدا وارد حساب کاربری شوید.', 'error');
         }
 
-        // ذخیره متاهای پروفایل اسپانسر
-        update_user_meta($user_id, 'jbg_sponsor_full_name',   (string) $data['full_name']);
-        update_user_meta($user_id, 'jbg_sponsor_national_id', (string) $data['national']);
-        update_user_meta($user_id, 'jbg_brand_name',          (string) $data['brand_name']);
-        update_user_meta($user_id, 'jbg_company',             (string) $data['company']);
-        if (!empty($data['phone_hint'])) {
-            update_user_meta($user_id, 'jbg_phone_hint',      (string) $data['phone_hint']);
+        $full_name  = (string) ($data['full_name']  ?? '');
+        $national   = (string) ($data['national']   ?? '');
+        $brand_name = (string) ($data['brand_name'] ?? '');
+        $company    = (string) ($data['company']    ?? '');
+        $phone_hint = (string) ($data['phone_hint'] ?? '');
+
+        /* --- متاهای اختصاصی اسپانسر / برند --- */
+        update_user_meta($user_id, 'jbg_sponsor_full_name',   $full_name);
+        update_user_meta($user_id, 'jbg_sponsor_national_id', $national);
+        update_user_meta($user_id, 'jbg_brand_name',          $brand_name);
+        update_user_meta($user_id, 'jbg_company',             $company);
+        if ($phone_hint !== '') {
+            update_user_meta($user_id, 'jbg_phone_hint',      $phone_hint);
         }
 
         // ثبت پلن انتخاب‌شده
         update_user_meta($user_id, 'jbg_sponsor_plan', (string) $plan);
+
+        /* --- سینک با فیلدهای استاندارد پروفایل وردپرس --- */
+        // اگر نام کامل داریم، آن را روی first_name و display_name و nickname هم ست می‌کنیم
+        if ($full_name !== '') {
+            // first_name: برای این‌که در پروفایل قسمت «نام» خالی نباشد
+            update_user_meta($user_id, 'first_name', $full_name);
+
+            // در صورتی که last_name خالی است، دست‌نخورده می‌ماند؛
+            // می‌توان بعداً در پنل مدیریت به‌صورت دستی اصلاح/تفکیک کرد.
+
+            // nickname و display_name فقط اگر قبلاً چیزی روی‌شان ست نشده باشد تغییر می‌کنیم
+            $nickname     = get_user_meta($user_id, 'nickname', true);
+            $display_name = get_userdata($user_id)->display_name ?? '';
+
+            if (empty($nickname)) {
+                update_user_meta($user_id, 'nickname', $full_name);
+            }
+            if (empty($display_name) || $display_name === $user_id) {
+                wp_update_user([
+                    'ID'           => $user_id,
+                    'display_name' => $full_name,
+                ]);
+            }
+        }
 
         // اضافه کردن نقش اسپانسر (بدون حذف نقش‌های قبلی)
         $user = get_userdata($user_id);
