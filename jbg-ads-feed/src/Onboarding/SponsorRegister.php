@@ -5,33 +5,33 @@ if (!defined('ABSPATH')) exit;
 /**
  * ثبت‌نام جداگانه برای «اسپانسرها/برندها» بدون تغییر در ثبت‌نام معمولی (Digits).
  * فلو:
- *  1) فرم سفارشی (شورتکد [jbg_sponsor_register]) اطلاعات تکمیلی را می‌گیرد.
- *  2) پس از ارسال، داده‌ها موقتاً در transient ذخیره می‌شود و کاربر به صفحه‌ی لاگین/ثبت‌نام Digits
- *     هدایت می‌گردد (OTP).
- *  3) Digits پس از احراز هویت، کاربر را به همان صفحه با token برمی‌گرداند؛
- *     ما دیتا را به user_meta ذخیره کرده و نقش «jbg_sponsor» ست می‌کنیم.
+ *  1) فرم شورت‌کد [jbg_sponsor_register] اطلاعات تکمیلی را می‌گیرد.
+ *  2) پس از ارسال، داده‌ها موقتاً در transient ذخیره می‌شود.
+ *  3) به کاربر لینک صفحه‌ی لاگین/ثبت‌نام Digits داده می‌شود (OTP).
+ *  4) بعد از لاگین، Digits کاربر را به همین صفحه با پارامتر token برمی‌گرداند
+ *     و این کلاس، داده‌ها را روی user_meta ذخیره و نقش jbg_sponsor را اضافه می‌کند.
  *
- * نکته: ثبت‌نام/ورود معمولی سایت تغییری نمی‌کند؛ این مسیر فقط مخصوص صفحه‌ای است
- * که شورتکد روی آن قرار می‌گیرد.
+ *  نکتهٔ مهم: در این نسخه هیچ header() / wp_redirect اجرا نمی‌شود
+ *  تا خطای «Cannot modify header information» رخ ندهد.
  */
 class SponsorRegister {
 
-    /** آدرس صفحه‌ی لاگین/ثبت‌نام Digits (در صورت نیاز تنظیم کن) */
-    private const DIGITS_LOGIN_URL = '/login/'; // ← اگر URL دیگری داری، همین‌جا عوض کن
+    /** آدرس صفحه‌ی لاگین/ثبت‌نام Digits (اسلاگ یا مسیر نسبی) */
+    private const DIGITS_LOGIN_URL = '/login/'; // *** این را با URL صفحه‌ی واقعی لاگین Digits خودت عوض کن
 
-    /** کلید ترنزینت‌ها */
+    /** پیشوند ترنزینت برای نگه‌داری موقت داده‌ها */
     private const TRANSIENT_PREFIX = 'jbg_sponsor_reg_';
 
-    /** نقش اختصاصی اسپانسر */
+    /** نام نقش اختصاصی اسپانسر */
     private const ROLE = 'jbg_sponsor';
 
-    /** رجیستر هوک‌ها و شورتکد */
+    /** رجیستر هوک‌ها و شورت‌کد */
     public static function register(): void {
         add_action('init', [self::class, 'maybe_add_role']);
         add_shortcode('jbg_sponsor_register', [self::class, 'shortcode']);
     }
 
-    /** در صورت نبود، نقش اسپانسر را ایجاد می‌کنیم (بر پایهٔ مشترک) */
+    /** در صورت نبود، نقش اسپانسر را بر پایهٔ نقش مشترک ایجاد می‌کنیم */
     public static function maybe_add_role(): void {
         if (!get_role(self::ROLE)) {
             $subscriber = get_role('subscriber');
@@ -40,14 +40,14 @@ class SponsorRegister {
         }
     }
 
-    /** هندل شورتکد: نمایش فرم / پردازش نهایی پس از لاگین / هندل ارسال فرم */
+    /** هندل شورت‌کد: نمایش فرم / پردازش ارسال / تکمیل نهایی پس از لاگین */
     public static function shortcode(): string {
-        // اگر پس از لاگین برگشته و token داریم، داده‌ها را به یوزر لاگین‌شده نسبت بده
+        // اگر بعد از لاگین از Digits برگشته باشیم و token داشته باشیم
         if (is_user_logged_in() && isset($_GET['jbg_sponsor_token'])) {
             return self::complete_for_logged_user(sanitize_text_field($_GET['jbg_sponsor_token']));
         }
 
-        // ارسال فرم (بدون استفاده از header redirect تا خطای "headers already sent" نگیریم)
+        // ارسال فرم
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['jbg_sponsor_submit'])) {
             return self::handle_submit();
         }
@@ -57,60 +57,71 @@ class SponsorRegister {
     }
 
     /**
-     * ذخیره‌ی داده‌ها در transient و تولید اسکریپت جاوااسکریپت برای هدایت کاربر
-     * به صفحه لاگین Digits (بدون تغییر header های PHP).
+     * ذخیره‌ی داده‌های فرم در transient و برگرداندن پیام + لینک به صفحهٔ Digits
+     * بدون هیچ‌گونه هدایت (redirect) سمت سرور.
      */
     private static function handle_submit(): string {
-        // امنیت پایه: نانس
+        // اعتبار سنجی نانس برای جلوگیری از CSRF
         if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'jbg_sponsor_reg')) {
-            return self::msg('درخواست نامعتبر است. صفحه را مجدداً بارگذاری کنید.', 'error') . self::render_form($_POST);
+            return self::msg('درخواست نامعتبر است. لطفاً صفحه را مجدداً بارگذاری کنید.', 'error')
+                 . self::render_form($_POST);
         }
 
-        // ورودی‌ها
-        $full_name  = isset($_POST['full_name'])  ? sanitize_text_field($_POST['full_name'])  : '';
-        $national   = isset($_POST['national_id'])? sanitize_text_field($_POST['national_id']): '';
-        $brand_name = isset($_POST['brand_name']) ? sanitize_text_field($_POST['brand_name']) : '';
-        $company    = isset($_POST['company'])    ? sanitize_text_field($_POST['company'])    : '';
-        $phone_hint = isset($_POST['phone_hint']) ? sanitize_text_field($_POST['phone_hint']) : '';
+        // خواندن ورودی‌ها
+        $full_name  = isset($_POST['full_name'])   ? sanitize_text_field($_POST['full_name'])   : '';
+        $national   = isset($_POST['national_id']) ? sanitize_text_field($_POST['national_id']) : '';
+        $brand_name = isset($_POST['brand_name'])  ? sanitize_text_field($_POST['brand_name'])  : '';
+        $company    = isset($_POST['company'])     ? sanitize_text_field($_POST['company'])     : '';
+        $phone_hint = isset($_POST['phone_hint'])  ? sanitize_text_field($_POST['phone_hint'])  : '';
 
-        // اعتبارسنجی ساده
+        // چک کردن فیلدهای ضروری
         if ($full_name === '' || $national === '' || $brand_name === '') {
-            return self::msg('لطفاً «نام و نام خانوادگی»، «کد ملی» و «نام برند» را تکمیل کنید.', 'error') . self::render_form($_POST);
+            return self::msg('لطفاً «نام و نام خانوادگی»، «کد ملی» و «نام برند» را تکمیل کنید.', 'error')
+                 . self::render_form($_POST);
         }
 
-        // ساخت token و ذخیره‌ی موقت در transient
+        // ساخت توکن یکتا و ذخیره‌ی موقت اطلاعات
         $token = wp_generate_password(20, false, false);
-        set_transient(self::TRANSIENT_PREFIX . $token, [
-            'full_name'  => $full_name,
-            'national'   => $national,
-            'brand_name' => $brand_name,
-            'company'    => $company,
-            'phone_hint' => $phone_hint,
-            'created'    => time(),
-        ], 30 * MINUTE_IN_SECONDS); // ← اعتبار ۳۰ دقیقه
+        set_transient(
+            self::TRANSIENT_PREFIX . $token,
+            [
+                'full_name'  => $full_name,
+                'national'   => $national,
+                'brand_name' => $brand_name,
+                'company'    => $company,
+                'phone_hint' => $phone_hint,
+                'created'    => time(),
+            ],
+            30 * MINUTE_IN_SECONDS // ← اعتبار ۳۰ دقیقه برای تکمیل فرایند
+        );
 
-        // آدرس بازگشت بعد از لاگین Digits (همان صفحه فعلی + token)
+        // آدرس فعلی صفحه با الحاق token برای بازگشت بعد از لاگین
         $return_url = add_query_arg(['jbg_sponsor_token' => $token], self::current_url());
 
-        // آدرس صفحه لاگین/ثبت‌نام Digits با پارامتر redirect_to
-        $login_url = add_query_arg(
+        // آدرس صفحه‌ی لاگین Digits به همراه redirect_to
+        $login_base = home_url(self::DIGITS_LOGIN_URL); // ← اگر صفحه لاگین دیگری داری، این مسیر را تنظیم کن
+        $login_url  = add_query_arg(
             ['redirect_to' => rawurlencode($return_url)],
-            home_url(self::DIGITS_LOGIN_URL)
+            $login_base
         );
-        $login_url = esc_url_raw($login_url); // ← پاکسازی جهت استفاده در JS
+        $login_url = esc_url($login_url);
 
-        // به‌جای wp_redirect/exit که header را تغییر می‌دهند، از جاوااسکریپت استفاده می‌کنیم
-        // تا با هیچ خروجی قبلی (مثلاً Elementor) تداخلی نداشته باشد.
-        $js = '<script>
-            // هدایت کاربر به صفحهٔ ورود/ثبت‌نام Digits برای تأیید شماره
-            window.location.href = "' . esc_js($login_url) . '";
-        </script>';
+        // پیام + لینک دستی برای رفتن به صفحه Digits
+        // (بدون هیچ wp_redirect تا مشکل headers رخ ندهد)
+        $html  = self::msg('اطلاعات ثبت‌نام شما ذخیره شد. حالا شماره موبایل خود را در صفحهٔ بعدی تأیید کنید.', 'success');
+        $html .= '<p style="direction:rtl;text-align:right;margin-top:10px">';
+        $html .= '<a href="' . $login_url . '" class="jbg-sponsor-next-link" style="display:inline-block;background:#016f87;color:#fff;border-radius:9999px;padding:10px 18px;font-weight:700;text-decoration:none;">';
+        $html .= 'رفتن به صفحهٔ تأیید شماره (ورود / ثبت‌نام)';
+        $html .= '</a>';
+        $html .= '</p>';
 
-        // برای اطمینان، یک پیام هم قبل از اسکریپت نمایش داده می‌شود
-        return self::msg('در حال انتقال به صفحهٔ تأیید شماره همراه...', 'success') . $js;
+        return $html;
     }
 
-    /** پس از لاگین کاربر: اعمال داده‌های اسپانسر به پروفایل و نقش */
+    /**
+     * پس از لاگین کاربر (بازگشت از Digits) داده‌های ذخیره‌شده را روی پروفایل
+     * اعمال کرده و نقش اسپانسر را اضافه می‌کنیم.
+     */
     private static function complete_for_logged_user(string $token): string {
         $data = get_transient(self::TRANSIENT_PREFIX . $token);
         if (!$data || !is_array($data)) {
@@ -122,22 +133,22 @@ class SponsorRegister {
             return self::msg('ابتدا وارد حساب کاربری شوید.', 'error');
         }
 
-        // ذخیره‌ی متاها
-        update_user_meta($user_id, 'jbg_sponsor_full_name',  (string)$data['full_name']);
-        update_user_meta($user_id, 'jbg_sponsor_national_id',(string)$data['national']);
-        update_user_meta($user_id, 'jbg_brand_name',         (string)$data['brand_name']);
-        update_user_meta($user_id, 'jbg_company',            (string)$data['company']);
+        // ذخیره‌ی متاها روی کاربر
+        update_user_meta($user_id, 'jbg_sponsor_full_name',   (string) $data['full_name']);
+        update_user_meta($user_id, 'jbg_sponsor_national_id', (string) $data['national']);
+        update_user_meta($user_id, 'jbg_brand_name',          (string) $data['brand_name']);
+        update_user_meta($user_id, 'jbg_company',             (string) $data['company']);
         if (!empty($data['phone_hint'])) {
-            update_user_meta($user_id, 'jbg_phone_hint', (string)$data['phone_hint']);
+            update_user_meta($user_id, 'jbg_phone_hint',      (string) $data['phone_hint']);
         }
 
-        // نقش اسپانسر را به کاربر اضافه می‌کنیم (بدون حذف نقش‌های دیگر)
+        // اضافه کردن نقش اسپانسر بدون حذف نقش‌های قبلی
         $user = get_userdata($user_id);
-        if ($user && !in_array(self::ROLE, (array)$user->roles, true)) {
+        if ($user && !in_array(self::ROLE, (array) $user->roles, true)) {
             $user->add_role(self::ROLE);
         }
 
-        // پاکسازی transient
+        // حذف داده‌ی موقت
         delete_transient(self::TRANSIENT_PREFIX . $token);
 
         return self::msg('ثبت‌نام اسپانسر/برند با موفقیت تکمیل شد. کارشناسان ما در صورت نیاز با شما تماس خواهند گرفت.', 'success');
@@ -197,12 +208,12 @@ class SponsorRegister {
         return ob_get_clean();
     }
 
-    /** ساخت پیام وضعیت */
+    /** ساخت HTML پیام وضعیت */
     private static function msg(string $text, string $type = 'success'): string {
         return '<div class="jbg-msg ' . esc_attr($type) . '">' . esc_html($text) . '</div>';
     }
 
-    /** URL فعلی بدون fragment */
+    /** URL فعلی بدون fragment برای استفاده در redirect_to */
     private static function current_url(): string {
         $scheme = is_ssl() ? 'https' : 'http';
         $host   = $_SERVER['HTTP_HOST'] ?? '';
